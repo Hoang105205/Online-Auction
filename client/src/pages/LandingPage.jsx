@@ -4,10 +4,10 @@ import LandingProduct from "../components/LandingProduct";
 const LandingPage = () => {
   return (
     <>
-        <Header />
-        <LandingProduct />
+      <Header />
+      <LandingProduct />
     </>
-  )
-}
+  );
+};
 
-export default LandingPage
+export default LandingPage;

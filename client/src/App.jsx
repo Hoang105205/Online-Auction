@@ -10,6 +10,7 @@ import LandingPage from "./pages/LandingPage";
 import AdminLayout from "./layouts/AdminLayout";
 import DashboardPage from "./pages/Admin/DashboardPage";
 import DetailsPage from "./pages/DetailsPage";
+import LoginPage from "./pages/auth/LoginPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -18,16 +19,15 @@ const router = createBrowserRouter(
         <Route index element={<LandingPage />} />
         <Route path="details/:id" element={<DetailsPage />} />
       </Route>
-      //Admin route
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Admin route */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
       </Route>
     </>
-    )
-  );
-
-
-
+  )
+);
 
 function App() {
   return <RouterProvider router={router} />;
