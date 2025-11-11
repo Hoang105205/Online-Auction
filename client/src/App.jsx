@@ -23,6 +23,8 @@ const router = createBrowserRouter(
         <Route index element={<DashboardPage />} />
       </Route>
     </>
+    )
+  );
 
 
 
