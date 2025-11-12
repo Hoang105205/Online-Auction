@@ -11,6 +11,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import DashboardPage from "./pages/Admin/DashboardPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
+import SignUpPage from "./pages/auth/SignUpPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -20,6 +21,7 @@ const router = createBrowserRouter(
         <Route path="details/:id" element={<DetailsPage />} />
       </Route>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
 
       {/* Admin route */}
       <Route path="/admin" element={<AdminLayout />}>
