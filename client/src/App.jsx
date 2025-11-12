@@ -12,6 +12,7 @@ import DashboardPage from "./pages/Admin/DashboardPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -27,6 +28,9 @@ const router = createBrowserRouter(
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
       </Route>
+
+      {/* Catch-all route for 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </>
   )
 );
