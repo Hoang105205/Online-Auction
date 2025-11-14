@@ -11,7 +11,7 @@ import {
 import { Link } from "react-router-dom";
 const Header = () => {
   return (
-    <>
+    <div className="border-b border-black/20 bg-white">
       <MegaMenu>
         <NavbarBrand href="/" className="flex items-center">
           <img alt="" src="/logo.png" className="mr-3 h-8 sm:h-12" />
@@ -37,7 +37,7 @@ const Header = () => {
           <NavbarLink href="#">Sản phẩm thắng</NavbarLink>
         </NavbarCollapse>
       </MegaMenu>
-    </>
+    </div>
   );
 };
 export default Header;

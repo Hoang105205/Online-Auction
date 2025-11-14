@@ -12,7 +12,7 @@ const Footer = () => {
     <>
       <FlowbiteFooter container className="bg-gray-700">
         <div className="w-full text-center">
-          <div className="w-full flex justify-center items-center">
+          <div className="hidden md:w-full md:flex md:justify-center md:items-center ">
             {/* <FooterBrand
             src="/logo.png"
             alt="Auctify Logo"
@@ -33,7 +33,7 @@ const Footer = () => {
               </FooterLink>
             </FooterLinkGroup>
           </div>
-          <FooterDivider />
+          <FooterDivider className="hidden md:block"/>
           <FooterCopyright
             href="#"
             className="text-white"
