@@ -1,32 +1,53 @@
-import { useState } from "react";
-import AccountSidebar from "../components/Account/AccountSidebar";
-import ProfileTab from "../components/Account/ProfileTab";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, NavLink } from "react-router-dom";
 import Header from "../components/Header";
-import { HiX } from "react-icons/hi";
+import AccountSidebar from "../components/Account/AccountSidebar";
 import { HiOutlineBars3BottomLeft } from "react-icons/hi2";
+import { HiX } from "react-icons/hi";
 
-const AccountPage = () => {
-  const [activeTab, setActiveTab] = useState("profile");
+// Layout wrapping all /account/* pages. Provides sidebar + mobile drawer.
+export default function AccountLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const openBtnRef = useRef(null);
+  const drawerRef = useRef(null);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "profile":
-        return <ProfileTab />;
-      case "payment":
-        return <div className="p-6">Phương thức thanh toán (Coming soon)</div>;
-      case "auctions":
-        return <div className="p-6">Đấu giá (Coming soon)</div>;
-      case "my-auctions":
-        return <div className="p-6">Đấu giá của tôi (Coming soon)</div>;
-      case "watchlist":
-        return <div className="p-6">My Watchlist (Coming soon)</div>;
-      case "permissions":
-        return <div className="p-6">Quyền hạn tài (Coming soon)</div>;
-      default:
-        return <ProfileTab />;
+  // When drawer opens, move focus inside; when it closes, return focus
+  useEffect(() => {
+    if (mobileOpen) {
+      // Focus first focusable item in drawer (a, button, input)
+      const focusable = drawerRef.current?.querySelector(
+        'a, button, input, [tabindex]:not([tabindex="-1"])'
+      );
+      focusable?.focus();
+    } else {
+      // Return focus to the opener button
+      openBtnRef.current?.focus();
     }
-  };
+  }, [mobileOpen]);
+
+  // Basic focus trap when drawer is open (Tab cycles within panel)
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function handleKey(e) {
+      if (e.key !== "Tab") return;
+      const focusableEls = drawerRef.current?.querySelectorAll(
+        'a, button, input, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusableEls || focusableEls.length === 0) return;
+      const list = Array.from(focusableEls);
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,6 +63,7 @@ const AccountPage = () => {
         {/* Mobile header with menu button */}
         <div className="flex items-center justify-between lg:hidden mb-4">
           <button
+            ref={openBtnRef}
             type="button"
             aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
@@ -54,13 +76,12 @@ const AccountPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <div className="hidden lg:block lg:col-span-1">
-            <AccountSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <AccountSidebar onItemClick={() => {}} />
           </div>
-
           {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-sm">
-              {renderContent()}
+              <Outlet />
             </div>
           </div>
         </div>
@@ -71,20 +92,18 @@ const AccountPage = () => {
         className={`lg:hidden fixed inset-0 z-50 ${
           mobileOpen ? "" : "pointer-events-none"
         }`}
-        aria-hidden={!mobileOpen}
-        aria-modal={mobileOpen}
-        role="dialog"
+        role={mobileOpen ? "dialog" : undefined}
+        aria-modal={mobileOpen || undefined}
         inert={!mobileOpen}
       >
-        {/* Overlay */}
         <div
           className={`absolute inset-0 bg-black/40 transition-opacity ${
             mobileOpen ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setMobileOpen(false)}
         />
-        {/* Panel */}
         <div
+          ref={drawerRef}
           className={`absolute left-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-xl transition-transform ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
@@ -101,16 +120,10 @@ const AccountPage = () => {
             </button>
           </div>
           <div className="p-2">
-            <AccountSidebar
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              onItemClick={() => setMobileOpen(false)}
-            />
+            <AccountSidebar onItemClick={() => setMobileOpen(false)} />
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default AccountPage;
+}

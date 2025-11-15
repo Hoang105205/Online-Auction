@@ -5,6 +5,8 @@ import {
   createRoutesFromElements,
 } from "react-router-dom";
 
+import { Navigate } from "react-router-dom";
+
 import MainLayout from "./layouts/MainLayout";
 import LandingPage from "./pages/LandingPage";
 import AdminLayout from "./layouts/AdminLayout";
@@ -13,7 +15,15 @@ import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import AccountPage from "./pages/AccountPage";
+
+// Account related pages and layout
+import AccountLayout from "./layouts/AccountLayout";
+import ProfilePage from "./pages/account/ProfilePage";
+import RatingPage from "./pages/account/RatingPage";
+import AuctionsPage from "./pages/account/AuctionsPage";
+import MyAuctionsPage from "./pages/account/MyAuctionsPage";
+import WatchlistPage from "./pages/account/WatchlistPage";
+import PermissionsPage from "./pages/account/PermissionsPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -21,8 +31,18 @@ const router = createBrowserRouter(
       <Route path="/" element={<MainLayout />}>
         <Route index element={<LandingPage />} />
         <Route path="details/:id" element={<DetailsPage />} />
-        <Route path="account" element={<AccountPage />} />
+
+        {/* Account pages */}
+        <Route path="account" element={<AccountLayout />}>
+          <Route index element={<ProfilePage />} />
+          <Route path="rating" element={<RatingPage />} />
+          <Route path="auctions" element={<AuctionsPage />} />
+          <Route path="my-auctions" element={<MyAuctionsPage />} />
+          <Route path="watchlist" element={<WatchlistPage />} />
+          <Route path="permissions" element={<PermissionsPage />} />
+        </Route>
       </Route>
+
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
 
