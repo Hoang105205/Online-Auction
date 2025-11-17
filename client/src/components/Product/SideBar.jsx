@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Category from "../components/Category"
+import Category from "./Category"
 
 const SideBar = () => {
   const [categories, setCategories] = useState(["Điện tử", "Thời trang", "Nghệ thuật", "Túi đựng", "Nội thất", "Trang trí", "Rượu chưng cất"]);

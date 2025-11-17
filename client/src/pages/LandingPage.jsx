@@ -1,5 +1,5 @@
 import Header from "../components/Header";
-import LandingProduct from "../components/LandingProduct";
+import LandingProduct from "../components/Product/LandingProduct";
 
 const LandingPage = () => {
   return (
