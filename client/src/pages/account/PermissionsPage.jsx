@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "flowbite-react";
 import { HiShieldCheck, HiClock } from "react-icons/hi";
 
-export default function PermissionsPage() {
+const PermissionsPage = () => {
   // Mock data - replace with API data later
   const [isSeller, setIsSeller] = useState(true); // Change to true to test seller view
   const [sellerSince, setSellerSince] = useState("2025-11-15"); // Date when user became seller
@@ -236,4 +236,6 @@ export default function PermissionsPage() {
       </div>
     </div>
   );
-}
+};
+
+export default PermissionsPage;
