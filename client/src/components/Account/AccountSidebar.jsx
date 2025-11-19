@@ -1,5 +1,5 @@
 import { HiUser, HiHeart, HiKey, HiStar } from "react-icons/hi";
-import { HiTrophy } from "react-icons/hi2";
+import { HiTrophy,HiCube  } from "react-icons/hi2";
 import { FaGavel } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -17,7 +17,8 @@ const sections = [
     title: "Đấu giá",
     items: [
       { to: "/account/auctions", label: "Đang đấu giá", icon: FaGavel },
-      { to: "/account/my-auctions", label: "Đã thắng đấu giá", icon: HiTrophy },
+      { to: "/account/win-auctions", label: "Đã thắng đấu giá", icon: HiTrophy },
+      { to: "/account/my-products", label: "Sản phẩm đã đăng", icon: HiCube },
     ],
   },
   {
