@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, Link } from "react-router-dom";
 import Header from "../components/Header";
 import AccountSidebar from "../components/Account/AccountSidebar";
 import { HiOutlineBars3BottomLeft } from "react-icons/hi2";
@@ -55,9 +55,11 @@ export default function AccountLayout() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="mb-6 text-sm text-gray-600">
-          <span>Home</span>
+          <span>
+            <Link to="/">Trang chủ</Link>
+          </span>
           <span className="mx-2">/</span>
-          <span className="text-gray-900 font-medium">My Account</span>
+          <span className="text-gray-900 font-medium">Tài khoản của tôi</span>
         </div>
 
         {/* Mobile header with menu button */}
