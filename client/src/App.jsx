@@ -22,6 +22,8 @@ import AuctionsPage from "./pages/account/AuctionsPage";
 import WinAuctionsPage from "./pages/account/WinAuctionsPage";
 import WatchlistPage from "./pages/account/WatchlistPage";
 import PermissionsPage from "./pages/account/PermissionsPage";
+import MyProductsPage from "./pages/account/MyProductsPage";
+import CreateProductPage from "./pages/account/CreateProductPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -36,7 +38,11 @@ const router = createBrowserRouter(
           <Route path="rating" element={<RatingPage />} />
           <Route path="auctions" element={<AuctionsPage />} />
           <Route path="win-auctions" element={<WinAuctionsPage />} />
-          <Route path="my-products" element={<WinAuctionsPage />} />
+          <Route path="my-products" element={<MyProductsPage />} />
+          <Route
+            path="my-products/create-product"
+            element={<CreateProductPage />}
+          />
           <Route path="watchlist" element={<WatchlistPage />} />
           <Route path="permissions" element={<PermissionsPage />} />
         </Route>

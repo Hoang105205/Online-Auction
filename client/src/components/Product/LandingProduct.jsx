@@ -1,13 +1,15 @@
-import SideBar from "./SideBar";
+import { useState } from "react";
+import Category from "./Category";
 import HomeContent from "./HomeContent";
+import SideBar from "./SideBar";
 
 const LandingProduct = () => {
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-[500px] bg-white border-r p-4">
+    <div className="flex">
+      <aside className="flex z-50 md:border-r md:p-4">
         <SideBar />
       </aside>
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1">
         <HomeContent />
       </main>
     </div>
