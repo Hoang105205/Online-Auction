@@ -30,20 +30,6 @@ export const Category = ({ category }) => {
                 <span>{item.label}</span>
               </NavLink>
             ))}
-            {/* <ul className="text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDefault">
-              <li>
-                <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">HALAAAAAAAAAAAAAAAAO</a>
-              </li>
-              <li>
-                <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Settings</a>
-              </li>
-              <li>
-                <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Earnings</a>
-              </li>
-              <li>
-                <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Sign out</a>
-              </li>
-            </ul> */}
           </div>
         </div>
       )}
