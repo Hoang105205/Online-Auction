@@ -44,16 +44,6 @@ const LoginPage = () => {
         setAuth({ accessToken, roles: userRoles, email, fullName }); // <-- Dùng roles: userRoles
 
         setLoginError(null);
-
-        // 3. XÓA BỎ LỆNH navigate("/") TẠI ĐÂY!
-
-        // Console log để kiểm tra (chúng ta dùng userRoles đã được chuẩn hóa)
-        console.log("Roles after setting Auth:", userRoles);
-        console.log("Context after setting Auth:", {
-          accessToken,
-          roles: userRoles,
-          email,
-        });
       } catch (error) {
         setLoginError(error.response?.data?.message || "Login failed");
       }
@@ -65,7 +55,7 @@ const LoginPage = () => {
   useEffect(() => {
     // Nếu Access Token xuất hiện trong Context, chuyển hướng
     if (auth?.accessToken) {
-      navigate("/"); // Hoặc đường dẫn mà bạn muốn chuyển đến
+      navigate("/");
     }
   }, [auth, navigate]);
 

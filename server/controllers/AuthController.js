@@ -77,15 +77,33 @@ const login = async (req, res) => {
 const refreshToken = async (req, res) => {
   try {
     const cookies = req.cookies;
-    
-    const { accessToken, email, fullName, roles } = await UserService.refreshToken(cookies.jwt);
 
-    return res
-      .status(200)
-      .json({ accessToken, email, fullName, roles });
+    const { accessToken, email, fullName, roles } =
+      await UserService.refreshToken(cookies.jwt);
+
+    return res.status(200).json({ accessToken, email, fullName, roles });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ message: error.message || "Lỗi máy chủ." });
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Lỗi máy chủ." });
   }
 };
 
-module.exports = { signup, login, refreshToken };
+const logoutUser = async (req, res) => {
+  if (!req.cookies?.jwt) {
+    return res.sendStatus(204); // No content
+  }
+
+  try {
+    await UserService.logoutUser(req.cookies.jwt);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Lỗi máy chủ." });
+  } finally {
+    res.clearCookie("jwt", { httpOnly: true, secure: true, sameSite: "None" });
+    return res.sendStatus(204);
+  }
+};
+
+module.exports = { signup, login, refreshToken, logoutUser };

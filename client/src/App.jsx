@@ -47,7 +47,6 @@ const router = createBrowserRouter(
           <Route path="/signup" element={<SignUpPage />} />
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
-
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>
             {/* Account pages */}
             <Route path="account" element={<AccountLayout />}>
@@ -66,6 +65,7 @@ const router = createBrowserRouter(
           </Route>
         </Route>
 
+        {/* Yêu cầu Đã Đăng nhập với quyền Admin --> chưa config RequireAuth */}
         {/* Admin route */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />

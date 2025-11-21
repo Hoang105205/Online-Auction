@@ -10,19 +10,20 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import useAuth from "../hooks/useAuth";
+import useRefreshToken from "../hooks/useRefreshToken";
 
 const Header = () => {
   const { auth, setAuth } = useAuth();
+  const { logout } = useRefreshToken();
+
   const navigate = useNavigate();
   // Determine logged-in state (adjust key names to match your auth shape)
   const isLoggedIn = Boolean(auth?.email || auth?.user?.email);
   const displayName = auth?.fullName || auth?.user?.fullName || "Người dùng";
   const displayEmail = auth?.email || auth?.user?.email || "";
 
-  const handleLogout = () => {
-    // Clear auth; replace with API logout if needed
-    setAuth({});
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout();
   };
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -41,21 +42,40 @@ const Header = () => {
           </span>
         </Link>
 
+        {/* Mobile auth actions when NOT logged in */}
+        {!isLoggedIn && (
+          <div className="md:hidden ml-auto flex items-center gap-3">
+            <Link
+              to="/login"
+              className="px-4 py-2 text-sm font-medium text-gray-800 rounded-lg border border-gray-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              Đăng nhập
+            </Link>
+            <Button
+              onClick={() => navigate("/signup")}
+              size="sm"
+              className="bg-sky-600 hover:bg-sky-700"
+            >
+              Đăng ký
+            </Button>
+          </div>
+        )}
+
         {/* Desktop Right side controls */}
         <div className="order-2 hidden items-center md:flex">
           {!isLoggedIn ? (
             <>
               <Link
                 to="/login"
-                className="md:text-xl mr-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-300 md:mr-2 md:px-5 md:py-2.5 dark:text-white dark:hover:bg-gray-700 dark:focus:ring-gray-800"
+                className="md:text-xl mr-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 md:mr-2 md:px-5 dark:text-white dark:hover:bg-gray-700 dark:focus:ring-gray-800"
               >
-                Login
+                Đăng nhập
               </Link>
               <Button
                 onClick={() => navigate("/signup")}
-                className="md:text-xl"
+                className="md:text-xl bg-sky-600 hover:bg-sky-700"
               >
-                Sign up
+                Đăng ký
               </Button>
             </>
           ) : (

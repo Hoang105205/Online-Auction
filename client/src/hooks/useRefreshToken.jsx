@@ -14,7 +14,7 @@ const useRefreshToken = () => {
       const { accessToken, roles, email, fullName } = response.data;
 
       setAuth((prev) => {
-        console.log("🔄 Đã khôi phục phiên đăng nhập:", { accessToken, roles });
+        console.log("🔄 Đã khôi phục phiên đăng nhập:");
         return {
           ...prev,
           accessToken,
@@ -26,17 +26,22 @@ const useRefreshToken = () => {
 
       return accessToken;
     } catch (error) {
-      console.error(
-        "Refresh token failed, navigating to login:",
-        error.response || error
-      );
-      navigate("/login");
-
       throw error;
     }
   };
 
-  return refresh;
+  const logout = async () => {
+    setAuth({});
+
+    try {
+      await axiosPublic.get("/auth/logout");
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error.response || error);
+    }
+  };
+
+  return { refresh, logout };
 };
 
 export default useRefreshToken;

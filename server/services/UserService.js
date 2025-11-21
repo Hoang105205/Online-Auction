@@ -119,6 +119,19 @@ class UserService {
       throw error;
     }
   }
+
+  static async logoutUser(refreshToken) {
+    if (!refreshToken) return;
+
+    const foundUser = await User.findOne({ refreshToken }).exec();
+
+    if (foundUser) {
+      foundUser.refreshToken = null;
+      await foundUser.save();
+    }
+
+    return;
+  }
 }
 
 module.exports = UserService;
