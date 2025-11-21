@@ -4,11 +4,17 @@ import {
   RouterProvider,
   createRoutesFromElements,
 } from "react-router-dom";
+// Admin related pages and layout
+import AdminLayout from "./layouts/AdminLayout";
+import DashboardPage from "./pages/Admin/DashboardPage";
+import CategoriesPage from "./pages/Admin/CategoriesPage";
+import ProductsPage from "./pages/Admin/ProductsPage";
+import UsersPage from "./pages/Admin/UsersPage";
+import UpgradePage from "./pages/Admin/UpgradePage";
+import SettingsPage from "./pages/Admin/SettingsPage";
 
 import MainLayout from "./layouts/MainLayout";
 import LandingPage from "./pages/LandingPage";
-import AdminLayout from "./layouts/AdminLayout";
-import DashboardPage from "./pages/Admin/DashboardPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
@@ -68,8 +74,13 @@ const router = createBrowserRouter(
         {/* Yêu cầu Đã Đăng nhập với quyền Admin --> chưa config RequireAuth */}
         {/* Admin route */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<DashboardPage />} />
-        </Route>
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="categories" element={<CategoriesPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="upgrade" element={<UpgradePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />
