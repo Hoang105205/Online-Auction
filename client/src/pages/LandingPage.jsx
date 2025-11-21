@@ -1,12 +1,13 @@
 import Header from "../components/Header";
-
+import LandingProduct from "../components/LandingPage/LandingProduct";
 
 const LandingPage = () => {
   return (
     <>
-        <Header />
+      <Header />
+      <LandingProduct />
     </>
-  )
-}
+  );
+};
 
-export default LandingPage
+export default LandingPage;
