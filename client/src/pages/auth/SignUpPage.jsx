@@ -1,57 +1,59 @@
 import { useState } from "react";
 import { Button, Label, TextInput, Card } from "flowbite-react";
 import { FaFacebook, FaLinkedin, FaGoogle } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { signup } from "../../api/authService";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const SignUpPage = () => {
   const [submitError, setSubmitError] = useState(null);
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    address: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const passwordsMatch =
-    formData.password.length > 0 &&
-    formData.confirmPassword.length > 0 &&
-    formData.password === formData.confirmPassword;
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  const signUpSchema = z
+    .object({
+      fullName: z.string().min(3, "Họ và tên tối thiểu 3 ký tự"),
+      email: z.email("Email không hợp lệ"),
+      address: z.string().min(5, "Địa chỉ tối thiểu 5 ký tự"),
+      password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+      confirmPassword: z.string().min(6, "Xác nhận mật khẩu tối thiểu 6 ký tự"),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      path: ["confirmPassword"],
+      message: "Mật khẩu xác nhận không khớp",
     });
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    // Simple front-end validation before calling API
-    if (!passwordsMatch) {
-      return;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+  } = useForm({
+    resolver: zodResolver(signUpSchema),
+    mode: "onBlur",
+    defaultValues: {
+      fullName: "",
+      email: "",
+      address: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = async (data) => {
+    try {
+      const result = await signup({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        address: data.address,
+      });
+      setSubmitError(null);
+      navigate("/login");
+    } catch (error) {
+      setSubmitError(error.response?.data?.message || "Signup failed");
     }
-
-    const userData = {
-      email: formData.email,
-      password: formData.password,
-      fullName: formData.fullName,
-      address: formData.address,
-    };
-
-    const handleSignup = async () => {
-      try {
-        const result = await signup(userData);
-        console.log("User signed up successfully:", result);
-        setSubmitError(null);
-      } catch (error) {
-        setSubmitError(error.response?.data?.message || "Signup failed");
-      }
-    };
-
-    await handleSignup();
   };
 
   return (
@@ -87,7 +89,7 @@ const SignUpPage = () => {
             <h1 className="md:hidden text-4xl font-extrabold text-sky-500 drop-shadow-md text-center mb-6">
               Auctify
             </h1>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Full Name Input */}
               <div>
                 <Label
@@ -97,15 +99,18 @@ const SignUpPage = () => {
                 />
                 <TextInput
                   id="fullName"
-                  name="fullName"
                   type="text"
                   placeholder="Họ và Tên"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  required
+                  {...register("fullName")}
+                  color={errors.fullName ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.fullName && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.fullName.message}
+                  </p>
+                )}
               </div>
 
               {/* Email Input */}
@@ -113,15 +118,18 @@ const SignUpPage = () => {
                 <Label htmlFor="email" value="Email" className="sr-only" />
                 <TextInput
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="Email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  {...register("email")}
+                  color={errors.email ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               {/* Address Input */}
@@ -129,15 +137,18 @@ const SignUpPage = () => {
                 <Label htmlFor="address" value="Địa chỉ" className="sr-only" />
                 <TextInput
                   id="address"
-                  name="address"
                   type="text"
                   placeholder="Địa chỉ"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
+                  {...register("address")}
+                  color={errors.address ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.address && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.address.message}
+                  </p>
+                )}
               </div>
 
               {/* Password Input */}
@@ -149,15 +160,18 @@ const SignUpPage = () => {
                 />
                 <TextInput
                   id="password"
-                  name="password"
                   type="password"
                   placeholder="Mật khẩu"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
+                  {...register("password")}
+                  color={errors.password ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.password && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               {/* Confirm Password Input */}
@@ -169,35 +183,18 @@ const SignUpPage = () => {
                 />
                 <TextInput
                   id="confirmPassword"
-                  name="confirmPassword"
                   type="password"
                   placeholder="Xác nhận mật khẩu"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
+                  {...register("confirmPassword")}
+                  color={errors.confirmPassword ? "failure" : "gray"}
                   className="w-full"
-                  color={
-                    formData.confirmPassword
-                      ? passwordsMatch
-                        ? "success"
-                        : "failure"
-                      : undefined
-                  }
                   sizing="lg"
                 />
-
-                {/* Reserve space to avoid layout shift; toggle visibility only */}
-                <div className="mt-1 h-5">
-                  <p
-                    className={`text-sm ${
-                      formData.confirmPassword && !passwordsMatch
-                        ? "text-red-600 visible"
-                        : "invisible"
-                    }`}
-                  >
-                    Mật khẩu xác nhận không khớp
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.confirmPassword.message}
                   </p>
-                </div>
+                )}
               </div>
 
               {/* ReCAPTCHA Placeholder */}
@@ -214,17 +211,14 @@ const SignUpPage = () => {
                 type="submit"
                 className="bg-sky-600 w-full hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 size="lg"
-                disabled={
-                  !formData.fullName ||
-                  !formData.email ||
-                  !formData.address ||
-                  !formData.password ||
-                  !formData.confirmPassword ||
-                  !passwordsMatch
-                }
+                disabled={!isValid || isSubmitting}
               >
                 Đăng ký
               </Button>
+
+              {submitError && (
+                <p className="text-red-600 text-sm mt-2">{submitError}</p>
+              )}
 
               {/* Social Sign Up Buttons */}
               <div className="flex gap-3 justify-center">
@@ -270,9 +264,6 @@ const SignUpPage = () => {
                     Đăng nhập
                   </Button>
                 </Link>
-                {submitError && (
-                  <p className="text-red-600 text-sm mt-2">{submitError}</p>
-                )}
               </div>
             </form>
           </div>
