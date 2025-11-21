@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tinymce/tinymce-react": "^6.3.0",
+    "axios": "^1.13.2",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.12.10",
     "lucide-react": "^0.553.0",

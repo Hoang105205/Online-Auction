@@ -1,13 +1,14 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.VITE_API_BASE_URL + "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL + "/api";
 
 // ----------------------------------------------------------------
-// 1. AXIOS PUBLIC (Cho các API không cần Token: Signup, Login, Public Data)
+// 1. AXIOS PUBLIC (Cho các API không cần Token: Signup, Login, Public Data, refresh token)
 // ----------------------------------------------------------------
 export const axiosPublic = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 // ----------------------------------------------------------------

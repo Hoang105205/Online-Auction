@@ -3,4 +3,4 @@ const CORS_OPTIONS = {
   credentials: true, // Cho phép nhận/gửi cookies
   optionsSuccessStatus: 200,
 };
-export default CORS_OPTIONS;
+module.exports = CORS_OPTIONS;
