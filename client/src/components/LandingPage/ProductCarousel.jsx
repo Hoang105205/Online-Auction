@@ -1,6 +1,8 @@
-import { Card, Button } from "flowbite-react";
-import { HiTrash } from "react-icons/hi";
-import ProductCardP from "../Product/ProductCardP"
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import ProductCardC from "./ProductCardC";
+import "swiper/css";
+import "swiper/css/pagination";
 
 const products = [
   {
@@ -58,30 +60,24 @@ const products = [
     endDate: "2025-11-18",
     bidCount: 22,
   },
-  {
-    id: 6,
-    name: "Tranh sơn dầu phong cảnh cổ điển",
-    image: "/img/image1.jpg",
-    currentPrice: 8500000,
-    buyNowPrice: null,
-    highestBidder: "VuThiF",
-    postedDate: "2025-11-01",
-    endDate: "2025-11-16",
-    bidCount: 18,
-  },
 ];
 
-export default function WatchList() {
-  const count = products.length;
-
+export default function ProductCarousel() {
   return (
-    <>
-      <h2 className="text-lg font-bold p-4">Yêu thích ({count})</h2>
-      <div className="w-full grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        {products.map((item, i) => (
-          <ProductCardP product={product} />
-        ))}
-      </div>
-    </>
+    <Swiper
+      modules={[Pagination]}
+      slidesPerView={1}
+      spaceBetween={20}
+      loop={true}
+      autoplay={true}
+      pagination={{ clickable: true }}
+    >
+      {products.map((product) => (
+        <SwiperSlide key={product.id}>
+          <ProductCardC product={product} />
+        </SwiperSlide>
+      ))}
+      <div className="custom-pagination mt-4 flex justify-center"></div>
+    </Swiper>
   );
 }

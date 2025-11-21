@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Star, User, Eye, Clock } from "lucide-react";
 import { Carousel, Card } from "flowbite-react";
+import ProductDetailsInformation from "./ProductDetailsInformation";
+import ProductDetailsAuction from "./ProductDetailsAuction";
+import ProductDetailsANA from "./ProductDetailsANA";
 
 const ProductDetails = () => {
   const temp = ["1", "2", "3", "4", "5"];
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
 
   const mainImageRef = useRef(null);
   const thumbsRef = useRef(null);
@@ -18,6 +22,64 @@ const ProductDetails = () => {
     "/img/image4.jpg",
     "/img/image5.jpg",
   ];
+
+  const [productDescription, setProductDescription] = useState(`
+    <p>
+      Áo khoác <strong>MSI RED T1</strong> là sự kết hợp bùng nổ giữa nhà sản xuất
+      phần cứng gaming hàng đầu thế giới <strong>MSI (Micro-Star
+      International)</strong> và đội tuyển Esports huyền thoại <strong>T1</strong>. Được
+      thiết kế dành riêng cho những nhà vô địch và fan hâm mộ cuồng
+      nhiệt, chiếc áo này không chỉ là một trang phục mà còn là biểu
+      tượng rực lửa của tinh thần "Dare to win". Tông màu <strong>Đen</strong> mạnh
+      mẽ làm nền, kết hợp hài hòa với các chi tiết <strong>Đỏ (RED)</strong> đặc
+      trưng, tạo nên vẻ ngoài cực kỳ nổi bật và cuốn hút.
+    </p>
+    <br />
+    <p>
+      Về chất liệu, áo được chế tạo từ <strong>Vải dù cao cấp
+      (Polyester/Nylon)</strong> có khả năng chống thấm nước nhẹ và chắn gió
+      hiệu quả, đảm bảo sự thoải mái trong mọi điều kiện thời tiết. Đặc
+      biệt, lớp lót lưới <strong>(Mesh lining)</strong> bên trong tăng cường khả năng
+      thoáng khí và thấm hút mồ hôi, giữ cho cơ thể luôn khô ráo và mát
+      mẻ trong các hoạt động năng động hay những trận chiến căng thẳng.
+      Logo Rồng MSI uy dũng và logo T1 được thêu/in ấn tượng, khẳng định
+      đẳng cấp và phong cách của người mặc. Đây là món đồ không thể
+      thiếu để thể hiện niềm đam mê Esports và phong cách đường phố mạnh
+      mẽ.
+    </p>
+    <br />
+    <p>
+      電源入り撮影出来ましたが細部の機能までは確認していません。
+      不得意ジャンルの買い取り品の為細かい確認出来る知識がありません、ご了承ください。
+      簡単な確認方法が有れば確認しますので方法等質問欄からお願いします、終了日の質問には答えられない場合があります。
+      付属品、状態は画像でご確認ください。
+      当方詳しくありませんので高度な質問には答えられない場合がありますがご了承ください。
+      発送は佐川急便元払いを予定しています、破損防止の為梱包サイズが大きくなる事がありますがご了承下さい。 
+      中古品の為NC/NRでお願いします。<br/>
+
+      ✏️ 31/10/2025 <br/>
+
+      - が大きくなる事がありますがご了承下さい。 <br/>
+
+      ✏️ 5/11/2025 <br/>
+
+      - 不得意ジャンルの買い取り品の為細かい確認出来る知識がありません、ご了承ください。 <br/>
+    </p>
+  `);
+
+  const currentUserId = "user123";
+  const sellerId = "user123";
+  const isOwner = currentUserId === sellerId;
+
+  const handleSaveDescription = async (newDescription) => {
+    try {
+      setProductDescription(newDescription);
+      alert("Cập nhật mô tả thành công!");
+    } catch (error) {
+      console.error("Có lỗi xảy ra khi cập nhật", error);
+      alert("Có lỗi xảy ra khi cập nhật.");
+    }
+  };
 
   useEffect(() => {
     const VISIBLE_THUMBS = 4;
@@ -157,7 +219,10 @@ const ProductDetails = () => {
           </div>
 
           {/* Bid Button */}
-          <button className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8">
+          <button
+            className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
+            onClick={() => setActiveTab("auction")}
+          >
             Ra Giá Ngay!
           </button>
         </div>
@@ -168,42 +233,48 @@ const ProductDetails = () => {
         {/* Tabs */}
         <div className="mt-12">
           <div className="grid grid-cols-3 gap-8 border-b">
-            <button className="py-4 px-2 border-b-2 border-black font-medium">
+            <button
+              onClick={() => setActiveTab("details")}
+              className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                activeTab === "details"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-600 hover:text-black"
+              }`}
+            >
               Chi Tiết Sản Phẩm
             </button>
-            <button className="py-4 px-2 text-gray-600 hover:text-black">
+            <button
+              onClick={() => setActiveTab("auction")}
+              className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                activeTab === "auction"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-600 hover:text-black"
+              }`}
+            >
               Bắt đầu đấu giá
             </button>
-            <button className="py-4 px-2 text-gray-600 hover:text-black">
+            <button
+              onClick={() => setActiveTab("qa")}
+              className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                activeTab === "qa"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-600 hover:text-black"
+              }`}
+            >
               Hỏi Đáp
             </button>
           </div>
 
-          {/* Product Description */}
-          <div className="py-6 text-gray-700 leading-relaxed">
-            <p>
-              Áo khoác **MSI RED T1** là sự kết hợp bùng nổ giữa nhà sản xuất
-              phần cứng gaming hàng đầu thế giới **MSI (Micro-Star
-              International)** và đội tuyển Esports huyền thoại **T1**. Được
-              thiết kế dành riêng cho những nhà vô địch và fan hâm mộ cuồng
-              nhiệt, chiếc áo này không chỉ là một trang phục mà còn là biểu
-              tượng rực lửa của tinh thần "Dare to win". Tông màu **Đen** mạnh
-              mẽ làm nền, kết hợp hài hòa với các chi tiết **Đỏ (RED)** đặc
-              trưng, tạo nên vẻ ngoài cực kỳ nổi bật và cuốn hút.
-              <br />
-              <br />
-              Về chất liệu, áo được chế tạo từ **Vải dù cao cấp
-              (Polyester/Nylon)** có khả năng chống thấm nước nhẹ và chắn gió
-              hiệu quả, đảm bảo sự thoải mái trong mọi điều kiện thời tiết. Đặc
-              biệt, lớp lót lưới **(Mesh lining)** bên trong tăng cường khả năng
-              thoáng khí và thấm hút mồ hôi, giữ cho cơ thể luôn khô ráo và mát
-              mẻ trong các hoạt động năng động hay những trận chiến căng thẳng.
-              Logo Rồng MSI uy dũng và logo T1 được thêu/in ấn tượng, khẳng định
-              đẳng cấp và phong cách của người mặc. Đây là món đồ không thể
-              thiếu để thể hiện niềm đam mê Esports và phong cách đường phố mạnh
-              mẽ.
-            </p>
-          </div>
+          {/* Tab Contents */}
+          {activeTab === "details" && (
+            <ProductDetailsInformation
+              description={productDescription}
+              isOwner={isOwner}
+              onSave={handleSaveDescription}
+            />
+          )}
+          {activeTab === "auction" && <ProductDetailsAuction />}
+          {activeTab === "qa" && <ProductDetailsANA />}
         </div>
       </div>
 

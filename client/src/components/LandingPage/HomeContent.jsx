@@ -1,7 +1,6 @@
-import { Card, Button } from "flowbite-react";
-import { HiTrash } from "react-icons/hi";
+import { Card } from "flowbite-react";
+import ProductCarousel from "./ProductCarousel"
 import ProductCardP from "../Product/ProductCardP"
-
 const products = [
   {
     id: 1,
@@ -58,30 +57,29 @@ const products = [
     endDate: "2025-11-18",
     bidCount: 22,
   },
-  {
-    id: 6,
-    name: "Tranh sơn dầu phong cảnh cổ điển",
-    image: "/img/image1.jpg",
-    currentPrice: 8500000,
-    buyNowPrice: null,
-    highestBidder: "VuThiF",
-    postedDate: "2025-11-01",
-    endDate: "2025-11-16",
-    bidCount: 18,
-  },
 ];
 
-export default function WatchList() {
-  const count = products.length;
-
+const HomeContent = () => {
+  const temp = ["1", "2", "3", "4", "5"];
   return (
-    <>
-      <h2 className="text-lg font-bold p-4">Yêu thích ({count})</h2>
-      <div className="w-full grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        {products.map((item, i) => (
-          <ProductCardP product={product} />
-        ))}
+    <div className="flex flex-wrap gap-4 justify-center">
+      <div className="max-w-[380px] sm:max-w-[500px] lg:max-w-[675px] mx-auto p-3">
+        <ProductCarousel />
       </div>
-    </>
+      <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
+          {products.map((product, i) => (
+            <ProductCardP key={i} product={product} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
+          {products.map((product, i) => (
+            <ProductCardP key={i} product={product} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
-}
+};
+
+export default HomeContent;
