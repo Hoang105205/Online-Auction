@@ -1,3 +1,5 @@
+import WatchList from "../../components/Account/WatchList";
+
 export default function WatchlistPage() {
-  return <div className="p-6">My Watchlist (Coming soon)</div>;
+  return <WatchList />
 }
