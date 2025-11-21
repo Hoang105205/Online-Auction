@@ -6,6 +6,7 @@ import {
   FooterLink,
   FooterLinkGroup,
 } from "flowbite-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -18,22 +19,22 @@ const Footer = () => {
             alt="Auctify Logo"
             name="Auctify"
           /> */}
-            <FooterLinkGroup>
-              <FooterLink href="#" className="text-white">
+            <FooterLinkGroup className="gap-4">
+              <Link to="/" className="text-white">
                 Trang chủ
-              </FooterLink>
-              <FooterLink href="#" className="text-white">
-                Sản phẩm đang đấu giá
-              </FooterLink>
-              <FooterLink href="#" className="text-white">
-                Sản phẩm thắng
-              </FooterLink>
-              <FooterLink href="#" className="text-white">
+              </Link>
+              <Link to="/account" className="text-white">
                 Tài khoản của tôi
-              </FooterLink>
+              </Link>
+              <Link to="/account/auctions" className="text-white">
+                Sản phẩm đang đấu giá
+              </Link>
+              <Link to="/account/win-auctions" className="text-white">
+                Sản phẩm thắng
+              </Link>
             </FooterLinkGroup>
           </div>
-          <FooterDivider className="hidden md:block"/>
+          <FooterDivider className="hidden md:block" />
           <FooterCopyright
             href="#"
             className="text-white"

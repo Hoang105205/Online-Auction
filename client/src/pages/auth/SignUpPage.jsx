@@ -3,7 +3,11 @@ import { Button, Label, TextInput, Card } from "flowbite-react";
 import { FaFacebook, FaLinkedin, FaGoogle } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
+import { signup } from "../../api/authService";
+
 const SignUpPage = () => {
+  const [submitError, setSubmitError] = useState(null);
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -23,15 +27,31 @@ const SignUpPage = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     // Simple front-end validation before calling API
     if (!passwordsMatch) {
-      // Early return if passwords don't match
       return;
     }
-    // Handle signup logic here
-    console.log("Sign Up:", formData);
+
+    const userData = {
+      email: formData.email,
+      password: formData.password,
+      fullName: formData.fullName,
+      address: formData.address,
+    };
+
+    const handleSignup = async () => {
+      try {
+        const result = await signup(userData);
+        console.log("User signed up successfully:", result);
+        setSubmitError(null);
+      } catch (error) {
+        setSubmitError(error.response?.data?.message || "Signup failed");
+      }
+    };
+
+    await handleSignup();
   };
 
   return (
@@ -250,6 +270,9 @@ const SignUpPage = () => {
                     Đăng nhập
                   </Button>
                 </Link>
+                {submitError && (
+                  <p className="text-red-600 text-sm mt-2">{submitError}</p>
+                )}
               </div>
             </form>
           </div>

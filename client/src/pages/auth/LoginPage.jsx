@@ -1,17 +1,73 @@
-import { useState } from "react";
 import { Button, Label, TextInput, Card } from "flowbite-react";
 import { FaFacebook, FaLinkedin, FaGoogle } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useEffect } from "react";
+
+import { login } from "../../api/authService";
+import useAuth from "../../hooks/useAuth";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { auth, setAuth } = useAuth();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle login logic here
-    console.log("Login:", { email, password });
+  const [loginError, setLoginError] = useState(null);
+  const navigate = useNavigate();
+
+  const loginSchema = z.object({
+    email: z.email("Email không hợp lệ"),
+    password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = async (data) => {
+    const handleLogin = async () => {
+      try {
+        const result = await login(data.email, data.password);
+
+        const { accessToken, roles, email, fullName } = result;
+
+        // 1. XỬ LÝ LỖI ROLES: Đảm bảo roles là một mảng HỢP LỆ
+        const userRoles = roles || [];
+
+        // 2. LƯU THÔNG TIN VÀO CONTEXT (Global State)
+        setAuth({ accessToken, roles: userRoles, email, fullName }); // <-- Dùng roles: userRoles
+
+        setLoginError(null);
+
+        // 3. XÓA BỎ LỆNH navigate("/") TẠI ĐÂY!
+
+        // Console log để kiểm tra (chúng ta dùng userRoles đã được chuẩn hóa)
+        console.log("Roles after setting Auth:", userRoles);
+        console.log("Context after setting Auth:", {
+          accessToken,
+          roles: userRoles,
+          email,
+        });
+      } catch (error) {
+        setLoginError(error.response?.data?.message || "Login failed");
+      }
+    };
+
+    await handleLogin();
   };
+
+  useEffect(() => {
+    // Nếu Access Token xuất hiện trong Context, chuyển hướng
+    if (auth?.accessToken) {
+      navigate("/"); // Hoặc đường dẫn mà bạn muốn chuyển đến
+    }
+  }, [auth, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -46,7 +102,7 @@ const LoginPage = () => {
             <h1 className="md:hidden text-4xl font-extrabold text-sky-500 drop-shadow-md text-center mb-6">
               Auctify
             </h1>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Email Input */}
               <div>
                 <Label htmlFor="email" value="Email" className="sr-only" />
@@ -54,12 +110,16 @@ const LoginPage = () => {
                   id="email"
                   type="email"
                   placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  {...register("email")}
+                  color={errors.email ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               {/* Password Input */}
@@ -73,12 +133,16 @@ const LoginPage = () => {
                   id="password"
                   type="password"
                   placeholder="Mật khẩu"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
+                  {...register("password")}
+                  color={errors.password ? "failure" : "gray"}
                   className="w-full"
                   sizing="lg"
                 />
+                {errors.password && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               {/* Forgot Password Link */}
@@ -96,9 +160,16 @@ const LoginPage = () => {
                 type="submit"
                 className="bg-sky-600 w-full hover:bg-sky-700"
                 size="lg"
+                disabled={isSubmitting}
               >
                 Đăng nhập
               </Button>
+
+              {loginError && (
+                <p className="text-sm text-red-600 mt-1 text-center">
+                  {loginError}
+                </p>
+              )}
 
               {/* Social Login Buttons */}
               <div className="flex gap-3 justify-center">

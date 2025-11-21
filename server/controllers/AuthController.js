@@ -49,10 +49,13 @@ const login = async (req, res) => {
       return;
     }
 
-    const { accessToken, refreshToken } = await UserService.loginUser(
-      email,
-      password
-    );
+    const {
+      accessToken,
+      refreshToken,
+      email: userEmail,
+      fullName,
+      roles,
+    } = await UserService.loginUser(email, password);
 
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
@@ -61,7 +64,9 @@ const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
     });
 
-    return res.status(200).json({ accessToken });
+    return res
+      .status(200)
+      .json({ accessToken, email: userEmail, fullName, roles });
   } catch (error) {
     res
       .status(error.statusCode || 500)
@@ -69,4 +74,18 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { signup, login };
+const refreshToken = async (req, res) => {
+  try {
+    const cookies = req.cookies;
+    
+    const { accessToken, email, fullName, roles } = await UserService.refreshToken(cookies.jwt);
+
+    return res
+      .status(200)
+      .json({ accessToken, email, fullName, roles });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ message: error.message || "Lỗi máy chủ." });
+  }
+};
+
+module.exports = { signup, login, refreshToken };

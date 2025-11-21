@@ -64,10 +64,58 @@ class UserService {
       foundUser.refreshToken = refreshToken;
       await foundUser.save();
 
-      return { accessToken, refreshToken };
+      return {
+        accessToken,
+        refreshToken,
+        email: foundUser.email,
+        fullName: foundUser.fullName,
+        roles: foundUser.roles,
+      };
     } else {
       const error = new Error("Sai tên đăng nhập hoặc mật khẩu.");
       error.statusCode = 401; // Unauthorized
+      throw error;
+    }
+  }
+
+  static async refreshToken(refreshToken) {
+    if (!refreshToken) {
+      const error = new Error("Refresh token không được cung cấp.");
+      error.statusCode = 401; // Unauthorized
+      throw error;
+    }
+
+    const foundUser = await User.findOne({ refreshToken }).exec();
+
+    if (!foundUser) {
+      const error = new Error("Refresh token không hợp lệ.");
+      error.statusCode = 403; // Forbidden
+      throw error;
+    }
+
+    try {
+      const accessToken = jwt.sign(
+        {
+          UserInfo: {
+            id: foundUser._id,
+            email: foundUser.email,
+            fullname: foundUser.fullName,
+            roles: foundUser.roles,
+          },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      return {
+        accessToken,
+        email: foundUser.email,
+        fullName: foundUser.fullName,
+        roles: foundUser.roles,
+      };
+    } catch (err) {
+      const error = new Error("Refresh token không hợp lệ.");
+      error.statusCode = 403; // Forbidden
       throw error;
     }
   }
