@@ -1,18 +1,82 @@
 import { useState } from 'react';
 import Category from "./Category"
 import { Button } from "flowbite-react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+
+const categories = [
+    {
+      id: "dien-tu",
+      title: "Điện tử",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "thoi-trang",
+      title: "Thời trang",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "nghe-thuat",
+      title: "Nghệ thuật",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "tui-dung",
+      title: "Túi đựng",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "noi-that",
+      title: "Nội thất",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "trang-tri",
+      title: "Trang trí",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+    {
+      id: "ruou-chung-cat",
+      title: "Rượu chưng cất",
+      items: [
+        { to: "/HELLO", label: "HELLO" },
+        { to: "/HEHE", label: "HEHE" },
+        { to: "/ABC", label: "ABC" },
+        { to: "/A", label: "AAAAAAAAAAAAA" },
+      ],
+    },
+  ];
 
 const SideBar = () => {
-  const [categories] = useState([
-    "Điện tử",
-    "Thời trang",
-    "Nghệ thuật",
-    "Túi đựng",
-    "Nội thất",
-    "Trang trí",
-    "Rượu chưng cất",
-  ]);
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   
   return (
@@ -26,7 +90,6 @@ const SideBar = () => {
       <div
         className={`fixed top-0 left-0 h-full w-[300px] bg-gray-100 p-4 transform transition-transform duration-300 z-40
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}
-        onMouseLeave={() => isOpenMobile(false)}
       >
         <form className="max-w-md mx-auto">   
           <label htmlFor="default-search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
@@ -47,8 +110,8 @@ const SideBar = () => {
         </form>
         <div className="w-full mx-auto p-2">
         {categories != null && (
-          categories.map((category, i) => (
-          <Category key={i} category={category} />
+          categories.map((category) => (
+          <Category key={category.id} category={category} />
           )
         ))}
         </div>

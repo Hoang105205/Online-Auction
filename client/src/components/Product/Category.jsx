@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NavLink } from "react-router-dom";
 
 export const Category = ({ category }) => {
   const [open, setOpen] = useState(false);
@@ -9,7 +10,7 @@ export const Category = ({ category }) => {
         className="justify-between w-full text-black hover:bg-gray-200 focus:bg-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center" 
         type="button"
       >
-        {category}
+        {category.title}
         <svg className="w-2.5 h-2.5 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m1 9 4-4-4-4" />
         </svg>
@@ -19,7 +20,17 @@ export const Category = ({ category }) => {
           <div 
             className="absolute shadow-md z-10 bg-white divide-gray-100 rounded-lg dark:bg-gray-700"
           >
-            <ul className="text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDefault">
+            {category.items.map((item, _) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end
+                className={"block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"}
+              >
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+            {/* <ul className="text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDefault">
               <li>
                 <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">HALAAAAAAAAAAAAAAAAO</a>
               </li>
@@ -32,7 +43,7 @@ export const Category = ({ category }) => {
               <li>
                 <a href="#" className="block rounded-lg px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Sign out</a>
               </li>
-            </ul>
+            </ul> */}
           </div>
         </div>
       )}

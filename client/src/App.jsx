@@ -36,6 +36,7 @@ const router = createBrowserRouter(
         <Route path="account" element={<AccountLayout />}>
           <Route index element={<ProfilePage />} />
           <Route path="rating" element={<RatingPage />} />
+          <Route path="watchlist" element={<WatchlistPage />} />
           <Route path="auctions" element={<AuctionsPage />} />
           <Route path="win-auctions" element={<WinAuctionsPage />} />
           <Route path="my-products" element={<MyProductsPage />} />
