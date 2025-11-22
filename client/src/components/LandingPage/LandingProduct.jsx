@@ -1,5 +1,3 @@
-import { useState } from "react";
-import Category from "./Category";
 import HomeContent from "./HomeContent";
 import SideBar from "./SideBar";
 
