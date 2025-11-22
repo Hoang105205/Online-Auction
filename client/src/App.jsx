@@ -15,6 +15,7 @@ import SettingsPage from "./pages/Admin/SettingsPage";
 
 import MainLayout from "./layouts/MainLayout";
 import LandingPage from "./pages/LandingPage";
+import CategoryPage from "./pages/CategoryPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
@@ -51,6 +52,7 @@ const router = createBrowserRouter(
           <Route path="details/:id" element={<DetailsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/category/*" element={<CategoryPage />} />
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>

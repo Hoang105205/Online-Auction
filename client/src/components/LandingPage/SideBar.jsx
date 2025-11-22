@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Category from "./Category"
+import Category from "../Category/Category"
 import { Button } from "flowbite-react";
 import { ChevronRight } from "lucide-react";
 
@@ -8,77 +8,77 @@ const categories = [
       id: "dien-tu",
       title: "Điện tử",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "thoi-trang",
       title: "Thời trang",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "nghe-thuat",
       title: "Nghệ thuật",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "tui-dung",
       title: "Túi đựng",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "noi-that",
       title: "Nội thất",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "trang-tri",
       title: "Trang trí",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
     {
       id: "ruou-chung-cat",
       title: "Rượu chưng cất",
       items: [
-        { to: "/HELLO", label: "HELLO" },
-        { to: "/HEHE", label: "HEHE" },
-        { to: "/ABC", label: "ABC" },
-        { to: "/A", label: "AAAAAAAAAAAAA" },
+        { to: "HELLO", label: "HELLO" },
+        { to: "HEHE", label: "HEHE" },
+        { to: "ABC", label: "ABC" },
+        { to: "A", label: "AAAAAAAAAAAAA" },
       ],
     },
   ];
 
 const SideBar = () => {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
-  
+
   return (
     <div onMouseLeave={() => setIsOpenMobile(false)}>
       <Button
