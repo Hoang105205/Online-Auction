@@ -222,7 +222,7 @@ const SignUpPage = () => {
 
               {/* Social Sign Up Buttons */}
               <div className="flex gap-3 justify-center">
-                <button
+                {/* <button
                   type="button"
                   className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                   aria-label="Sign up with Facebook"
@@ -235,11 +235,16 @@ const SignUpPage = () => {
                   aria-label="Sign up with LinkedIn"
                 >
                   <FaLinkedin className="w-6 h-6 text-blue-700" />
-                </button>
+                </button> */}
                 <button
                   type="button"
                   className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                   aria-label="Sign up with Google"
+                  onClick={() =>
+                    (window.location.href = `${
+                      import.meta.env.VITE_API_URL
+                    }/api/auth/google`)
+                  }
                 >
                   <FaGoogle className="w-6 h-6 text-red-600" />
                 </button>

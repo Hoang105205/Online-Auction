@@ -6,6 +6,8 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const passport = require("passport");
+require("./config/passport"); 
 
 // Cấu hình CORS
 const CORS_OPTIONS = require("./config/cors");
@@ -13,6 +15,9 @@ app.use(cors(CORS_OPTIONS));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser()); // Sử dụng cookie-parser
+
+// Khởi động Passport
+app.use(passport.initialize());
 
 // --- Kết nối Database ---
 const mongoose = require("mongoose");

@@ -18,6 +18,7 @@ import LandingPage from "./pages/LandingPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
+import LoginSuccess from "./pages/auth/LoginSuccess.jsx";
 import NotFoundPage from "./pages/NotFoundPage";
 
 // Account related pages and layout
@@ -51,6 +52,7 @@ const router = createBrowserRouter(
           <Route path="details/:id" element={<DetailsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/login-success" element={<LoginSuccess />} />
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>

@@ -1,6 +1,6 @@
 import { Button, Label, TextInput, Card } from "flowbite-react";
 import { FaFacebook, FaLinkedin, FaGoogle } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,8 @@ import useAuth from "../../hooks/useAuth";
 
 const LoginPage = () => {
   const { auth, setAuth } = useAuth();
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loginError, setLoginError] = useState(null);
   const navigate = useNavigate();
@@ -58,6 +60,30 @@ const LoginPage = () => {
       navigate("/");
     }
   }, [auth, navigate]);
+
+  useEffect(() => {
+    const errorType = searchParams.get("error");
+
+    if (errorType) {
+      switch (errorType) {
+        case "google_auth_failed":
+          setLoginError(
+            "Bạn đã hủy đăng nhập Google hoặc phiên kết nối hết hạn."
+          );
+          break;
+        case "google_failed":
+          setLoginError(
+            "Lỗi hệ thống khi tạo tài khoản. Vui lòng thử lại hoặc dùng Email khác."
+          );
+          break;
+        default:
+          setLoginError("Đăng nhập thất bại. Vui lòng thử lại.");
+      }
+    }
+
+    searchParams.delete("error");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -163,7 +189,7 @@ const LoginPage = () => {
 
               {/* Social Login Buttons */}
               <div className="flex gap-3 justify-center">
-                <button
+                {/* <button
                   type="button"
                   className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                   aria-label="Login with Facebook"
@@ -176,11 +202,16 @@ const LoginPage = () => {
                   aria-label="Login with LinkedIn"
                 >
                   <FaLinkedin className="w-6 h-6 text-blue-700" />
-                </button>
+                </button> */}
                 <button
                   type="button"
                   className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                   aria-label="Login with Google"
+                  onClick={() =>
+                    (window.location.href = `${
+                      import.meta.env.VITE_API_URL
+                    }/api/auth/google`)
+                  }
                 >
                   <FaGoogle className="w-6 h-6 text-red-600" />
                 </button>
