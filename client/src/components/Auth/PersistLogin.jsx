@@ -20,7 +20,7 @@ const PersistLogin = () => {
       } catch (err) {
         // Nếu lỗi (Token hết hạn hoặc không có), ta chỉ log ra console
         // Không làm gì cả, auth vẫn rỗng -> Giao diện sẽ hiển thị như Guest
-        console.log("Không thể khôi phục phiên đăng nhập:", err);
+        console.log("Không thể khôi phục phiên đăng nhập:");
       } finally {
         // Dù thành công hay thất bại, cũng phải tắt loading để hiện trang web
         if (isMounted) setIsLoading(false);

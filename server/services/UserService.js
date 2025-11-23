@@ -7,25 +7,116 @@ const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 
 class UserService {
   static async registerUser(userData) {
-    const existingUser = await User.findOne({ email: userData.email }).exec();
-    if (existingUser) {
-      const error = new Error("Email đã được đăng ký.");
-      error.statusCode = 409;
-      throw error;
+    let user = await User.findOne({ email: userData.email }).exec();
+    if (user) {
+      // Nếu user đã tồn tại và đã verified
+      if (user.isVerified) {
+        const error = new Error("Email đã được đăng ký.");
+        error.statusCode = 409;
+        throw error;
+      }
     }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // OTP expires in 5 minutes
 
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
 
-    const newUser = new User({ ...userData, password: hashedPassword });
-    const user = await newUser.save();
+    if (user) {
+      user.password = hashedPassword;
+      user.fullName = userData.fullName;
+      user.address = userData.address;
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+    } else {
+      user = new User({
+        ...userData,
+        password: hashedPassword,
+        otp: otp,
+        otpExpires: otpExpires,
+        isVerified: false,
+      });
+    }
 
-    const userDto = user.toObject();
+    const subject = "Mã xác thực đăng ký Auctify";
+    const htmlMessage = `
+<div style="background:#f4f7f9;padding:32px 12px;font-family:Helvetica,Arial,sans-serif;line-height:1.55;color:#1f2937;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:28px 24px;text-align:center;">
+      <h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.5px;color:#ffffff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">Auctify</h1>
+      <p style="margin:8px 0 0;font-size:13px;font-weight:500;color:#e0f2fe;letter-spacing:1px;text-transform:uppercase;">Đăng ký tài khoản</p>
+    </div>
 
-    // Loại bỏ các trường nhạy cảm trước khi trả về
-    delete userDto.password;
-    delete userDto.refreshToken;
+    <!-- Body -->
+    <div style="padding:38px 40px 30px;">
+      <p style="margin:0 0 18px;font-size:16px;font-weight:500;">Xin chào,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#374151;">Cảm ơn bạn đã chọn <strong style="color:#0ea5e9;">Auctify</strong>. Vui lòng sử dụng mã OTP bên dưới để hoàn tất quá trình đăng ký. Mã có hiệu lực trong <strong>5 phút</strong>.</p>
 
-    return userDto;
+      <div style="text-align:center;margin:30px 0 34px;">
+        <div style="display:inline-block;background:#0ea5e9;color:#ffffff;font-weight:700;font-size:32px;letter-spacing:6px;padding:18px 34px;border-radius:12px;font-family:'Roboto',Helvetica,Arial,sans-serif;box-shadow:0 4px 10px rgba(14,165,233,0.35);">
+          ${otp}
+        </div>
+        <p style="margin:16px 0 0;font-size:12px;color:#64748b;">Không chia sẻ mã này với bất kỳ ai.</p>
+      </div>
+
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;padding:16px 18px;border-radius:10px;font-size:13px;color:#0369a1;line-height:1.5;">
+        Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email. Tài khoản sẽ không được kích hoạt nếu bạn không xác thực.
+      </div>
+
+      <p style="margin:34px 0 6px;font-size:13px;color:#6b7280;">Trân trọng,</p>
+      <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">Auctify Team</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f9fafb;padding:18px 24px;text-align:center;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Bạn gặp vấn đề? Liên hệ <a href="mailto:auctify.onlineauction@gmail.com" style="color:#0ea5e9;text-decoration:none;font-weight:600;">auctify.onlineauction@gmail.com</a></p>
+      <p style="margin:10px 0 0;font-size:11px;color:#94a3b8;">© 2025 Auctify. All rights reserved.</p>
+    </div>
+  </div>
+</div>
+`;
+
+    // Gửi mail bất đồng bộ
+    sendEmail(userData.email, subject, htmlMessage).catch(console.error);
+
+    await user.save();
+
+    return { email: user.email };
+  }
+
+  static async verifyEmailOTP(email, otp) {
+    const user = await User.findOne({ email }).exec();
+
+    if (!user) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
+    if (user.isVerified) {
+      return { message: "Tài khoản đã được xác minh trước đó." };
+    }
+
+    if (!user.otp || user.otp !== otp) {
+      const error = new Error("Mã OTP không hợp lệ.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (user.otpExpires < Date.now()) {
+      const error = new Error("Mã OTP đã hết hạn. Vui lòng đăng ký lại.");
+      error.statusCode = 400; // Bad Request
+      throw error;
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    return { message: "Xác thực thành công." };
   }
 
   static async verifyCredentials(email, password) {
@@ -34,6 +125,12 @@ class UserService {
     if (!foundUser) {
       const error = new Error("Không tìm thấy người dùng.");
       error.statusCode = 401; // Unauthorized
+      throw error;
+    }
+
+    if (!foundUser.isVerified) {
+      const error = new Error("Tài khoản chưa được xác minh.");
+      error.statusCode = 403; // Forbidden
       throw error;
     }
 
@@ -81,6 +178,7 @@ class UserService {
       // Cập nhật googleId nếu chưa có (để lần sau nhận diện nhanh hơn)
       if (!user.googleId) {
         user.googleId = googleId;
+        user.isVerified = true; // Đã xác minh qua Google
         await user.save();
       }
       return user;
@@ -100,6 +198,7 @@ class UserService {
       fullName: fullName,
       googleId: googleId,
       roles: [2001], // Mặc định là Bidder
+      isVerified: true, // Đã xác minh qua Google
       // address: Sẽ null, chờ user cập nhật
     });
 

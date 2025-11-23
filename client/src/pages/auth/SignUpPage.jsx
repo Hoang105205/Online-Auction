@@ -3,12 +3,13 @@ import { Button, Label, TextInput, Card } from "flowbite-react";
 import { FaFacebook, FaLinkedin, FaGoogle } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
-import { signup } from "../../api/authService";
+import { signup, verifyOTP } from "../../api/authService";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import ReCAPTCHA from "react-google-recaptcha";
+import { toast } from "react-toastify";
 
 const SignUpPage = () => {
   const [submitError, setSubmitError] = useState(null);
@@ -17,6 +18,11 @@ const SignUpPage = () => {
   const [recaptchaToken, setRecaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
   const [recaptchaSize, setRecaptchaSize] = useState("normal");
+
+  const [isOtpStep, setIsOtpStep] = useState(false); // Check xem đang ở bước nào
+  const [pendingEmail, setPendingEmail] = useState(""); // Lưu email để verify
+  const [otp, setOtp] = useState(""); // Lưu mã OTP người dùng nhập
+  const [error, setError] = useState(""); // Lưu lỗi
 
   useEffect(() => {
     const handleResize = () => {
@@ -86,12 +92,29 @@ const SignUpPage = () => {
         address: data.address,
         recaptchaToken: recaptchaToken,
       });
+
+      setPendingEmail(data.email);
+      setIsOtpStep(true);
+      toast.success("OTP đã được gửi đến email của bạn");
       setSubmitError(null);
-      navigate("/login");
+      setError(null);
     } catch (error) {
       recaptchaRef.current.reset();
       setRecaptchaToken(null);
-      setSubmitError(error.response?.data?.message || "Signup failed");
+      setSubmitError(error.response?.data?.message || "Đăng ký thất bại");
+      setError(error.response?.data?.message || "Đăng ký thất bại");
+    }
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await verifyOTP(pendingEmail, otp);
+      toast.success("Xác thực thành công! Đang chuyển hướng...");
+      setTimeout(() => navigate("/login"), 1200);
+    } catch (error) {
+      setError(error.response?.data?.message || "Xác thực OTP thất bại");
+      toast.error(error.response?.data?.message || "Xác thực OTP thất bại");
     }
   };
 
@@ -129,148 +152,204 @@ const SignUpPage = () => {
               Auctify
             </h1>
             <div className="mx-auto w-full max-w-md">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                {/* Full Name Input */}
-                <div>
-                  <Label
-                    htmlFor="fullName"
-                    value="Họ và Tên"
-                    className="sr-only"
-                  />
-                  <TextInput
-                    id="fullName"
-                    type="text"
-                    placeholder="Họ và Tên"
-                    {...register("fullName")}
-                    color={errors.fullName ? "failure" : "gray"}
-                    className="w-full"
-                    sizing="lg"
-                  />
-                  {errors.fullName && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.fullName.message}
+              {isOtpStep ? (
+                <form onSubmit={handleOtpSubmit} className="space-y-6">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold text-sky-600">
+                      Xác thực OTP
+                    </h2>
+                    <p className="text-gray-600 text-sm">
+                      Mã OTP đã gửi tới email{" "}
+                      <span className="font-semibold">{pendingEmail}</span>. Vui
+                      lòng kiểm tra hộp thư (bao gồm Spam/Junk).
                     </p>
-                  )}
-                </div>
-
-                {/* Email Input */}
-                <div>
-                  <Label htmlFor="email" value="Email" className="sr-only" />
-                  <TextInput
-                    id="email"
-                    type="email"
-                    placeholder="Email"
-                    {...register("email")}
-                    color={errors.email ? "failure" : "gray"}
-                    className="w-full"
-                    sizing="lg"
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Address Input */}
-                <div>
-                  <Label
-                    htmlFor="address"
-                    value="Địa chỉ"
-                    className="sr-only"
-                  />
-                  <TextInput
-                    id="address"
-                    type="text"
-                    placeholder="Địa chỉ"
-                    {...register("address")}
-                    color={errors.address ? "failure" : "gray"}
-                    className="w-full"
-                    sizing="lg"
-                  />
-                  {errors.address && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.address.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Password Input */}
-                <div>
-                  <Label
-                    htmlFor="password"
-                    value="Mật khẩu"
-                    className="sr-only"
-                  />
-                  <TextInput
-                    id="password"
-                    type="password"
-                    placeholder="Mật khẩu"
-                    {...register("password")}
-                    color={errors.password ? "failure" : "gray"}
-                    className="w-full"
-                    sizing="lg"
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.password.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Confirm Password Input */}
-                <div>
-                  <Label
-                    htmlFor="confirmPassword"
-                    value="Xác nhận mật khẩu"
-                    className="sr-only"
-                  />
-                  <TextInput
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Xác nhận mật khẩu"
-                    {...register("confirmPassword")}
-                    color={errors.confirmPassword ? "failure" : "gray"}
-                    className="w-full"
-                    sizing="lg"
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.confirmPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* ReCAPTCHA Placeholder */}
-                <div className="flex justify-center py-2">
-                  <div className="recaptcha-wrapper">
-                    <ReCAPTCHA
-                      key={recaptchaSize}
-                      ref={recaptchaRef}
-                      sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                      onChange={onCaptchaChange}
-                      size={recaptchaSize}
-                    />
                   </div>
-                </div>
+                  <div>
+                    <Label htmlFor="otp" value="Mã OTP" className="sr-only" />
+                    <TextInput
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Nhập mã OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.trim())}
+                      color={error ? "failure" : "gray"}
+                      sizing="lg"
+                      className="tracking-widest text-center"
+                      maxLength={6}
+                    />
+                    {error && (
+                      <p className="text-sm text-red-600 mt-1">{error}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      type="submit"
+                      className="bg-sky-600 w-full hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      size="lg"
+                      disabled={otp.length < 6}
+                    >
+                      Xác thực
+                    </Button>
+                    <Button
+                      type="button"
+                      color="gray"
+                      size="lg"
+                      onClick={() => {
+                        setIsOtpStep(false);
+                        setError("");
+                        // Không reset form để giữ lại dữ liệu người dùng đã nhập
+                      }}
+                    >
+                      Quay lại đăng ký
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Full Name Input */}
+                  <div>
+                    <Label
+                      htmlFor="fullName"
+                      value="Họ và Tên"
+                      className="sr-only"
+                    />
+                    <TextInput
+                      id="fullName"
+                      type="text"
+                      placeholder="Họ và Tên"
+                      {...register("fullName")}
+                      color={errors.fullName ? "failure" : "gray"}
+                      className="w-full"
+                      sizing="lg"
+                    />
+                    {errors.fullName && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.fullName.message}
+                      </p>
+                    )}
+                  </div>
 
-                {/* Sign Up Button */}
-                <Button
-                  type="submit"
-                  className="bg-sky-600 w-full hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  size="lg"
-                  disabled={!isValid || isSubmitting}
-                >
-                  Đăng ký
-                </Button>
+                  {/* Email Input */}
+                  <div>
+                    <Label htmlFor="email" value="Email" className="sr-only" />
+                    <TextInput
+                      id="email"
+                      type="email"
+                      placeholder="Email"
+                      {...register("email")}
+                      color={errors.email ? "failure" : "gray"}
+                      className="w-full"
+                      sizing="lg"
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
 
-                {submitError && (
-                  <p className="text-red-600 text-sm mt-2">{submitError}</p>
-                )}
+                  {/* Address Input */}
+                  <div>
+                    <Label
+                      htmlFor="address"
+                      value="Địa chỉ"
+                      className="sr-only"
+                    />
+                    <TextInput
+                      id="address"
+                      type="text"
+                      placeholder="Địa chỉ"
+                      {...register("address")}
+                      color={errors.address ? "failure" : "gray"}
+                      className="w-full"
+                      sizing="lg"
+                    />
+                    {errors.address && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.address.message}
+                      </p>
+                    )}
+                  </div>
 
-                {/* Social Sign Up Buttons */}
-                <div className="flex gap-3 justify-center">
-                  {/* <button
+                  {/* Password Input */}
+                  <div>
+                    <Label
+                      htmlFor="password"
+                      value="Mật khẩu"
+                      className="sr-only"
+                    />
+                    <TextInput
+                      id="password"
+                      type="password"
+                      placeholder="Mật khẩu"
+                      {...register("password")}
+                      color={errors.password ? "failure" : "gray"}
+                      className="w-full"
+                      sizing="lg"
+                    />
+                    {errors.password && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Confirm Password Input */}
+                  <div>
+                    <Label
+                      htmlFor="confirmPassword"
+                      value="Xác nhận mật khẩu"
+                      className="sr-only"
+                    />
+                    <TextInput
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Xác nhận mật khẩu"
+                      {...register("confirmPassword")}
+                      color={errors.confirmPassword ? "failure" : "gray"}
+                      className="w-full"
+                      sizing="lg"
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ReCAPTCHA Placeholder (ẩn ở bước OTP) */}
+                  {!isOtpStep && (
+                    <div className="flex justify-center py-2">
+                      <div className="recaptcha-wrapper">
+                        <ReCAPTCHA
+                          key={recaptchaSize}
+                          ref={recaptchaRef}
+                          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                          onChange={onCaptchaChange}
+                          size={recaptchaSize}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sign Up Button */}
+                  <Button
+                    type="submit"
+                    className="bg-sky-600 w-full hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="lg"
+                    disabled={!isValid || isSubmitting}
+                  >
+                    Đăng ký
+                  </Button>
+
+                  {submitError && (
+                    <p className="text-red-600 text-sm mt-2">{submitError}</p>
+                  )}
+
+                  {/* Social Sign Up Buttons */}
+                  <div className="flex gap-3 justify-center">
+                    {/* <button
                   type="button"
                   className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                   aria-label="Sign up with Facebook"
@@ -284,44 +363,45 @@ const SignUpPage = () => {
                 >
                   <FaLinkedin className="w-6 h-6 text-blue-700" />
                 </button> */}
-                  <button
-                    type="button"
-                    className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
-                    aria-label="Sign up with Google"
-                    onClick={() =>
-                      (window.location.href = `${
-                        import.meta.env.VITE_API_URL
-                      }/api/auth/google`)
-                    }
-                  >
-                    <FaGoogle className="w-6 h-6 text-red-600" />
-                  </button>
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 border-t border-gray-300"></div>
-                  <span className="text-gray-500 text-sm">Or</span>
-                  <div className="flex-1 border-t border-gray-300"></div>
-                </div>
-
-                {/* Login Link */}
-                <div className="text-center">
-                  <p className="text-gray-600 mb-3">Đã có tài khoản?</p>
-                  <Link
-                    to="/login"
-                    className="block w-full md:w-fit md:mx-auto"
-                  >
-                    <Button
-                      color="gray"
-                      size="lg"
-                      className="w-full md:w-fit px-12"
+                    <button
+                      type="button"
+                      className="p-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                      aria-label="Sign up with Google"
+                      onClick={() =>
+                        (window.location.href = `${
+                          import.meta.env.VITE_API_URL
+                        }/api/auth/google`)
+                      }
                     >
-                      Đăng nhập
-                    </Button>
-                  </Link>
-                </div>
-              </form>
+                      <FaGoogle className="w-6 h-6 text-red-600" />
+                    </button>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="text-gray-500 text-sm">Or</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                  </div>
+
+                  {/* Login Link */}
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-3">Đã có tài khoản?</p>
+                    <Link
+                      to="/login"
+                      className="block w-full md:w-fit md:mx-auto"
+                    >
+                      <Button
+                        color="gray"
+                        size="lg"
+                        className="w-full md:w-fit px-12"
+                      >
+                        Đăng nhập
+                      </Button>
+                    </Link>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

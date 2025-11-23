@@ -48,7 +48,7 @@ const signup = async (req, res) => {
 
     const defaultRoles = [ROLES_LIST.Bidder];
 
-    const newUser = await UserService.registerUser({
+    const result = await UserService.registerUser({
       email,
       password,
       fullName,
@@ -56,14 +56,36 @@ const signup = async (req, res) => {
       roles: defaultRoles,
     });
 
-    return res.status(201).json({
-      message: "Đăng ký thành công!",
-      user: newUser,
+    return res.status(200).json({
+      message: "Mã xác thực (OTP) đã được gửi đến email của bạn.",
+      email: result.email,
     });
   } catch (error) {
     res
       .status(error.statusCode || 500)
       .json({ message: error.message || "Lỗi máy chủ." });
+  }
+};
+
+const verifyOTP = async (req, res) => {
+  try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Dữ liệu không được để trống." });
+    }
+
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Vui lòng nhập đủ thông tin." });
+    }
+
+    const result = await UserService.verifyEmailOTP(email, otp);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Lỗi xác thực." });
   }
 };
 
@@ -196,4 +218,5 @@ module.exports = {
   refreshToken,
   logoutUser,
   loginGoogleCallback,
+  verifyOTP,
 };

@@ -20,3 +20,13 @@ export const signup = async (userData) => {
     throw error;
   }
 };
+
+// Hàm xử lý logic gọi API Xác thực OTP
+export const verifyOTP = async (email, otp) => {
+  try {
+    const response = await axiosPublic.post("/auth/verify-otp", { email, otp });
+    return response.data; // Trả về kết quả xác thực OTP
+  } catch (error) {
+    throw error;
+  }
+};
