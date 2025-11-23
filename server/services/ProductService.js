@@ -5,7 +5,7 @@ class ProductService {
   // update product description
   static async updateDescription(productId, newContent, sellerId) {
     try {
-      const product = await this.findById(productId);
+      const product = await Product.findById(productId);
 
       if (!product) {
         throw new Error("Product not found");
@@ -27,7 +27,7 @@ class ProductService {
   // add question to ProductDetailsQNA
   static async addQuestion(productId, sendId, message, type = "public") {
     try {
-      const product = await this.findById(productId);
+      const product = await Product.findById(productId);
 
       if (!product) {
         throw new Error("Product not found");
@@ -51,7 +51,7 @@ class ProductService {
   // add reply to a question
   static async addReply(productId, chatId, sendId, message) {
     try {
-      const product = await this.findById(productId);
+      const product = await Product.findById(productId);
       if (!product) {
         throw new Error("Product not found");
       }
@@ -78,7 +78,7 @@ class ProductService {
   // get number of followers
   static async getFollowers(productId) {
     try {
-      const product = await this.findById(productId);
+      const product = await Product.findById(productId);
       if (!product) {
         throw new Error("Product not found");
       }
@@ -91,7 +91,7 @@ class ProductService {
   // get product basic details (for above information)
   static async getProductBasicDetails(productId) {
     try {
-      const product = await this.findProductById(productId)
+      const product = await Product.findById(productId)
         .populate("detail.sellerId", "fullname feedbackAsSeller")
         .populate("auction.highestBidderId", "fullname feedbackAsBidder")
         .exec();
@@ -109,7 +109,7 @@ class ProductService {
   // get product Q&A
   static async getProductQA(productId) {
     try {
-      const product = await this.findById(productId)
+      const product = await Product.findById(productId)
         .populate("chat.sendId", "fullname")
         .populate("chat.receiveId", "fullname")
         .populate("chat.replies.sendId", "fullname")
@@ -127,7 +127,7 @@ class ProductService {
   // get product description
   static async getProductDescription(productId) {
     try {
-      const product = await this.findById(productId).exec();
+      const product = await Product.findById(productId).exec();
       if (!product) {
         throw new Error("Product not found");
       }
