@@ -19,6 +19,8 @@ import CategoryPage from "./pages/CategoryPage";
 import DetailsPage from "./pages/DetailsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import LoginSuccess from "./pages/auth/LoginSuccess.jsx";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -53,6 +55,8 @@ const router = createBrowserRouter(
           <Route path="details/:id" element={<DetailsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/category/*" element={<CategoryPage />} />
           <Route path="/login-success" element={<LoginSuccess />} />
 
@@ -78,13 +82,13 @@ const router = createBrowserRouter(
         {/* Yêu cầu Đã Đăng nhập với quyền Admin --> chưa config RequireAuth */}
         {/* Admin route */}
         <Route path="/admin" element={<AdminLayout />}>
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="categories" element={<CategoriesPage />} />
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="upgrade" element={<UpgradePage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="upgrade" element={<UpgradePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />

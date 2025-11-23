@@ -63,6 +63,12 @@ const userSchema = new Schema(
     otpExpires: {
       type: Date,
     },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
     feedBackAsBidder: {
       type: [feedbackSchema],
       default: [],

@@ -8,6 +8,8 @@ const {
   logoutUser,
   loginGoogleCallback,
   verifyOTP,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/AuthController");
 
 router.post("/signup", signup);
@@ -38,5 +40,9 @@ router.get(
 );
 
 router.post("/verify-otp", verifyOTP);
+
+router.post("/forgot-password", forgotPassword);
+
+router.post("/reset-password", resetPassword);
 
 module.exports = router;
