@@ -1,5 +1,6 @@
 const UserService = require("../services/UserService");
 const ROLES_LIST = require("../config/roles_list");
+const axios = require("axios");
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -12,11 +13,37 @@ const signup = async (req, res) => {
       return;
     }
 
-    const { email, password, fullName, address } = req.body;
+    const { email, password, fullName, address, recaptchaToken } = req.body;
 
     if (!email || !password || !fullName || !address) {
       res.status(400).json({ message: "Tất cả các trường là bắt buộc." });
       return;
+    }
+
+    if (!recaptchaToken) {
+      res.status(400).json({ message: "Vui lòng xác thực reCAPTCHA." });
+      return;
+    }
+
+    try {
+      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+
+      const params = new URLSearchParams();
+      params.append("secret", process.env.RECAPTCHA_SECRET_KEY);
+      params.append("response", recaptchaToken);
+
+      const googleResponse = await axios.post(verifyUrl, params);
+
+      const { success } = googleResponse.data;
+
+      if (!success) {
+        return res.status(400).json({ message: "Xác thực Captcha thất bại." });
+      }
+    } catch (captchaError) {
+      console.error("Lỗi kết nối Google ReCaptcha:", captchaError);
+      return res
+        .status(500)
+        .json({ message: "Lỗi xác thực Captcha từ phía Server." });
     }
 
     const defaultRoles = [ROLES_LIST.Bidder];
