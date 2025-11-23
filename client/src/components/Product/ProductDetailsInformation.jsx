@@ -56,7 +56,7 @@ const ProductDetailsInformation = ({ description, isOwner, onSave }) => {
                 Thêm thông tin mới:
               </h3>
               <Editor
-                apiKey="4sw6khf6ddhk3a13cyy0uxwcwycbteu6hgtzyalejo89ph29"
+                apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                 onInit={(evt, editor) => (editorRef.current = editor)}
                 value={editorContent}
                 init={{
