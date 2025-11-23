@@ -212,6 +212,50 @@ const loginGoogleCallback = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Dữ liệu không được để trống." });
+    }
+
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Vui lòng nhập email." });
+    }
+
+    await UserService.requestPasswordReset(email);
+
+    return res.status(200).json({ message: "Đã gửi email đặt lại mật khẩu." });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Lỗi máy chủ." });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Dữ liệu không được để trống." });
+    }
+
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ message: "Thiếu thông tin xác thực." });
+    }
+
+    const result = await UserService.resetPassword(email, token, newPassword);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Lỗi máy chủ." });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -219,4 +263,6 @@ module.exports = {
   logoutUser,
   loginGoogleCallback,
   verifyOTP,
+  forgotPassword,
+  resetPassword,
 };

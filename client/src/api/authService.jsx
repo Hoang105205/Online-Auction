@@ -30,3 +30,27 @@ export const verifyOTP = async (email, otp) => {
     throw error;
   }
 };
+
+// Hàm xử lý logic gọi API Quên mật khẩu
+export const forgotPassword = async (email) => {
+  try {
+    const response = await axiosPublic.post("/auth/forgot-password", { email });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Hàm xử lý logic gọi API Đặt lại mật khẩu
+export const resetPassword = async (email, token, newPassword) => {
+  try {
+    const response = await axiosPublic.post("/auth/reset-password", {
+      email,
+      token,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
