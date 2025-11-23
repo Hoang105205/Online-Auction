@@ -87,6 +87,11 @@ const SideBar = () => {
       >
         <ChevronRight size={20} />
       </Button>
+      {/* Mobile overlay (shown when sidebar is open) */}
+      {isOpenMobile && (
+        <div className="fixed inset-0 bg-black/40 z-30" onClick={() => setIsOpenMobile(false)} />
+      )}
+
       <div
         className={`fixed top-0 left-0 h-full w-[300px] bg-gray-100 p-4 transform transition-transform duration-300 z-40
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}
