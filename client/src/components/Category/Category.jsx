@@ -4,12 +4,29 @@ import { NavLink } from "react-router-dom";
 export const Category = ({ category }) => {
   const [open, setOpen] = useState(false);
   const [openSubIndex, setOpenSubIndex] = useState(null);
+  const [firstTap, setFirstTap] = useState(false);
 
   return (
     <div className="flex w-full p-1" onMouseLeave={() => { setOpen(false); setOpenSubIndex(null); }}>
       <NavLink
         to={`/category/${encodeURIComponent(category.title)}`}
         onMouseEnter={() => setOpen(true)}
+        onClick={(e) => {
+          const isMobile = window.innerWidth < 768;
+
+          if (!isMobile) return;
+
+          if (!firstTap) {
+            e.preventDefault();
+            setOpen(true);
+            setFirstTap(true);
+
+            setTimeout(() => setFirstTap(false), 2000);
+          } else {
+            setOpen(false);
+            setFirstTap(false);
+          }
+        }}
         className="justify-between w-full text-black hover:bg-gray-200 focus:bg-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
       >
         {category.title}
