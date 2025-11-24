@@ -7,7 +7,7 @@ const app = express();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const passport = require("passport");
-require("./config/passport"); 
+require("./config/passport");
 
 // Cấu hình CORS
 const CORS_OPTIONS = require("./config/cors");
@@ -25,12 +25,13 @@ const connectDB = require("./config/db");
 connectDB();
 
 // --- Routes ---
-app.use("/api/auth", require("./routes/AuthRoute")); 
+app.use("/api/auth", require("./routes/AuthRoute"));
+app.use("/api/products", require("./routes/ProductRoute"));
 
 // --- Middleware Xử lý Lỗi Cuối cùng ---
 app.use((req, res) => {
   res.status(404).json({ message: "Không tìm thấy tài nguyên." });
-})
+});
 
 // --- Lắng nghe kết nối DB và khởi động server ---
 const PORT = process.env.PORT || 3000;
