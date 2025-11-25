@@ -119,6 +119,7 @@ const login = async (req, res) => {
 
     return res.status(200).json({
       accessToken,
+      id: foundUser._id,
       email: foundUser.email,
       fullName: foundUser.fullName,
       roles: foundUser.roles,
@@ -152,6 +153,7 @@ const refreshToken = async (req, res) => {
 
     return res.status(200).json({
       accessToken,
+      id: foundUser._id,
       email: foundUser.email,
       fullName: foundUser.fullName,
       roles: foundUser.roles,

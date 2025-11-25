@@ -11,13 +11,14 @@ const useRefreshToken = () => {
     try {
       const response = await axiosPublic.get("/auth/refresh-token");
 
-      const { accessToken, roles, email, fullName } = response.data;
+      const { accessToken, id, roles, email, fullName } = response.data;
 
       setAuth((prev) => {
-        console.log("🔄 Đã khôi phục phiên đăng nhập:");
+        console.log("🔄 Đã khôi phục phiên đăng nhập: ");
         return {
           ...prev,
           accessToken,
+          id,
           roles,
           email,
           fullName,
