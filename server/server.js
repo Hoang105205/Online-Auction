@@ -26,7 +26,7 @@ connectDB();
 
 // --- Routes ---
 app.use("/api/auth", require("./routes/AuthRoute")); 
-app.use("/api/users", require("./routes/User"));
+app.use("/api/users", require("./routes/UserRoute"));
 
 // --- Middleware Xử lý Lỗi Cuối cùng ---
 app.use((req, res) => {

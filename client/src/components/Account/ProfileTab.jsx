@@ -3,9 +3,14 @@ import { Button, Label, TextInput } from "flowbite-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
 
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { getUserBasicProfile } from "../../api/userService";
+import {
+  getUserBasicProfile,
+  updateUserInfo,
+  updateUserPassword,
+} from "../../api/userService";
 
 import { Spinner } from "flowbite-react";
 
@@ -121,38 +126,82 @@ const ProfileTab = () => {
     };
   }, [axiosPrivate, reset]);
 
-  const onSubmitInfo = (data) => {
-    const payload = {
-      fullName: data.fullName,
-      email: data.email,
-      address: data.address,
-    };
-    console.log("Update basic info:", payload);
-    setUserData(payload);
-    // Keep password fields as current values
-    const { currentPassword, newPassword, confirmPassword } = getValues();
-    reset({ ...payload, currentPassword, newPassword, confirmPassword });
-    setIsEditingInfo(false);
+  const onSubmitInfo = async (data) => {
+    try {
+      const payload = {
+        fullName: data.fullName,
+        email: data.email,
+        address: data.address,
+      };
+
+      const result = await updateUserInfo(axiosPrivate, payload);
+
+      setUserData(payload);
+
+      toast.success(result.message);
+
+      // --- LOGIC RESET FORM ---
+      // Lấy giá trị các trường password hiện tại để không làm mất chúng
+      const { currentPassword, newPassword, confirmPassword } = getValues();
+
+      // QUAN TRỌNG: Dùng 'payload' (dữ liệu mới) để reset, KHÔNG dùng 'userData'
+      reset({
+        ...payload,
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      setIsEditingInfo(false);
+    } catch (error) {
+      const { currentPassword, newPassword, confirmPassword } = getValues();
+      reset({ ...userData, currentPassword, newPassword, confirmPassword });
+      setIsEditingInfo(false);
+      const msg = error.response?.data?.message || "Cập nhật thất bại";
+      toast.error(msg);
+    }
   };
 
-  const onSubmitPassword = (data) => {
-    const payload = {
-      currentPassword: data.currentPassword,
-      newPassword: data.newPassword,
-      confirmPassword: data.confirmPassword,
-    };
-    console.log("Update password:", payload);
-    // Clear password fields after successful update
-    const { fullName, email, address } = getValues();
-    reset({
-      fullName,
-      email,
-      address,
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
-    setIsEditingPassword(false);
+  const onSubmitPassword = async (data) => {
+    try {
+      const payload = {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      };
+
+      const result = await updateUserPassword(axiosPrivate, payload);
+
+      toast.success(result.message);
+
+      // --- LOGIC RESET FORM ---
+      // Lấy thông tin info hiện tại để giữ nguyên
+      const { fullName, email, address } = getValues();
+
+      // Reset các ô password về rỗng (Logic của bạn đoạn này ĐÚNG)
+      reset({
+        fullName,
+        email,
+        address,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setIsEditingPassword(false);
+    } catch (error) {
+      const { fullName, email, address } = getValues();
+      reset({
+        fullName,
+        email,
+        address,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setIsEditingPassword(false);
+      const msg = error.response?.data?.message || "Đổi mật khẩu thất bại";
+      toast.error(msg);
+    }
   };
 
   const handleCancelInfo = () => {
