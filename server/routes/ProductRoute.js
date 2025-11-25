@@ -2,9 +2,6 @@ const express = require("express");
 const router = express.Router();
 const ProductController = require("../controllers/ProductController");
 
-// GET /products/:id - Get basic details of a product by ID
-router.get("/:id", ProductController.getProductBasicDetails);
-
 // GET /products/description/:id - Get product description by ID
 router.get("/description/:id", ProductController.getProductDescription);
 
@@ -26,7 +23,7 @@ router.get("/auction-history/:id", ProductController.getAuctionHistory);
 // GET /products/related/:id - Get related product by ID
 router.get("/related/:id", ProductController.getRelatedProduct);
 
-// GET /products/time-remaining/:id - Caculate product remaining auction time by ID
-// router.get("/time-remaining/:id", ProductController.getTimeRemaining);
+// GET /products/:id - Get basic details of a product by ID
+router.get("/:id", ProductController.getProductBasicDetails);
 
 module.exports = router;

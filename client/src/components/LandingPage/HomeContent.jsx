@@ -1,4 +1,4 @@
-import { HiHeart } from "react-icons/hi";
+import { Card } from "flowbite-react";
 import ProductCarousel from "./ProductCarousel";
 import ProductCardP from "../Product/ProductCardP";
 const products = [

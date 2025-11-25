@@ -16,7 +16,7 @@ class ProductService {
 
       return {
         detail: product.detail,
-        highestBidder: product.auction.highestBidderId,
+        auction: product.auction,
       };
     } catch (error) {
       throw new Error("Error getting product details: " + error.message);

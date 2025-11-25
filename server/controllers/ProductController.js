@@ -44,7 +44,8 @@ class ProductController {
     try {
       const { id } = req.params;
       const { description } = req.body;
-      const sellerId = req.user.id; // mocked
+      // const sellerId = req.user.id; // mocked
+      const sellerId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !description) {
         return res
@@ -93,7 +94,8 @@ class ProductController {
     try {
       const { id } = req.params;
       const { message, type } = req.body;
-      const sendId = req.user.id; // mocked
+      // const sendId = req.user.id; // mocked
+      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !message) {
         return res
@@ -124,7 +126,8 @@ class ProductController {
     try {
       const { id, chatId } = req.params;
       const { message } = req.body;
-      const sendId = req.user.id; // mocked
+      // const sendId = req.user.id; // mocked
+      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !chatId || !message) {
         return res
