@@ -20,6 +20,25 @@ class ProductController {
     }
   }
 
+  // GET /products/auction/:id - Get auction details of a product by ID
+  static async getProductAuction(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({ error: "Product ID is required" });
+      }
+
+      const productAuction = await ProductService.getProductAuction(id);
+
+      return res.status(200).json(productAuction);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error getting product auction" });
+    }
+  }
+
   // GET /products/description/:id - Get product description by ID
   static async getProductDescription(req, res) {
     try {

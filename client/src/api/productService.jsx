@@ -4,7 +4,17 @@ import { axiosPublic } from "../config/axios";
 export const getProductBasicDetails = async (productId) => {
   try {
     const response = await axiosPublic.get(`/products/${productId}`);
-    return response.data; // Tra ve { detail, auction }
+    return response.data; // Tra ve { detail }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic API lay thong tin auction cua san pham
+export const getProductAuction = async (productId) => {
+  try {
+    const response = await axiosPublic.get(`/products/auction/${productId}`);
+    return response.data; // Tra ve { auction }
   } catch (error) {
     throw error;
   }
@@ -28,7 +38,7 @@ export const getAuctionHistory = async (productId) => {
     const response = await axiosPublic.get(
       `/products/auction-history/${productId}`
     );
-    return response.data; // Tra ve { numberOfBids, historyList, currentHighestBid , stepPrice, buyNowPrice }
+    return response.data; // Tra ve { numberOfBids, historyList }
   } catch (error) {
     throw error;
   }

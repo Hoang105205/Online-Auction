@@ -1,52 +1,27 @@
 import React, { useState } from "react";
 import { Clock } from "lucide-react";
 
-const ProductDetailsAuction = () => {
-  const currentPrice = 360000; // Example current price
-  const stepPrice = 3600; // Example current price step
-  const buyNowPrice = 500000; // Example buy now price
-
+const ProductDetailsAuction = ({
+  productId,
+  auctionData,
+  auctionHistoryData,
+}) => {
   const [bidAmount, setBidAmount] = useState("");
 
-  const historyBids = {
-    numberOfBids: 5,
-    historyList: [
-      {
-        id: 1,
-        bidderId: "user1234",
-        bidPrice: 340000,
-        bidTime: "2025-11-15 10:00:00",
-      },
-      {
-        id: 2,
-        bidderId: "user5678",
-        bidPrice: 345000,
-        bidTime: "2025-11-16 12:30:00",
-      },
-      {
-        id: 3,
-        bidderId: "user9101",
-        bidPrice: 350000,
-        bidTime: "2025-11-17 14:45:00",
-      },
-      {
-        id: 4,
-        bidderId: "user1121",
-        bidPrice: 355000,
-        bidTime: "2025-11-18 16:00:00",
-      },
-      {
-        id: 5,
-        bidderId: "user3141",
-        bidPrice: 360000,
-        bidTime: "2025-11-19 18:15:00",
-      },
-    ],
-  };
+  if (!auctionData || !auctionHistoryData) {
+    return (
+      <div className="py-6 text-center">
+        <p className="text-gray-500">Đang tải dữ liệu đấu giá...</p>
+      </div>
+    );
+  }
 
-  const anonymizeId = (id) => {
-    if (id.length < 7) return id;
-    return `${id.slice(0, 3)}xxxx${id.slice(-3)}`;
+  const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
+  const { numberOfBids, historyList } = auctionHistoryData;
+
+  const anonymizeId = (fullName) => {
+    if (fullName.length < 7) return fullName;
+    return `${fullName.slice(0, 3)}xxxx${fullName.slice(-3)}`;
   };
 
   const formatPrice = (price) => {
@@ -141,7 +116,7 @@ const ProductDetailsAuction = () => {
               Lịch sử đấu giá:
             </h2>
             <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Tổng số lượt đấu giá: <strong>{historyBids.numberOfBids}</strong>
+              Tổng số lượt đấu giá: <strong>{numberOfBids}</strong>
             </p>
           </div>
 
@@ -165,11 +140,10 @@ const ProductDetailsAuction = () => {
             <div className="overflow-y-auto max-h-[400px]">
               <table className="w-full">
                 <tbody className="divide-y divide-gray-200">
-                  {[...historyBids.historyList]
-                    .sort((a, b) => b.bidPrice - a.bidPrice)
-                    .map((bid) => (
+                  {historyList.length > 0 ? (
+                    historyList.map((bid) => (
                       <tr
-                        key={bid.id}
+                        key={bid._id}
                         className="hover:bg-gray-50 transition-colors"
                       >
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 w-[35%]">
@@ -179,28 +153,33 @@ const ProductDetailsAuction = () => {
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 w-[35%]">
                           <span className="text-xs sm:text-sm font-medium text-gray-800">
-                            {anonymizeId(bid.bidderId)}
+                            {anonymizeId(bid.bidderId?.fullName)}
                           </span>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-right w-[30%]">
                           <span className="text-xs sm:text-sm font-semibold text-gray-800 whitespace-nowrap">
-                            {formatPrice(bid.bidPrice)}
+                            {formatPrice(bid.bidPrice)} đ
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="3"
+                        className="text-center py-8 sm:py-12 text-gray-500"
+                      >
+                        <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm sm:text-base">
+                          Chưa có lượt đấu giá nào
+                        </p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
-
-          {/* Empty State */}
-          {historyBids.historyList.length === 0 && (
-            <div className="text-center py-8 sm:py-12 text-gray-500">
-              <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm sm:text-base">Chưa có lượt đấu giá nào</p>
-            </div>
-          )}
         </div>
 
         {/* Note */}
