@@ -5,28 +5,28 @@ const ProductController = require("../controllers/ProductController");
 // GET /products/:id - Get basic details of a product by ID
 router.get("/:id", ProductController.getProductBasicDetails);
 
-// GET /products/:id/description - Get product description by ID
-router.get("/:id/description", ProductController.getProductDescription);
+// GET /products/description/:id - Get product description by ID
+router.get("/description/:id", ProductController.getProductDescription);
 
-// PUT /products/:id/description - Update product description by ID
-router.put("/:id/description", ProductController.updateDescription);
+// PUT /products/description/:id - Update product description by ID
+router.put("/description/:id", ProductController.updateDescription);
 
-// GET /products/:id/qa - Get product Q&A by ID
-router.get("/:id/qa", ProductController.getProductQA);
+// GET /products/qa/:id - Get product Q&A by ID
+router.get("/qa/:id", ProductController.getProductQA);
 
-// POST /products/:id/qa - Add a new Q entry for a product by ID
-router.post("/:id/qa", ProductController.addQuestion);
+// POST /products/qa/:id - Add a new Q entry for a product by ID
+router.post("/qa/:id", ProductController.addQuestion);
 
-// POST /products/:id/qa/reply/:chatId - Add a new A entry for a product by ID
-router.post("/:id/qa/:chatId/reply", ProductController.addReply);
+// POST /products/qa/:id/reply/:chatId - Add a new A entry for a product by ID
+router.post("/qa/:id/reply/:chatId", ProductController.addReply);
 
-// GET /products/:id/auction-history - Get auction history details for a product by ID
-router.get("/:id/auction-history", ProductController.getAuctionHistory);
+// GET /products/auction-history/:id - Get auction history details for a product by ID
+router.get("/auction-history/:id", ProductController.getAuctionHistory);
 
-// GET /products/:id/related - Get related product by ID
-router.get("/:id/related", ProductController.getRelatedProduct);
+// GET /products/related/:id - Get related product by ID
+router.get("/related/:id", ProductController.getRelatedProduct);
 
-// GET /products/:id/time-remaining - Caculate product remaining auction time by ID
-router.get("/:id/time-remaining", ProductController.getTimeRemaining);
+// GET /products/time-remaining/:id - Caculate product remaining auction time by ID
+// router.get("/time-remaining/:id", ProductController.getTimeRemaining);
 
 module.exports = router;

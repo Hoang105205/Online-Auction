@@ -14,41 +14,13 @@ class ProductService {
         throw new Error("Product not found");
       }
 
-      return product;
+      return {
+        detail: product.detail,
+        highestBidder: product.auction.highestBidderId,
+      };
     } catch (error) {
       throw new Error("Error getting product details: " + error.message);
     }
-  }
-
-  // calculate time remaining for auction (for above information)
-  static calculateTimeRemaining(endTime) {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end - now;
-
-    if (diff <= 0) {
-      return {
-        expired: true,
-        formatted: "Đã kết thúc",
-      };
-    }
-
-    const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
-    const days = Math.floor(
-      (diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24)
-    );
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    return {
-      expired: false,
-      weeks,
-      days,
-      hours,
-      minutes,
-      formatted: `${weeks} tuần ${days} ngày ${hours} giờ ${minutes} phút`,
-      milliseconds: diff,
-    };
   }
 
   // update product description

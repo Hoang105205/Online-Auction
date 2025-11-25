@@ -1,6 +1,6 @@
 import { Card } from "flowbite-react";
-import ProductCarousel from "./ProductCarousel"
-import ProductCardP from "../Product/ProductCardP"
+import ProductCarousel from "./ProductCarousel";
+import ProductCardP from "../Product/ProductCardP";
 const products = [
   {
     id: 1,
