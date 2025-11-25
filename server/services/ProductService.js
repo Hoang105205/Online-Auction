@@ -7,7 +7,6 @@ class ProductService {
     try {
       const product = await Product.findById(productId)
         .populate("detail.sellerId", "fullName feedBackAsSeller")
-        .populate("auction.highestBidderId", "fullName feedBackAsBidder")
         .exec();
 
       if (!product) {
@@ -16,10 +15,27 @@ class ProductService {
 
       return {
         detail: product.detail,
-        auction: product.auction,
       };
     } catch (error) {
       throw new Error("Error getting product details: " + error.message);
+    }
+  }
+
+  static async getProductAuction(productId) {
+    try {
+      const product = await Product.findById(productId)
+        .populate("auction.highestBidderId", "fullName feedBackAsBidder")
+        .exec();
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      return {
+        auction: product.auction,
+      };
+    } catch (error) {
+      throw new Error("Error getting product auction: " + error.message);
     }
   }
 
@@ -142,12 +158,13 @@ class ProductService {
         throw new Error("Product not found");
       }
 
+      const sortedHistoryList = product.auctionHistory.historyList.sort(
+        (a, b) => b.bidPrice - a.bidPrice
+      );
+
       return {
         numberOfBids: product.auctionHistory.numberOfBids,
-        historyList: product.auctionHistory.historyList,
-        currentPrice: product.auction.currentPrice,
-        stepPrice: product.auction.stepPrice,
-        buyNowPrice: product.auction.buyNowPrice,
+        historyList: sortedHistoryList,
       };
     } catch (error) {
       throw new Error("Error getting auction history: " + error.message);

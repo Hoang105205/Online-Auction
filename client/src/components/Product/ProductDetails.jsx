@@ -8,7 +8,13 @@ import ProductDetailsANA from "./ProductDetailsANA";
 
 import ProductCardP from "../Product/ProductCardP";
 
-import { getProductBasicDetails } from "../../api/productService";
+import {
+  getProductBasicDetails,
+  getProductAuction,
+  getProductDescription,
+  getAuctionHistory,
+  getProductQA,
+} from "../../api/productService";
 
 const ProductDetails = () => {
   const products = [
@@ -272,6 +278,10 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [productInfoData, setProductInfoData] = useState(null);
+  const [productAuctionData, setProductAuctionData] = useState(null);
+  const [productDescData, setProductDescData] = useState(null);
+  const [productAuctHisData, setProductAuctHisData] = useState(null);
+  const [productQAData, setProductQAData] = useState(null);
 
   const temp = ["1", "2", "3", "4", "5"];
 
@@ -289,8 +299,18 @@ const ProductDetails = () => {
         setError(null);
 
         const basicBata = await getProductBasicDetails(productId);
-        console.log("Fetched product data:", basicBata);
+        const auctionData = await getProductAuction(productId);
+        const descData = await getProductDescription(productId);
+        const aucHisData = await getAuctionHistory(productId);
+        const qaData = await getProductQA(productId);
+
+        console.log("Fetched QA data:", qaData);
+
         setProductInfoData(basicBata);
+        setProductAuctionData(auctionData);
+        setProductDescData(descData);
+        setProductAuctHisData(aucHisData);
+        setProductQAData(qaData);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -334,10 +354,6 @@ const ProductDetails = () => {
     };
   }, [productInfoData, selectedImage]);
 
-  const [productDescription, setProductDescription] = useState(
-    productInfo.detail.description
-  );
-
   const calculateTimeRemaining = (endTime) => {
     const now = new Date();
     const end = new Date(endTime);
@@ -347,19 +363,18 @@ const ProductDetails = () => {
       return "Đã kết thúc";
     }
 
-    const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
     const days = Math.floor(
       (diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24)
     );
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-    return `${weeks} tuần ${days} ngày ${hours} giờ ${minutes} phút`;
+    return `${days} ngày ${hours} giờ ${minutes} phút`;
   };
 
   const handleSaveDescription = async (newDescription) => {
     try {
-      setProductDescription(newDescription);
+      setProductDescData(newDescription);
       alert("Cập nhật mô tả thành công!");
     } catch (error) {
       console.error("Có lỗi xảy ra khi cập nhật", error);
@@ -371,24 +386,11 @@ const ProductDetails = () => {
   let sellerId = "";
   let timeRemaining = "";
 
-  if (productInfoData) {
+  if (productInfoData && productAuctionData) {
     images = productInfoData.detail?.images || [];
     sellerId = productInfoData.detail.sellerId._id;
-    timeRemaining = calculateTimeRemaining(productInfoData.auction.endTime);
+    timeRemaining = calculateTimeRemaining(productAuctionData.auction.endTime);
   }
-
-  // const images = useMemo(
-  //   () => productInfoData.detail?.images || [],
-  //   [productInfoData]
-  // );
-  // const sellerId = useMemo(
-  //   () => productInfoData.detail.sellerId._id,
-  //   [productInfoData]
-  // );
-  // const timeRemaining = useMemo(
-  //   () => calculateTimeRemaining(productInfoData.auction.endTime),
-  //   [productInfoData]
-  // );
 
   const currentUserId = "6922ec91a628dffaa2414479";
   const isOwner = currentUserId === sellerId;
@@ -399,7 +401,7 @@ const ProductDetails = () => {
       {error && (
         <div className="text-center py-20 text-red-500">Error: {error}</div>
       )}
-      {!loading && !error && productInfoData && (
+      {!loading && !error && productInfoData && productAuctionData && (
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-gray-600 mb-8">
@@ -475,20 +477,20 @@ const ProductDetails = () => {
               {/* Date Range */}
               <div className="text-gray-700 mb-4">
                 Bắt đầu:{" "}
-                {new Date(productInfoData.auction.startTime).toLocaleDateString(
-                  "vi-VN"
-                )}{" "}
+                {new Date(
+                  productAuctionData.auction.startTime
+                ).toLocaleDateString("vi-VN")}{" "}
                 - Kết thúc:{" "}
-                {new Date(productInfoData.auction.endTime).toLocaleDateString(
-                  "vi-VN"
-                )}
+                {new Date(
+                  productAuctionData.auction.endTime
+                ).toLocaleDateString("vi-VN")}
               </div>
 
               {/* Stats */}
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex items-center gap-2">
                   <User className="w-5 h-5 text-gray-600" />
-                  <span>{productInfoData.auction.bidders}</span>
+                  <span>{productAuctionData.auction.bidders}</span>
                 </div>
               </div>
 
@@ -497,16 +499,17 @@ const ProductDetails = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600">Ra giá cao nhất:</span>
                   <span className="text-3xl font-bold text-red-500">
-                    ${productInfoData.auction.currentPrice}
+                    ${productAuctionData.auction.currentPrice}
                   </span>
                   <div className="flex items-center gap-3">
                     <span className="text-gray-600">
-                      bởi: @{productInfoData.auction.highestBidderId.fullName}
+                      bởi: @
+                      {productAuctionData.auction.highestBidderId.fullName}
                     </span>
                     <div className="flex items-center gap-1">
                       <span className="font-semibold">
                         {
-                          productInfoData.auction.highestBidderId
+                          productAuctionData.auction.highestBidderId
                             .feedBackAsBidder.point
                         }
                       </span>
@@ -518,7 +521,9 @@ const ProductDetails = () => {
                 {/* Countdown */}
                 <div className="flex items-center gap-2 text-gray-700">
                   <Clock className="w-5 h-5" />
-                  <span>{timeRemaining}</span>
+                  <span className="text-red-500 font-semibold">
+                    {timeRemaining}
+                  </span>
                 </div>
               </div>
 
@@ -572,13 +577,25 @@ const ProductDetails = () => {
               {/* Tab Contents */}
               {activeTab === "details" && (
                 <ProductDetailsInformation
-                  description={productDescription}
+                  productId={productId}
+                  description={productDescData}
                   isOwner={isOwner}
                   onSave={handleSaveDescription}
                 />
               )}
-              {activeTab === "auction" && <ProductDetailsAuction />}
-              {activeTab === "qa" && <ProductDetailsANA />}
+              {activeTab === "auction" && (
+                <ProductDetailsAuction
+                  productId={productId}
+                  auctionData={productAuctionData}
+                  auctionHistoryData={productAuctHisData}
+                />
+              )}
+              {activeTab === "qa" && (
+                <ProductDetailsANA
+                  productId={productId}
+                  qaData={productQAData}
+                />
+              )}
             </div>
           </div>
 

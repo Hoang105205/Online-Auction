@@ -8,6 +8,9 @@ router.get("/description/:id", ProductController.getProductDescription);
 // PUT /products/description/:id - Update product description by ID
 router.put("/description/:id", ProductController.updateDescription);
 
+// GET /products/auction/:id - Get auction details of a product by ID
+router.get("/auction/:id", ProductController.getProductAuction);
+
 // GET /products/qa/:id - Get product Q&A by ID
 router.get("/qa/:id", ProductController.getProductQA);
 
