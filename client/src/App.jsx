@@ -49,14 +49,15 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route element={<PersistLogin />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
         <Route path="/" element={<MainLayout />}>
           {/* 1. PUBLIC ROUTES (Truy cập tự do) */}
           <Route index element={<LandingPage />} />
           <Route path="details/:id" element={<DetailsPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/category/*" element={<CategoryPage />} />
           <Route path="/login-success" element={<LoginSuccess />} />
 

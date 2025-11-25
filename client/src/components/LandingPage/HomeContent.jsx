@@ -69,12 +69,16 @@ const HomeContent = () => {
       <div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
           {products.map((product, i) => (
-            <ProductCardP key={i} product={product} />
+            <div key={i}>
+              <ProductCardP product={product} />
+            </div>
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
           {products.map((product, i) => (
-            <ProductCardP key={i} product={product} />
+            <div key={i}>
+              <ProductCardP product={product} />
+            </div>
           ))}
         </div>
       </div>
