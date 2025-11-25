@@ -1,0 +1,94 @@
+import { axiosPublic } from "../config/axios";
+
+// Ham xu ly logic API lay thong tin co ban cua san pham
+export const getProductBasicDetails = async (productId) => {
+  try {
+    const response = await axiosPublic.get(`/products/${productId}`);
+    return response.data; // Tra ve { detail, auction }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic lay phan mo ta san pham
+export const getProductDescription = async (productId) => {
+  try {
+    const response = await axiosPublic.get(
+      `/products/description/${productId}`
+    );
+    return response.data; // Tra ve description string
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic lay phan lich su dau gia cua san pham
+export const getAuctionHistory = async (productId) => {
+  try {
+    const response = await axiosPublic.get(
+      `/products/auction-history/${productId}`
+    );
+    return response.data; // Tra ve { numberOfBids, historyList, currentHighestBid , stepPrice, buyNowPrice }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic lay q&a cua san pham
+export const getProductQA = async (productId) => {
+  try {
+    const response = await axiosPublic.get(`/products/qa/${productId}`);
+    return response.data; // Tra ve danh sach Q&A
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic lay san pham lien quan
+export const getRelatedProducts = async (productId) => {
+  try {
+    const response = await axiosPublic.get(`/products/related/${productId}`);
+    return response.data; // Tra ve mang related products
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic cap nhat phan mo ta san pham
+export const updateDescription = async (productId, description) => {
+  try {
+    const response = await axiosPublic.put(
+      `/products/description/${productId}`,
+      { description }
+    );
+    return response.data; // Tra ve { product, message }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic them cau hoi moi cho san pham
+export const addQuestion = async (productId, message, type = "public") => {
+  try {
+    const response = await axiosPublic.post(`/products/qa/${productId}`, {
+      message,
+      type,
+    });
+    return response.data; // Tra ve {message, type }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic them cau tra loi moi cho san pham
+export const addReply = async (productId, chatId, message) => {
+  try {
+    const response = await axiosPublic.post(
+      `/products/qa/${productId}/reply/${chatId}`,
+      { message }
+    );
+    return response.data; // Tra ve { product, message }
+  } catch (error) {
+    throw error;
+  }
+};
