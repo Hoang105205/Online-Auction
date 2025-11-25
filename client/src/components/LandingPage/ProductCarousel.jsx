@@ -1,6 +1,7 @@
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import ProductCardC from "./ProductCardC";
+import { HiHeart } from "react-icons/hi";
 import "swiper/css";
 import "swiper/css/pagination";
 
@@ -74,6 +75,13 @@ export default function ProductCarousel() {
     >
       {products.map((product) => (
         <SwiperSlide key={product.id}>
+          <button
+            //onClick={}
+            className="absolute z-10 top-2 left-2 p-2  rounded-full shadow transition-colors duration-300 
+            bg-gray-300 text-gray-400 hover:bg-white hover:text-red-500"
+          >
+            <HiHeart className="w-5 h-5" />
+          </button>
           <ProductCardC product={product} />
         </SwiperSlide>
       ))}
