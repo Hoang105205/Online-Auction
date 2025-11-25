@@ -1,4 +1,4 @@
-const UserService = require("../services/UserService");
+const AuthService = require("../services/AuthService");
 const ROLES_LIST = require("../config/roles_list");
 const axios = require("axios");
 const {
@@ -48,7 +48,7 @@ const signup = async (req, res) => {
 
     const defaultRoles = [ROLES_LIST.Bidder];
 
-    const result = await UserService.registerUser({
+    const result = await AuthService.registerUser({
       email,
       password,
       fullName,
@@ -79,7 +79,7 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: "Vui lòng nhập đủ thông tin." });
     }
 
-    const result = await UserService.verifyEmailOTP(email, otp);
+    const result = await AuthService.verifyEmailOTP(email, otp);
 
     return res.status(200).json(result);
   } catch (error) {
@@ -103,12 +103,12 @@ const login = async (req, res) => {
       return;
     }
 
-    const foundUser = await UserService.verifyCredentials(email, password);
+    const foundUser = await AuthService.verifyCredentials(email, password);
 
     const accessToken = generateAccessToken(foundUser);
     const refreshToken = generateRefreshToken(foundUser);
 
-    await UserService.updateRefreshToken(foundUser._id, refreshToken);
+    await AuthService.updateRefreshToken(foundUser._id, refreshToken);
 
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
@@ -138,7 +138,7 @@ const refreshToken = async (req, res) => {
 
     const refreshToken = cookies.jwt;
 
-    const foundUser = await UserService.findUserByRefreshToken(refreshToken);
+    const foundUser = await AuthService.findUserByRefreshToken(refreshToken);
 
     try {
       verifyRefreshToken(refreshToken); // Nếu lỗi sẽ nhảy xuống catch
@@ -169,7 +169,7 @@ const logoutUser = async (req, res) => {
   }
 
   try {
-    await UserService.logoutUser(req.cookies.jwt);
+    await AuthService.logoutUser(req.cookies.jwt);
   } catch (error) {
     res
       .status(error.statusCode || 500)
@@ -188,11 +188,11 @@ const loginGoogleCallback = async (req, res) => {
       throw new Error("Không nhận được thông tin người dùng từ Google.");
     }
 
-    const user = await UserService.loginWithGoogle(profile);
+    const user = await AuthService.loginWithGoogle(profile);
 
     const refreshToken = generateRefreshToken(user);
 
-    await UserService.updateRefreshToken(user._id, refreshToken);
+    await AuthService.updateRefreshToken(user._id, refreshToken);
 
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
@@ -224,7 +224,7 @@ const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Vui lòng nhập email." });
     }
 
-    await UserService.requestPasswordReset(email);
+    await AuthService.requestPasswordReset(email);
 
     return res.status(200).json({ message: "Đã gửi email đặt lại mật khẩu." });
   } catch (error) {
@@ -246,7 +246,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Thiếu thông tin xác thực." });
     }
 
-    const result = await UserService.resetPassword(email, token, newPassword);
+    const result = await AuthService.resetPassword(email, token, newPassword);
 
     return res.status(200).json(result);
   } catch (error) {
