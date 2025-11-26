@@ -1,8 +1,34 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
+const ROLES_LIST = require("../config/roles_list");
 
 class UserService {
+  static async checkAndDemoteSeller(user) {
+    if (
+      !user.roles.includes(ROLES_LIST.Seller) ||
+      !user.sellerRequest.startDate
+    ) {
+      return user;
+    }
+
+    const expiryDate = new Date(user.sellerRequest.startDate);
+    expiryDate.setDate(expiryDate.getDate() + 7); // Seller role valid for 7 days
+
+    if (new Date() > expiryDate) {
+      user.roles = user.roles.filter((role) => role !== ROLES_LIST.Seller);
+
+      user.sellerRequest = {
+        status: "none",
+        startDate: null,
+      };
+
+      await user.save();
+    }
+
+    return user;
+  }
+
   static async getUserBasicInfoById(userId) {
     if (!userId) {
       const error = new Error("ID người dùng không được để trống.");
@@ -10,8 +36,10 @@ class UserService {
       throw error;
     }
 
-    const user = await User.findById(userId)
-      .select("-password -refreshToken -otp -otpExpires -feedBackAsBidder -feedBackAsSeller -isVerified -__v -googleId -createdAt -updatedAt")
+    let user = await User.findById(userId)
+      .select(
+        "-password -refreshToken -otp -otpExpires -feedBackAsBidder -feedBackAsSeller -isVerified -__v -googleId -createdAt -updatedAt"
+      )
       .exec();
 
     if (!user) {
@@ -20,9 +48,10 @@ class UserService {
       throw error;
     }
 
+    user = await this.checkAndDemoteSeller(user);
+
     return user;
   }
-
 
   static async updateUserInfo(userId, updateData) {
     if (updateData.email) {

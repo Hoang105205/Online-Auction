@@ -77,6 +77,20 @@ const userSchema = new Schema(
       type: [feedbackSchema],
       default: [],
     },
+    sellerRequest: {
+      // Trạng thái yêu cầu:
+      // 'none': Chưa yêu cầu (Mặc định)
+      // 'pending': Đã gửi yêu cầu, chờ Admin duyệt
+      // 'approved': Đã duyệt (Đang là Seller)
+      status: {
+        type: String,
+        enum: ["none", "pending", "approved"],
+        default: "none",
+      },
+
+      // Thời gian bắt đầu làm Seller
+      startDate: { type: Date, default: null },
+    },
   },
   {
     timestamps: true,

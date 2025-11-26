@@ -1,19 +1,68 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "flowbite-react";
 import { HiShieldCheck, HiClock } from "react-icons/hi";
 
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { getUserBasicProfile } from "../../api/userService";
+
+import { Spinner } from "flowbite-react";
+
 const PermissionsPage = () => {
+  const axiosPrivate = useAxiosPrivate();
+
+  const [sellerRequest, setSellerRequest] = useState({
+    status: "",
+    startDate: "",
+  });
+
   // Mock data - replace with API data later
-  const [isSeller, setIsSeller] = useState(true); // Change to true to test seller view
-  const [sellerSince, setSellerSince] = useState("2025-11-15"); // Date when user became seller
+  const [isSeller, setIsSeller] = useState(false);
+  const [startDate, setStartDate] = useState(null);
   const [requestPending, setRequestPending] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchUserProfile = async () => {
+      try {
+        const data = await getUserBasicProfile(axiosPrivate);
+
+        if (isMounted) {
+          setSellerRequest(data.sellerRequest);
+        }
+
+        setIsLoading(false);
+      } catch (err) {
+        setIsLoading(false);
+        console.error("Error fetching user profile:", err);
+      }
+    };
+
+    fetchUserProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [axiosPrivate]);
+
+  useEffect(() => {
+    if (sellerRequest.status === "none") {
+      setIsSeller(false);
+    } else if (sellerRequest.status === "approved") {
+      setIsSeller(true);
+      setStartDate(sellerRequest.startDate);
+    } else if (sellerRequest.status === "pending") {
+      setRequestPending(true);
+    }
+  }, [sellerRequest]);
 
   // Calculate days remaining if user is seller
   const calculateDaysRemaining = () => {
     if (!isSeller) return 0;
-    const startDate = new Date(sellerSince);
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 7); // 7 days from seller start date
+    endDate.setDate(endDate.getDate() + 7);
     const today = new Date();
     const diffTime = endDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -31,6 +80,13 @@ const PermissionsPage = () => {
 
   return (
     <div className="p-6 md:p-8">
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm">
+          <Spinner size="lg" color="info" />
+          <p className="mt-3 text-sm text-gray-700">Đang tải hồ sơ...</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left column: Current Role (approx 25%) */}
         <div className="lg:col-span-1">
@@ -135,7 +191,15 @@ const PermissionsPage = () => {
                   </div>
                   <p className="text-sm text-gray-500 mt-4">
                     Ngày bắt đầu:{" "}
-                    {new Date(sellerSince).toLocaleDateString("vi-VN")}
+                    {new Date(startDate).toLocaleDateString("vi-VN")}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-4">
+                    Ngày kết thúc:{" "}
+                    {new Date(
+                      new Date(startDate).setDate(
+                        new Date(startDate).getDate() + 7
+                      )
+                    ).toLocaleDateString("vi-VN")}
                   </p>
                 </div>
 
