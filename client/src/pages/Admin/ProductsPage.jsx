@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   HiSearch,
-  HiPencilAlt,
   HiTrash,
   HiChevronDown,
   HiChevronLeft,
@@ -66,9 +65,6 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [products, setProducts] = useState(MOCK_PRODUCTS);
   const [openRows, setOpenRows] = useState(new Set());
-  const [editingId, setEditingId] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editPrice, setEditPrice] = useState("");
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const pageSize = 6;
@@ -103,33 +99,7 @@ export default function ProductsPage() {
     setOpenRows(s);
   }
 
-  function startEdit(id) {
-    const item = products.find((p) => p.id === id);
-    if (!item) return;
-    setEditingId(id);
-    setEditName(item.name);
-    setEditPrice(item.price);
-  }
-
-  function submitEdit() {
-    if (!editingId) return;
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === editingId
-          ? { ...p, name: editName.trim(), price: editPrice }
-          : p
-      )
-    );
-    setEditingId("");
-    setEditName("");
-    setEditPrice("");
-  }
-
-  function cancelEdit() {
-    setEditingId("");
-    setEditName("");
-    setEditPrice("");
-  }
+  // edit functionality removed: only delete is allowed
 
   function handleDeleteClick(id) {
     setDeleteTarget(id);
@@ -207,70 +177,28 @@ export default function ProductsPage() {
                     }`}
                   >
                     <td className="py-4 px-4">{p.id}</td>
-                    {editingId === p.id ? (
-                      <>
-                        <td className="py-4 px-4">
-                          <input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full px-2 py-1 border rounded"
-                          />
-                        </td>
-                        <td className="py-4 px-4">{p.category}</td>
-                        <td className="py-4 px-4">
-                          <input
-                            value={editPrice}
-                            onChange={(e) => setEditPrice(e.target.value)}
-                            className="w-28 px-2 py-1 border rounded"
-                          />
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={submitEdit}
-                              className="px-3 py-1 bg-green-600 text-white rounded"
-                            >
-                              Lưu
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="px-3 py-1 bg-gray-100 rounded"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="py-4 px-4 flex items-center gap-3">
-                          <img
-                            src={p.image}
-                            alt="thumb"
-                            className="w-10 h-10 rounded-md object-cover"
-                          />
-                          <div>{p.name}</div>
-                        </td>
-                        <td className="py-4 px-4">{p.category}</td>
-                        <td className="py-4 px-4">{p.price}</td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => startEdit(p.id)}
-                              className="p-2 rounded-full bg-purple-50 text-purple-600"
-                            >
-                              <HiPencilAlt />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(p.id)}
-                              className="p-2 rounded-full bg-red-50 text-red-500"
-                            >
-                              <HiTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    )}
+                    <>
+                      <td className="py-4 px-4 flex items-center gap-3">
+                        <img
+                          src={p.image}
+                          alt="thumb"
+                          className="w-10 h-10 rounded-md object-cover"
+                        />
+                        <div>{p.name}</div>
+                      </td>
+                      <td className="py-4 px-4">{p.category}</td>
+                      <td className="py-4 px-4">{p.price}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDeleteClick(p.id)}
+                            className="p-2 rounded-full bg-red-50 text-red-500"
+                          >
+                            <HiTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </>
 
                     <td className="py-4 px-4 text-right">
                       <button
