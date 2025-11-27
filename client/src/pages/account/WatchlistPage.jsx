@@ -1,10 +1,6 @@
 import { useState, useMemo } from "react";
-import ProductCard from "../../components/ProductCard"
-import {
-  HiChevronLeft,
-  HiChevronRight,
-  HiTrash,
-} from "react-icons/hi";
+import ProductCard from "../../components/ProductCard";
+import { HiChevronLeft, HiChevronRight, HiTrash } from "react-icons/hi";
 
 const ITEMS_PER_PAGE = 3;
 
@@ -83,7 +79,7 @@ export default function WatchlistPage() {
 
   const [auctions, setAuctions] = useState(products);
   const sortedAuctions = useMemo(() => {
-    const sorted = [...auctions];  // dùng auctions, KHÔNG dùng products
+    const sorted = [...auctions]; // dùng auctions, KHÔNG dùng products
     setCount(auctions.length);
 
     switch (sortBy) {
@@ -117,7 +113,7 @@ export default function WatchlistPage() {
   };
 
   const handleRemove = (id) => {
-    setAuctions(prev => prev.filter(item => item.id !== id));
+    setAuctions((prev) => prev.filter((item) => item.id !== id));
     setCount(auctions.length);
   };
 
@@ -129,16 +125,15 @@ export default function WatchlistPage() {
 
           {/* Sort Options */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <p className="text-gray-600">
-              Tổng cộng {count} sản phẩm
-            </p>
+            <p className="text-gray-600">Tổng cộng {count} sản phẩm</p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 font-medium">Sắp xếp:</span>
+              <span className="text-sm text-gray-600 font-medium">
+                Sắp xếp:
+              </span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              >
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
                 <option value="recent">Mới nhất</option>
                 <option value="oldest">Cũ nhất</option>
                 <option value="price-high">Giá cao nhất</option>
@@ -154,8 +149,7 @@ export default function WatchlistPage() {
               {/* Nút xóa */}
               <button
                 onClick={() => handleRemove(product.id)}
-                className="absolute z-10 top-2 left-2 p-2 bg-white rounded-full shadow hover:bg-gray-100"
-              >
+                className="absolute z-10 top-2 left-2 p-2 bg-white rounded-full shadow hover:bg-gray-100">
                 <HiTrash className="w-5 h-5 text-red-500" />
               </button>
               <ProductCard key={product.id} product={product} />
@@ -175,27 +169,23 @@ export default function WatchlistPage() {
                   ? "border-gray-200 text-gray-400 cursor-not-allowed"
                   : "border-gray-300 text-gray-700 hover:bg-gray-50"
               }`}
-              aria-label="Trang trước"
-            >
+              aria-label="Trang trước">
               <HiChevronLeft className="w-5 h-5" />
             </button>
 
             {/* Page Numbers */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`min-w-[40px] h-10 px-3 rounded-lg border font-medium transition-colors ${
-                    currentPage === page
-                      ? "bg-sky-600 text-white border-sky-600"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`min-w-[40px] h-10 px-3 rounded-lg border font-medium transition-colors ${
+                  currentPage === page
+                    ? "bg-sky-600 text-white border-sky-600"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}>
+                {page}
+              </button>
+            ))}
 
             {/* Next Button */}
             <button
@@ -206,12 +196,11 @@ export default function WatchlistPage() {
                   ? "border-gray-200 text-gray-400 cursor-not-allowed"
                   : "border-gray-300 text-gray-700 hover:bg-gray-50"
               }`}
-              aria-label="Trang sau"
-            >
+              aria-label="Trang sau">
               <HiChevronRight className="w-5 h-5" />
             </button>
           </div>
-          )}
+        )}
       </div>
     </div>
   );

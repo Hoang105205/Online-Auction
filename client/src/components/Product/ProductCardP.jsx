@@ -1,6 +1,7 @@
 import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
 import { Link } from "react-router-dom";
 import { Button } from "flowbite-react";
+import ProductImage from "../ProductImage";
 
 const ProductCardP = ({ product, isWon = false }) => {
   // Calculate time remaining
@@ -57,18 +58,20 @@ const ProductCardP = ({ product, isWon = false }) => {
       <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-          <img
+          <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <ProductImage url="cld-sample-5" />
+          </div>
+          {/* <img
             src={product.image}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          /> */}
           {!isEnded && (
             <Button
               className="
               absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 
               group-hover:opacity-100 group-hover:translate-y-0
-              translate-y-4 transition-all duration-300 w-[80%]"
-            >
+              translate-y-4 transition-all duration-300 w-[80%]">
               Đấu giá ngay
             </Button>
           )}
@@ -82,7 +85,6 @@ const ProductCardP = ({ product, isWon = false }) => {
               Đã kết thúc
             </div>
           )}
-
         </div>
 
         {/* Content */}
@@ -141,8 +143,7 @@ const ProductCardP = ({ product, isWon = false }) => {
                 <span
                   className={`font-medium ${
                     isEnded ? "text-gray-500" : "text-orange-600"
-                  }`}
-                >
+                  }`}>
                   {timeRemaining}
                 </span>
               </div>

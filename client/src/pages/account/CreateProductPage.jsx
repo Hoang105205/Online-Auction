@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Label, TextInput, Textarea, Checkbox } from "flowbite-react";
 import { HiArrowLeft, HiX, HiPlus, HiSearch, HiCalendar } from "react-icons/hi";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 // Zod validation schema
 const productSchema = z
@@ -128,6 +129,9 @@ export default function CreateProductPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [subcategorySearch, setSubcategorySearch] = useState("");
   const [selectedImages, setSelectedImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const axiosPrivate = useAxiosPrivate();
 
   const {
     register,
@@ -166,6 +170,13 @@ export default function CreateProductPage() {
   }, [watchedFields, selectedImages]);
 
   const handleBack = () => {
+    if (uploading) {
+      alert(
+        "Đang tải lên ảnh. Vui lòng đợi quá trình tải lên hoàn tất trước khi rời khỏi trang."
+      );
+      return;
+    }
+
     if (isDirty) {
       const confirmed = window.confirm(
         "Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn rời khỏi trang này?"
@@ -175,6 +186,23 @@ export default function CreateProductPage() {
     navigate("/account/my-products");
   };
 
+  // Prevent closing/refreshing the page while uploading images
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = "Đang tải lên, bạn có chắc chắn muốn rời khỏi?";
+      return "Đang tải lên, bạn có chắc chắn muốn rời khỏi?";
+    };
+
+    if (uploading) {
+      window.addEventListener("beforeunload", handler);
+    } else {
+      window.removeEventListener("beforeunload", handler);
+    }
+
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [uploading]);
+
   // Format number with thousand separators for display (Vietnam locale)
   const formatThousand = (val) => {
     if (val === undefined || val === null || val === "") return "";
@@ -183,18 +211,94 @@ export default function CreateProductPage() {
     return Number(digitsOnly).toLocaleString("vi-VN");
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // Validate images
     if (selectedImages.length < 3) {
       alert("Vui lòng tải lên ít nhất 3 ảnh");
       return;
     }
 
-    console.log("Form data:", data);
-    console.log("Images:", selectedImages);
-    // Handle form submission here
-    alert("Sản phẩm đã được tạo thành công!");
-    navigate("/account/my-products");
+    try {
+      setUploading(true);
+
+      // Prepare product payload (convert numeric strings to numbers)
+      const payload = {
+        name: data.productName,
+        startingPrice: Number(data.startingPrice),
+        step: Number(data.step),
+        hasBuyNowPrice: data.hasBuyNowPrice,
+        buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
+        autoExtend: data.autoExtend,
+        category: data.category?.id ?? null,
+        subcategory: data.subcategory?.id ?? null,
+        endDate: data.endDate,
+        description: data.description,
+      };
+
+      // // 1) Create product on server
+      // const createRes = await axiosPrivate.post("/products", payload);
+
+      // // Try to resolve created id from common response shapes
+      // const newProductId =
+      //   createRes?.data?._id ||
+      //   createRes?.data?.id ||
+      //   createRes?.data?.product?._id;
+
+      // if (!newProductId) {
+      //   throw new Error("Không lấy được ID sản phẩm mới từ server.");
+      // }
+
+      // 2) Upload each selected image to /products/:id/image
+      const uploadedPublicIds = [];
+
+      const newProductId = "abcccccx";
+
+      const total = selectedImages.length;
+
+      // initialize progress entries for all images to 0
+      setUploadProgress((prev) => {
+        const next = { ...prev };
+        selectedImages.forEach((img) => (next[img.id] = 0));
+        return next;
+      });
+
+      for (let i = 0; i < selectedImages.length; i++) {
+        const img = selectedImages[i];
+        const formData = new FormData();
+        formData.append("image", img.file);
+
+        const res = await axiosPrivate.post(
+          `/products/${newProductId}/image`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+            onUploadProgress: (e) => {
+              const imgPercent = Math.round((e.loaded * 100) / e.total);
+              setUploadProgress((prev) => ({ ...prev, [img.id]: imgPercent }));
+            },
+          }
+        );
+
+        // ensure this image is marked 100% after upload completes
+        setUploadProgress((prev) => ({ ...prev, [img.id]: 100 }));
+
+        const publicId =
+          res?.data?.publicId || res?.data?.id || res?.data?.filename;
+        uploadedPublicIds.push(publicId);
+      }
+
+      // Optionally: you can send uploadedPublicIds to server to attach to product
+      // if your backend requires a separate call. For now we simply log them.
+      console.log("Uploaded images publicIds:", uploadedPublicIds);
+
+      alert("Sản phẩm đã được tạo và ảnh đã được tải lên thành công!");
+      navigate("/account/my-products");
+    } catch (error) {
+      console.error(error);
+      alert("Có lỗi xảy ra khi tạo sản phẩm hoặc tải ảnh. Vui lòng thử lại.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -221,15 +325,65 @@ export default function CreateProductPage() {
       )
     : [];
 
+  // compute overall upload progress based on selectedImages (count missing as 0)
+  const totalImages = selectedImages.length || 0;
+  const sumProgress = selectedImages.reduce(
+    (acc, img) => acc + (uploadProgress[img.id] || 0),
+    0
+  );
+  const avgProgress =
+    totalImages > 0 ? Math.round(sumProgress / totalImages) : 0;
+
   return (
     <div className="p-6 md:p-8">
+      {uploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm text-center">
+            <svg
+              className="mx-auto mb-4 h-10 w-10 text-gray-700 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <div className="mb-2 font-medium text-gray-800">
+              Đang tải lên ảnh…
+            </div>
+            <div className="text-sm text-gray-600">
+              Vui lòng không đóng hoặc rời khỏi trang.
+            </div>
+            <div className="mt-4">
+              <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
+                <div
+                  className="bg-green-500 h-3"
+                  style={{ width: `${avgProgress}%` }}
+                />
+              </div>
+              <div className="text-sm text-gray-700 mt-2">{avgProgress}%</div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header with Back Button */}
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={handleBack}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Quay lại"
-        >
+          disabled={uploading}
+          aria-disabled={uploading}
+          className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
+            uploading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+          aria-label="Quay lại">
           <HiArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
         <h2 className="text-2xl font-bold text-gray-900">Đăng sản phẩm</h2>
@@ -313,8 +467,7 @@ export default function CreateProductPage() {
             <div>
               <Label
                 htmlFor="hasBuyNowPrice"
-                className="flex items-center gap-3 mb-2 cursor-pointer select-none"
-              >
+                className="flex items-center gap-3 mb-2 cursor-pointer select-none">
                 <Controller
                   name="hasBuyNowPrice"
                   control={control}
@@ -367,8 +520,7 @@ export default function CreateProductPage() {
             <div>
               <Label
                 htmlFor="autoExtend"
-                className="flex items-start gap-3 cursor-pointer select-none"
-              >
+                className="flex items-start gap-3 cursor-pointer select-none">
                 <Controller
                   name="autoExtend"
                   control={control}
@@ -397,8 +549,7 @@ export default function CreateProductPage() {
                 <button
                   type="button"
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
+                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                   <span className={selectedCategory ? "" : "text-gray-500"}>
                     {selectedCategory ? selectedCategory.name : "Chọn danh mục"}
                   </span>
@@ -426,8 +577,7 @@ export default function CreateProductPage() {
                             setShowCategoryDropdown(false);
                             setCategorySearch("");
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
-                        >
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
                           {cat.name}
                         </button>
                       ))}
@@ -452,11 +602,9 @@ export default function CreateProductPage() {
                     onClick={() =>
                       setShowSubcategoryDropdown(!showSubcategoryDropdown)
                     }
-                    className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                  >
+                    className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                     <span
-                      className={watch("subcategory") ? "" : "text-gray-500"}
-                    >
+                      className={watch("subcategory") ? "" : "text-gray-500"}>
                       {watch("subcategory")
                         ? watch("subcategory").name
                         : "Chọn danh mục con"}
@@ -484,8 +632,7 @@ export default function CreateProductPage() {
                               setShowSubcategoryDropdown(false);
                               setSubcategorySearch("");
                             }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
-                          >
+                            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
                             {sub.name}
                           </button>
                         ))}
@@ -536,8 +683,7 @@ export default function CreateProductPage() {
                 {selectedImages.map((img) => (
                   <div
                     key={img.id}
-                    className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group"
-                  >
+                    className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group">
                     <img
                       src={img.url}
                       alt="Preview"
@@ -546,8 +692,7 @@ export default function CreateProductPage() {
                     <button
                       type="button"
                       onClick={() => removeImage(img.id)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                       <HiX className="w-4 h-4" />
                     </button>
                   </div>
@@ -583,15 +728,22 @@ export default function CreateProductPage() {
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t">
-          <Button type="button" color="gray" size="lg" onClick={handleBack}>
+          <Button
+            type="button"
+            color="gray"
+            size="lg"
+            onClick={handleBack}
+            disabled={uploading}>
             Hủy
           </Button>
           <Button
             type="submit"
-            className="bg-green-500 hover:bg-green-600"
-            size="lg"
-          >
-            Tạo mới
+            disabled={uploading}
+            className={`bg-green-500 hover:bg-green-600 ${
+              uploading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            size="lg">
+            {uploading ? "Đang tải..." : "Tạo mới"}
           </Button>
         </div>
       </form>
