@@ -37,3 +37,27 @@ export const updateUserPassword = async (axiosInstance, data) => {
     throw error;
   }
 };
+
+/**
+ * Lấy đánh giá của người dùng với phân trang và bộ lọc
+ * API: GET /api/users/feedback
+ */
+export const getUserFeedback = async (
+  axiosInstance,
+  page = 1,
+  filter = "all",
+  limit = 5
+) => {
+  try {
+    const response = await axiosInstance.get("/users/feedback", {
+      params: {
+        page: page,
+        filter: filter,
+        limit: limit,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

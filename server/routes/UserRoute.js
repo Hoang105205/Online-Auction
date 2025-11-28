@@ -5,6 +5,7 @@ const {
   getUserBasicProfile,
   updateUserProfile,
   updateUserPassword,
+  getFeedback,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -25,6 +26,13 @@ router.put(
   verifyJWT,
   verifyRoles(ROLES_LIST.Bidder),
   updateUserPassword
+);
+
+router.get(
+  "/feedback",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  getFeedback
 );
 
 module.exports = router;
