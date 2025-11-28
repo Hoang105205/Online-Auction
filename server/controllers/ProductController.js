@@ -10,9 +10,9 @@ class ProductController {
         return res.status(400).json({ error: "Product ID is required" });
       }
 
-      const product = await ProductService.getProductBasicDetails(id);
+      const productDetails = await ProductService.getProductBasicDetails(id);
 
-      return res.status(200).json(product);
+      return res.status(200).json(productDetails);
     } catch (error) {
       return res
         .status(500)
@@ -20,7 +20,26 @@ class ProductController {
     }
   }
 
-  // GET /products/:id/description - Get product description by ID
+  // GET /products/auction/:id - Get auction details of a product by ID
+  static async getProductAuction(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({ error: "Product ID is required" });
+      }
+
+      const productAuction = await ProductService.getProductAuction(id);
+
+      return res.status(200).json(productAuction);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error getting product auction" });
+    }
+  }
+
+  // GET /products/description/:id - Get product description by ID
   static async getProductDescription(req, res) {
     try {
       const { id } = req.params;
@@ -39,12 +58,13 @@ class ProductController {
     }
   }
 
-  // PUT /products/:id/description - Update product description by ID
+  // PUT /products/description/:id - Update product description by ID
   static async updateDescription(req, res) {
     try {
       const { id } = req.params;
       const { description } = req.body;
-      const sellerId = req.user.id; // mocked
+      // const sellerId = req.user.id; // mocked
+      const sellerId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !description) {
         return res
@@ -69,7 +89,7 @@ class ProductController {
     }
   }
 
-  // GET /products/:id/qa - Get product Q&A by ID
+  // GET /products/qa/:id - Get product Q&A by ID
   static async getProductQA(req, res) {
     try {
       const { id } = req.params;
@@ -88,12 +108,13 @@ class ProductController {
     }
   }
 
-  // POST /products/:id/qa - Add a new Q entry for a product by ID
+  // POST /products/qa/:id - Add a new Q entry for a product by ID
   static async addQuestion(req, res) {
     try {
       const { id } = req.params;
       const { message, type } = req.body;
-      const sendId = req.user.id; // mocked
+      // const sendId = req.user.id; // mocked
+      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !message) {
         return res
@@ -119,12 +140,13 @@ class ProductController {
     }
   }
 
-  // POST /products/:id/qa/:chatId/reply - Add a new A entry for a product by ID
+  // POST /products/qa/:id/reply/:chatId - Add a new A entry for a product by ID
   static async addReply(req, res) {
     try {
       const { id, chatId } = req.params;
       const { message } = req.body;
-      const sendId = req.user.id; // mocked
+      // const sendId = req.user.id; // mocked
+      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 
       if (!id || !chatId || !message) {
         return res
@@ -150,7 +172,7 @@ class ProductController {
     }
   }
 
-  // GET /products/:id/auction-history - Get auction history details for a product by ID
+  // GET /products/auction-history/:id - Get auction history details for a product by ID
   static async getAuctionHistory(req, res) {
     try {
       const { id } = req.params;
@@ -169,7 +191,7 @@ class ProductController {
     }
   }
 
-  // GET /products/:id/related - Get related product by ID
+  // GET /products/related/:id - Get related product by ID
   static async getRelatedProduct(req, res) {
     try {
       const { id } = req.params;
@@ -189,28 +211,6 @@ class ProductController {
       return res
         .status(500)
         .json({ error: error.message || "Error getting related products" });
-    }
-  }
-
-  // GET /products/:id/time-remaining - Caculate product remaining auction time by ID
-  static async getTimeRemaining(req, res) {
-    try {
-      const { id } = req.params;
-
-      if (!id) {
-        return res.status(400).json({ error: "Product ID is required" });
-      }
-
-      const product = await ProductService.getProductBasicDetails(id);
-      const timeRemaining = ProductService.calculateTimeRemaining(
-        product.auction.endTime
-      );
-
-      return res.status(200).json(timeRemaining);
-    } catch (error) {
-      return res
-        .status(500)
-        .json({ error: error.message || "Error getting time remaining" });
     }
   }
 }

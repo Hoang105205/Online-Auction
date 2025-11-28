@@ -1,20 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Label, TextInput } from "flowbite-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
+
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import {
+  getUserBasicProfile,
+  updateUserInfo,
+  updateUserPassword,
+} from "../../api/userService";
+
+import { Spinner } from "flowbite-react";
 
 const ProfileTab = () => {
-  // Default data for demo
-  const initialProfile = {
-    fullName: "Nguyễn Văn A",
-    email: "user@example.com",
-    address: "Kingston, 5230, United State",
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  };
-
   // Zod schema for validation
   const ProfileSchema = z
     .object({
@@ -37,14 +37,14 @@ const ProfileTab = () => {
           message: "Vui lòng nhập mật khẩu hiện tại",
         });
       }
-      if (!data.newPassword || data.newPassword.length < 8) {
+      if (!data.newPassword || data.newPassword.length < 6) {
         ctx.addIssue({
           code: "too_small",
-          minimum: 8,
+          minimum: 6,
           type: "string",
           inclusive: true,
           path: ["newPassword"],
-          message: "Mật khẩu mới tối thiểu 8 ký tự",
+          message: "Mật khẩu mới tối thiểu 6 ký tự",
         });
       }
       if (data.confirmPassword !== data.newPassword) {
@@ -59,36 +59,187 @@ const ProfileTab = () => {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isValid },
     reset,
   } = useForm({
     resolver: zodResolver(ProfileSchema),
-    defaultValues: initialProfile,
+    defaultValues: {
+      fullName: "",
+      email: "",
+      address: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
     mode: "onChange",
   });
 
-  const [isEditing, setIsEditing] = useState(false);
+  const axiosPrivate = useAxiosPrivate();
 
-  const onSubmit = (data) => {
-    // Handle save logic here (call API)
-    console.log("Saving profile:", data);
-    setIsEditing(false);
+  const [userData, setUserData] = useState({
+    fullName: "",
+    email: "",
+    address: "",
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      try {
+        const data = await getUserBasicProfile(axiosPrivate);
+
+        if (isMounted) {
+          const formValues = {
+            fullName: data.fullName || "",
+            email: data.email || "",
+            address: data.address || "",
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          };
+
+          setUserData({
+            fullName: data.fullName || "",
+            email: data.email || "",
+            address: data.address || "",
+          });
+
+          reset(formValues);
+        }
+      } catch (error) {
+        console.error("Lỗi tải thông tin:", error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [axiosPrivate, reset]);
+
+  const onSubmitInfo = async (data) => {
+    try {
+      const payload = {
+        fullName: data.fullName,
+        email: data.email,
+        address: data.address,
+      };
+
+      const result = await updateUserInfo(axiosPrivate, payload);
+
+      setUserData(payload);
+
+      toast.success(result.message);
+
+      // --- LOGIC RESET FORM ---
+      // Lấy giá trị các trường password hiện tại để không làm mất chúng
+      const { currentPassword, newPassword, confirmPassword } = getValues();
+
+      // QUAN TRỌNG: Dùng 'payload' (dữ liệu mới) để reset, KHÔNG dùng 'userData'
+      reset({
+        ...payload,
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      setIsEditingInfo(false);
+    } catch (error) {
+      const { currentPassword, newPassword, confirmPassword } = getValues();
+      reset({ ...userData, currentPassword, newPassword, confirmPassword });
+      setIsEditingInfo(false);
+      const msg = error.response?.data?.message || "Cập nhật thất bại";
+      toast.error(msg);
+    }
   };
 
-  const handleCancel = () => {
-    // Reset to original data
-    reset(initialProfile);
-    setIsEditing(false);
+  const onSubmitPassword = async (data) => {
+    try {
+      const payload = {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      };
+
+      const result = await updateUserPassword(axiosPrivate, payload);
+
+      toast.success(result.message);
+
+      // --- LOGIC RESET FORM ---
+      // Lấy thông tin info hiện tại để giữ nguyên
+      const { fullName, email, address } = getValues();
+
+      // Reset các ô password về rỗng (Logic của bạn đoạn này ĐÚNG)
+      reset({
+        fullName,
+        email,
+        address,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setIsEditingPassword(false);
+    } catch (error) {
+      const { fullName, email, address } = getValues();
+      reset({
+        fullName,
+        email,
+        address,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setIsEditingPassword(false);
+      const msg = error.response?.data?.message || "Đổi mật khẩu thất bại";
+      toast.error(msg);
+    }
+  };
+
+  const handleCancelInfo = () => {
+    const { currentPassword, newPassword, confirmPassword } = getValues();
+    reset({ ...userData, currentPassword, newPassword, confirmPassword });
+    setIsEditingInfo(false);
+  };
+
+  const handleCancelPassword = () => {
+    const { fullName, email, address } = getValues();
+    reset({
+      fullName,
+      email,
+      address,
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setIsEditingPassword(false);
   };
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="relative p-6 md:p-8">
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm">
+          <Spinner size="lg" color="info" />
+          <p className="mt-3 text-sm text-gray-700">Đang tải hồ sơ...</p>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">{isEditing ? "Chỉnh sửa hồ sơ" : "Hồ sơ của bạn"}</h2>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {isEditingInfo ? "Chỉnh sửa hồ sơ" : "Hồ sơ của bạn"}
+        </h2>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* FORM: Basic Info */}
+      <form onSubmit={handleSubmit(onSubmitInfo)} className="space-y-6">
         {/* Name and Email Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -101,7 +252,7 @@ const ProfileTab = () => {
               id="fullName"
               type="text"
               placeholder="Nhập họ và tên đầy đủ"
-              disabled={!isEditing}
+              disabled={isLoading || !isEditingInfo}
               sizing="lg"
               className="w-full"
               {...register("fullName")}
@@ -117,7 +268,7 @@ const ProfileTab = () => {
               id="email"
               type="email"
               placeholder="name@example.com"
-              disabled={!isEditing}
+              disabled={isLoading || !isEditingInfo}
               sizing="lg"
               className="w-full"
               {...register("email")}
@@ -136,7 +287,7 @@ const ProfileTab = () => {
             id="address"
             type="text"
             placeholder="Địa chỉ liên hệ"
-            disabled={!isEditing}
+            disabled={isLoading || !isEditingInfo}
             sizing="lg"
             className="w-full"
             {...register("address")}
@@ -147,6 +298,47 @@ const ProfileTab = () => {
           )}
         </div>
 
+        {/* Actions: Basic Info */}
+        <div className="flex justify-end gap-4 pt-2">
+          {isEditingInfo ? (
+            <>
+              <Button
+                type="button"
+                color="gray"
+                size="lg"
+                onClick={handleCancelInfo}
+                disabled={isLoading}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                className="bg-sky-600 hover:bg-sky-700"
+                size="lg"
+                disabled={isLoading || !isValid}
+              >
+                Cập nhật thông tin
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              className="bg-sky-600 hover:bg-sky-700"
+              size="lg"
+              onClick={() => setIsEditingInfo(true)}
+              disabled={isLoading}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          )}
+        </div>
+      </form>
+
+      {/* Divider */}
+      <hr className="my-8 border-gray-200" />
+
+      {/* FORM: Change Password */}
+      <form onSubmit={handleSubmit(onSubmitPassword)} className="space-y-6">
         {/* Password Changes Section */}
         <div className="pt-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -163,7 +355,7 @@ const ProfileTab = () => {
                 id="currentPassword"
                 type="password"
                 placeholder="Current Password"
-                disabled={!isEditing}
+                disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
                 {...register("currentPassword")}
@@ -185,7 +377,7 @@ const ProfileTab = () => {
                 id="newPassword"
                 type="password"
                 placeholder="New Password (min 8 ký tự)"
-                disabled={!isEditing}
+                disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
                 {...register("newPassword")}
@@ -207,7 +399,7 @@ const ProfileTab = () => {
                 id="confirmPassword"
                 type="password"
                 placeholder="Confirm New Password"
-                disabled={!isEditing}
+                disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
                 {...register("confirmPassword")}
@@ -221,36 +413,37 @@ const ProfileTab = () => {
             </div>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-4 pt-4">
-          {isEditing ? (
+        {/* Actions: Password */}
+        <div className="flex justify-end gap-4 pt-2">
+          {isEditingPassword ? (
             <>
               <Button
                 type="button"
                 color="gray"
                 size="lg"
-                onClick={handleCancel}
+                onClick={handleCancelPassword}
+                disabled={isLoading}
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 type="submit"
                 className="bg-red-500 hover:bg-red-600"
                 size="lg"
-                disabled={!isValid}
+                disabled={isLoading || !isValid}
               >
-                Save Changes
+                Cập nhật mật khẩu
               </Button>
             </>
           ) : (
             <Button
               type="button"
-              className="bg-sky-600 hover:bg-sky-700"
+              className="bg-red-500 hover:bg-red-600"
               size="lg"
-              onClick={() => setIsEditing(true)}
+              onClick={() => setIsEditingPassword(true)}
+              disabled={isLoading}
             >
-              Edit Profile
+              Thay đổi mật khẩu
             </Button>
           )}
         </div>

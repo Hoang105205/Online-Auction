@@ -1,37 +1,57 @@
 import React, { useState, useRef } from "react";
 import { Editor } from "@tinymce/tinymce-react";
+import { updateDescription } from "../../api/productService";
 
-const ProductDetailsInformation = ({ description, isOwner, onSave }) => {
+const ProductDetailsInformation = ({
+  productId,
+  description,
+  isOwner,
+  onSave,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editorContent, setEditorContent] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const editorRef = useRef(null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editorContent.trim()) {
       alert("Vui lòng nhập nội dung!");
       return;
     }
 
-    // Tạo timestamp
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const timestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+    try {
+      setSaving(true);
 
-    const updatedDescription = `
+      // Tạo timestamp
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, "0");
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const timestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+      const updatedDescription = `
       ${description}
       <br/>
       <p><strong>✏️ ${timestamp}</strong></p>
       ${editorContent}
     `;
 
-    onSave(updatedDescription);
-    setEditorContent("");
-    setIsEditing(false);
+      const response = await updateDescription(productId, updatedDescription);
+
+      console.log("Update description response:", response);
+
+      onSave(response.product.detail.description);
+      setEditorContent("");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating description:", error);
+      alert("Cập nhật mô tả thất bại. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -60,7 +80,7 @@ const ProductDetailsInformation = ({ description, isOwner, onSave }) => {
                 onInit={(evt, editor) => (editorRef.current = editor)}
                 value={editorContent}
                 init={{
-                  height: 400,
+                  height: 200,
                   menubar: false,
                   plugins: [
                     "advlist",

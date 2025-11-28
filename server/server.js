@@ -28,6 +28,8 @@ connectDB();
 app.use("/api/auth", require("./routes/AuthRoute"));
 app.use("/api/products", require("./routes/ProductRoute"));
 app.use("/api/products", require("./routes/UploadProductRoute"));
+app.use("/api/users", require("./routes/UserRoute"));
+app.use("/api/system", require("./routes/SystemRoute"));
 
 // --- Middleware Xử lý Lỗi Cuối cùng ---
 app.use((req, res) => {
