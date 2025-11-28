@@ -162,8 +162,7 @@ export default function MyProductsPage() {
                     ? "border-gray-200 text-gray-400 cursor-not-allowed"
                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                 }`}
-                aria-label="Trang trước"
-              >
+                aria-label="Trang trước">
                 <HiChevronLeft className="w-5 h-5" />
               </button>
 
@@ -177,8 +176,7 @@ export default function MyProductsPage() {
                       currentPage === page
                         ? "bg-sky-600 text-white border-sky-600"
                         : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
+                    }`}>
                     {page}
                   </button>
                 )
@@ -193,8 +191,7 @@ export default function MyProductsPage() {
                     ? "border-gray-200 text-gray-400 cursor-not-allowed"
                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                 }`}
-                aria-label="Trang sau"
-              >
+                aria-label="Trang sau">
                 <HiChevronRight className="w-5 h-5" />
               </button>
             </div>

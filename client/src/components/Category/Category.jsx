@@ -33,8 +33,7 @@ export const Category = ({ category }) => {
             setFirstTap(false);
           }
         }}
-        className={`justify-between w-full text-black hover:bg-gray-100 focus:bg-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center
-          ${open ? "bg-gray-100" : ""}`}
+        className="justify-between w-full text-black hover:bg-gray-200 focus:bg-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
       >
         {category.title}
         <svg
