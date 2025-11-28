@@ -108,6 +108,85 @@ class UserService {
 
     return;
   }
+
+  static async getFeedBack(userId, { page = 1, limit = 5, filter = "all" }) {
+    const user = await User.findById(userId)
+      .select("feedBackAsBidder feedBackAsSeller")
+      .populate({
+        path: "feedBackAsBidder.commenterId",
+        select: "fullName",
+      })
+      .populate({
+        path: "feedBackAsSeller.commenterId",
+        select: "fullName",
+      })
+      .exec();
+
+    if (!user) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
+    let rawFeedbacks = [];
+
+    // Map dữ liệu Bidder (Người này đi mua và được đánh giá)
+    const bidderReviews = user.feedBackAsBidder.map((item) => ({
+      _id: item._id,
+      content: item.content,
+      isGood: item.isGood,
+      date: item.date,
+      commenter: item.commenterId?.fullName || "Người dùng ẩn",
+      role: "bidder",
+    }));
+
+    // Map dữ liệu Seller (Người này đi bán và được đánh giá)
+    const sellerReviews = user.feedBackAsSeller.map((item) => ({
+      _id: item._id,
+      content: item.content,
+      isGood: item.isGood,
+      date: item.date,
+      commenter: item.commenterId?.fullName || "Người dùng ẩn",
+      role: "seller",
+    }));
+
+    if (filter === "bidder") {
+      rawFeedbacks = bidderReviews;
+    } else if (filter === "seller") {
+      rawFeedbacks = sellerReviews;
+    } else {
+      rawFeedbacks = [...bidderReviews, ...sellerReviews];
+    }
+
+    // stats
+    const totalCount = rawFeedbacks.length;
+    const goodCount = rawFeedbacks.filter((fb) => fb.isGood).length;
+    const badCount = totalCount - goodCount;
+
+    const percentage =
+      totalCount === 0 ? 100 : Math.round((goodCount / totalCount) * 100);
+
+    rawFeedbacks.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedFeedbacks = rawFeedbacks.slice(startIndex, endIndex);
+
+    return {
+      feedbacks: paginatedFeedbacks,
+      stats: {
+        total: totalCount,
+        good: goodCount,
+        bad: badCount,
+        percentage: percentage,
+      },
+      pagination: {
+        currentPage: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    };
+  }
 }
 
 module.exports = UserService;
