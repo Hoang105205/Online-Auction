@@ -63,6 +63,9 @@ class ProductController {
     try {
       const { id } = req.params;
       const { description } = req.body;
+
+      console.log("👉 Đang update sản phẩm ID:", req.params.id);
+      console.log("📦 Dữ liệu nhận được:", req.body);
       // const sellerId = req.user.id; // mocked
       const sellerId = "6922ec91a628dffaa2414479"; // hardcoded for testing
 

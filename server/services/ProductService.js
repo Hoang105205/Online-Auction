@@ -42,6 +42,9 @@ class ProductService {
   // update product description
   static async updateDescription(productId, newContent, sellerId) {
     try {
+      console.log("👉 Đang update mô tả sản phẩm ID:", productId);
+      console.log("📦 Dữ liệu nhận được:", newContent);
+      console.log("🆔 Seller ID:", sellerId);
       const product = await Product.findById(productId);
 
       if (!product) {

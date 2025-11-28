@@ -8,6 +8,8 @@ import ProductDetailsANA from "./ProductDetailsANA";
 
 import ProductCardP from "../Product/ProductCardP";
 
+import useAuth from "../../hooks/useAuth";
+
 import {
   getProductBasicDetails,
   getProductAuction,
@@ -17,6 +19,22 @@ import {
 } from "../../api/productService";
 
 const ProductDetails = () => {
+
+  const { auth } = useAuth();
+  const [currentUserId, setCurrentUserId] = useState("6922ec91a628dffaa2414479");
+
+  // useEffect(() => {
+  //   let isMounted = true;
+
+  //   if (!auth) return;
+
+  //   setCurrentUserId(auth.id);
+
+  //   return () => {
+  //     isMounted = false;
+  //   }
+  // }, [auth]);
+
   const products = [
     {
       id: 1,
@@ -392,7 +410,6 @@ const ProductDetails = () => {
     timeRemaining = calculateTimeRemaining(productAuctionData.auction.endTime);
   }
 
-  const currentUserId = "6922ec91a628dffaa2414479";
   const isOwner = currentUserId === sellerId;
 
   return (
