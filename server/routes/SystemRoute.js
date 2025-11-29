@@ -94,4 +94,25 @@ router.delete(
   SystemController.removeCategory
 );
 
+router.get(
+  "/users",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.listUsers
+);
+
+router.get(
+  "/products",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.listProducts
+);
+
+router.delete(
+  "/products/:productId",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.removeProduct
+);
+
 module.exports = router;

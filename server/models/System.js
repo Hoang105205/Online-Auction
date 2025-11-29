@@ -78,10 +78,10 @@ const systemSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "System",
+    collection: "system",
   }
 );
 
-const System = mongoose.model("System", systemSchema);
+const System = mongoose.model("system", systemSchema);
 
 module.exports = System;

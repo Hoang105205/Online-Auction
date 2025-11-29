@@ -53,7 +53,7 @@ const router = createBrowserRouter(
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        
+
         <Route path="/" element={<MainLayout />}>
           {/* 1. PUBLIC ROUTES (Truy cập tự do) */}
           <Route index element={<LandingPage />} />
@@ -80,15 +80,16 @@ const router = createBrowserRouter(
           </Route>
         </Route>
 
-        {/* Yêu cầu Đã Đăng nhập với quyền Admin --> chưa config RequireAuth */}
         {/* Admin route */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="upgrade" element={<UpgradePage />} />
-          <Route path="settings" element={<SettingsPage />} />
+        <Route element={<RequireAuth allowedRoles={[ROLES.Admin]} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="upgrade" element={<UpgradePage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
         </Route>
 
         {/* Catch-all route for 404 */}

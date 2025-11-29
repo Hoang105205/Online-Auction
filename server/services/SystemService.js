@@ -317,6 +317,97 @@ class SystemService {
     await sys.save();
     return sys;
   }
+
+  // Admin listing helpers
+  static async listUsers({ page = 1, limit = 20, q = "" } = {}) {
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(100, Number(limit) || 20);
+    q = (q || "").trim();
+
+    const filter = {};
+    if (q) {
+      const re = new RegExp(q, "i");
+      filter.$or = [{ fullName: re }, { email: re }];
+    }
+
+    const total = await User.countDocuments(filter).exec();
+    const users = await User.find(filter)
+      .select(
+        "-password -refreshToken -otp -otpExpires -resetPasswordToken -resetPasswordExpires -__v"
+      )
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean()
+      .exec();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      data: users,
+    };
+  }
+
+  static async listProducts({ page = 1, limit = 20, q = "", status } = {}) {
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(100, Number(limit) || 20);
+    q = (q || "").trim();
+
+    const filter = {};
+    if (q) {
+      const re = new RegExp(q, "i");
+      filter.$or = [
+        { "detail.name": re },
+        { "detail.description": re },
+        { "detail.category": re },
+      ];
+    }
+    if (status !== undefined && status !== null && String(status).length)
+      filter["auction.status"] = status;
+
+    const total = await Product.countDocuments(filter).exec();
+    const products = await Product.find(filter)
+      .select("detail auction auctionHistory")
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("detail.sellerId", "fullName email")
+      .lean()
+      .exec();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      data: products,
+    };
+  }
+
+  static async removeProduct(productId) {
+    if (!productId) {
+      const error = new Error("productId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      const error = new Error("Invalid productId");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const prod = await Product.findById(productId).exec();
+    if (!prod) {
+      const error = new Error("Product not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    await Product.deleteOne({ _id: productId }).exec();
+    return prod;
+  }
 }
 
 module.exports = SystemService;
