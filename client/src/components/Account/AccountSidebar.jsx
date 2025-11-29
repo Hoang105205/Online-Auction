@@ -25,7 +25,7 @@ const sections = [
     id: "other",
     title: "Other",
     items: [
-      { to: "/account/watchlist", label: "My Watchlist", icon: HiHeart },
+      { to: "/account/watchlist", label: "Watch List", icon: HiHeart },
       { to: "/account/permissions", label: "Quyền hiện tài", icon: HiKey },
     ],
   },

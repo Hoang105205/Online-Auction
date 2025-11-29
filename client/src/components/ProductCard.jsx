@@ -116,10 +116,10 @@ const ProductCard = ({ product, isWon = false }) => {
               </div>
             )}
 
-            {/* Posted Date */}
+            {/* Created Date */}
             <div className="flex items-center gap-2 text-gray-600">
               <HiTag className="text-gray-400 flex-shrink-0" />
-              <span>Ngày đăng: {formatDate(product.postedDate)}</span>
+              <span>Ngày đăng: {formatDate(product.createdAt)}</span>
             </div>
 
             {/* Time Remaining - Only show if not won */}

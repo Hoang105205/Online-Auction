@@ -116,6 +116,28 @@ const removeFromWatchList = async (req, res) => {
   }
 };
 
+const getWatchList = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 3;
+    const sort = req.query.sort || "newest";
+
+    const result = await UserService.getWatchList(userId, {
+      page,
+      limit,
+      sort,
+    });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getUserBasicProfile,
   updateUserProfile,
@@ -123,4 +145,5 @@ module.exports = {
   getFeedback,
   addToWatchList,
   removeFromWatchList,
+  getWatchList,
 };

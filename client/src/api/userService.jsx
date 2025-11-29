@@ -61,3 +61,55 @@ export const getUserFeedback = async (
     throw error;
   }
 };
+
+/**
+ * Lấy danh sách theo dõi của người dùng với phân trang và sắp xếp
+ * API: GET /api/users/watchlist
+ */
+export const getWatchList = async (
+  axiosInstance,
+  { page = 1, limit = 3, sort = "newest" }
+) => {
+  try {
+    const response = await axiosInstance.get("/users/watchlist", {
+      params: {
+        page,
+        limit,
+        sort,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Thêm sản phẩm vào danh sách theo dõi
+ * API: POST /api/users/watchlist
+ */
+export const addToWatchList = async (axiosInstance, productId) => {
+  try {
+    const response = await axiosInstance.post(`/users/watchlist`, {
+      productId,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Xóa sản phẩm khỏi danh sách theo dõi
+ * API: DELETE /api/users/watchlist
+ */
+export const removeFromWatchList = async (axiosInstance, productId) => {
+  try {
+    const response = await axiosInstance.delete(`/users/watchlist`, {
+      data: { productId },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

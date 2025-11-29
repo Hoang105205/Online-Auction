@@ -237,6 +237,66 @@ class UserService {
 
     return { message: "Đã xóa sản phẩm khỏi danh sách theo dõi." };
   }
+
+  static async getWatchList(userId, { page = 1, limit = 3, sort = "newest" }) {
+    let sortOption = {};
+
+    switch (sort) {
+      case "newest":
+        sortOption = { createdAt: -1 };
+        break;
+      case "oldest":
+        sortOption = { createdAt: 1 };
+        break;
+      case "price_desc": // Giá cao xuống thấp
+        sortOption = { "auction.currentPrice": -1 };
+        break;
+      case "price_asc": // Giá thấp lên cao
+        sortOption = { "auction.currentPrice": 1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const userCount = await User.findById(userId).select("watchList").exec();
+    if (!userCount) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const totalCountFromDB = userCount.watchList.length;
+
+    const user = await User.findById(userId)
+      .select("watchList")
+      .populate({
+        path: "watchList",
+        select:
+          "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.endTime auction.bidders auction.status auction.highestBidderId createdAt",
+        options: {
+          sort: sortOption,
+          skip: (page - 1) * limit,
+          limit: parseInt(limit),
+        },
+        populate: {
+          path: "auction.highestBidderId",
+          select: "fullName",
+        },
+      })
+      .exec();
+
+    const validProducts = user.watchList.filter((p) => p !== null);
+
+    return {
+      products: validProducts,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCountFromDB / limit),
+        totalItems: totalCountFromDB,
+        limit: parseInt(limit),
+      },
+    };
+  }
 }
 
 module.exports = UserService;

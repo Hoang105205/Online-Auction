@@ -8,6 +8,7 @@ const {
   getFeedback,
   addToWatchList,
   removeFromWatchList,
+  getWatchList,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -30,12 +31,7 @@ router.put(
   updateUserPassword
 );
 
-router.get(
-  "/feedback",
-  verifyJWT,
-  verifyRoles(ROLES_LIST.Bidder),
-  getFeedback
-);
+router.get("/feedback", verifyJWT, verifyRoles(ROLES_LIST.Bidder), getFeedback);
 
 router.post(
   "/watchlist",
@@ -51,6 +47,11 @@ router.delete(
   removeFromWatchList
 );
 
-
+router.get(
+  "/watchlist",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  getWatchList
+);
 
 module.exports = router;
