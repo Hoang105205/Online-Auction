@@ -5,6 +5,7 @@ import { Card } from "flowbite-react";
 import ProductDetailsInformation from "./ProductDetailsInformation";
 import ProductDetailsAuction from "./ProductDetailsAuction";
 import ProductDetailsANA from "./ProductDetailsANA";
+import ProductImage from "../ProductImage";
 
 import ProductCardP from "../Product/ProductCardP";
 
@@ -19,9 +20,10 @@ import {
 } from "../../api/productService";
 
 const ProductDetails = () => {
-
   const { auth } = useAuth();
-  const [currentUserId, setCurrentUserId] = useState("6922ec91a628dffaa2414479");
+  const [currentUserId, setCurrentUserId] = useState(
+    "6922ec91a628dffaa2414479"
+  );
 
   // useEffect(() => {
   //   let isMounted = true;
@@ -92,203 +94,6 @@ const ProductDetails = () => {
       bidCount: 22,
     },
   ];
-
-  const productInfo = {
-    _id: "69248889c9c9c0080231cd7f",
-    detail: {
-      sellerId: {
-        _id: "6922ec91a628dffaa2414479",
-        fullName: "Nguyễn Văn A",
-        email: "seller@example.com",
-        feedBackAsSeller: {
-          point: 3.6,
-          count: 152,
-        },
-      },
-      name: "MSI RED T1 jacket",
-      category: "Fashion",
-      subCategory: "Áo khoác",
-      description: `
-      <p>
-        Áo khoác <strong>MSI RED T1</strong> là sự kết hợp bùng nổ giữa nhà sản xuất
-        phần cứng gaming hàng đầu thế giới <strong>MSI (Micro-Star
-        International)</strong> và đội tuyển Esports huyền thoại <strong>T1</strong>. Được
-        thiết kế dành riêng cho những nhà vô địch và fan hâm mộ cuồng
-        nhiệt, chiếc áo này không chỉ là một trang phục mà còn là biểu
-        tượng rực lửa của tinh thần "Dare to win". Tông màu <strong>Đen</strong> mạnh
-        mẽ làm nền, kết hợp hài hòa với các chi tiết <strong>Đỏ (RED)</strong> đặc
-        trưng, tạo nên vẻ ngoài cực kỳ nổi bật và cuốn hút.
-      </p>
-      <br />
-      <p>
-        Về chất liệu, áo được chế tạo từ <strong>Vải dù cao cấp
-        (Polyester/Nylon)</strong> có khả năng chống thấm nước nhẹ và chắn gió
-        hiệu quả, đảm bảo sự thoải mái trong mọi điều kiện thời tiết. Đặc
-        biệt, lớp lót lưới <strong>(Mesh lining)</strong> bên trong tăng cường khả năng
-        thoáng khí và thấm hút mồ hôi, giữ cho cơ thể luôn khô ráo và mát
-        mẻ trong các hoạt động năng động hay những trận chiến căng thẳng.
-        Logo Rồng MSI uy dũng và logo T1 được thêu/in ấn tượng, khẳng định
-        đẳng cấp và phong cách của người mặc. Đây là món đồ không thể
-        thiếu để thể hiện niềm đam mê Esports và phong cách đường phố mạnh
-        mẽ.
-      </p>
-      <br />
-      <p>
-        電源入り撮影出来ましたが細部の機能までは確認していません。
-        不得意ジャンルの買い取り品の為細かい確認出来る知識がありません、ご了承ください。
-        簡単な確認方法が有れば確認しますので方法等質問欄からお願いします、終了日の質問には答えられない場合があります。
-        付属品、状態は画像でご確認ください。
-        当方詳しくありませんので高度な質問には答えられない場合がありますがご了承ください。
-        発送は佐川急便元払いを予定しています、破損防止の為梱包サイズが大きくなる事がありますがご了承下さい。 
-        中古品の為NC/NRでお願いします。<br/>
-
-        ✏️ 31/10/2025 <br/>
-
-        - が大きくなる事がありますがご了承下さい。 <br/>
-
-        ✏️ 5/11/2025 <br/>
-
-        - 不得意ジャンルの買い取り品の為細かい確認出来る知識がありません、ご了承ください。 <br/>
-      </p>
-    `,
-      images: [
-        "/img/image1h.jpg",
-        "/img/image2h.jpg",
-        "/img/image3h.jpg",
-        "/img/image4h.jpg",
-        "/img/image5h.jpg",
-      ],
-      followers: 363,
-    },
-    auction: {
-      startPrice: 100,
-      stepPrice: 5,
-      buyNowPrice: 500,
-      currentPrice: 360,
-      highestBidderId: {
-        _id: "bidder123",
-        fullName: "Trần Thị B",
-        feedBackAsBidder: {
-          point: 3.6,
-          count: 89,
-        },
-      },
-      startTime: new Date("2025-03-06T00:00:00Z"),
-      endTime: new Date("2025-06-03T23:59:59Z"),
-      autoExtend: false,
-      status: "active",
-      bidders: 45,
-    },
-    auctionHistory: {
-      numberOfBids: 52,
-      historyList: [
-        {
-          _id: "bid001",
-          bidderId: {
-            _id: "bidder123",
-            fullName: "Trần Thị B",
-          },
-          bidPrice: 360,
-          bidTime: new Date("2025-11-19T18:15:00Z"),
-        },
-        {
-          _id: "bid002",
-          bidderId: {
-            _id: "bidder456",
-            fullName: "Lê Văn C",
-          },
-          bidPrice: 355,
-          bidTime: new Date("2025-11-18T16:00:00Z"),
-        },
-        {
-          _id: "bid003",
-          bidderId: {
-            _id: "bidder789",
-            fullName: "Phạm Thị D",
-          },
-          bidPrice: 350,
-          bidTime: new Date("2025-11-17T14:45:00Z"),
-        },
-        {
-          _id: "bid004",
-          bidderId: {
-            _id: "bidder012",
-            fullName: "Hoàng Văn E",
-          },
-          bidPrice: 345,
-          bidTime: new Date("2025-11-16T12:30:00Z"),
-        },
-        {
-          _id: "bid005",
-          bidderId: {
-            _id: "bidder345",
-            fullName: "Vũ Thị F",
-          },
-          bidPrice: 340,
-          bidTime: new Date("2025-11-15T10:00:00Z"),
-        },
-      ],
-    },
-    chat: [
-      {
-        _id: "chat001",
-        type: "public",
-        sendId: {
-          _id: "user456",
-          fullName: "Nguyễn Thị G",
-        },
-        receiveId: {
-          _id: "user123",
-          fullName: "Nguyễn Văn A",
-        },
-        message:
-          "Hello, I am interested in your product. Is it still available?",
-        time: new Date("2025-11-18T08:10:00Z"),
-        replies: [
-          {
-            _id: "reply001",
-            sendId: {
-              _id: "user123",
-              fullName: "Nguyễn Văn A",
-            },
-            message:
-              "Yes, the product is still available. Let me know if you have any questions.",
-            time: new Date("2025-11-18T08:12:00Z"),
-          },
-        ],
-      },
-      {
-        _id: "chat002",
-        type: "public",
-        sendId: {
-          _id: "user456",
-          fullName: "Nguyễn Thị G",
-        },
-        receiveId: {
-          _id: "user123",
-          fullName: "Nguyễn Văn A",
-        },
-        message:
-          "Great! Can you provide more details about its condition and any accessories included?",
-        time: new Date("2025-11-18T08:15:00Z"),
-        replies: [
-          {
-            _id: "reply002",
-            sendId: {
-              _id: "user123",
-              fullName: "Nguyễn Văn A",
-            },
-            message:
-              "The product is in excellent condition with all accessories.",
-            time: new Date("2025-11-18T08:20:00Z"),
-          },
-        ],
-      },
-    ],
-    views: 3600, // Thêm field views (có thể lưu trong DB sau)
-    createdAt: new Date("2025-03-06T00:00:00Z"),
-    updatedAt: new Date("2025-11-19T18:15:00Z"),
-  };
 
   const { id } = useParams();
   const productId = id;
@@ -414,7 +219,17 @@ const ProductDetails = () => {
 
   return (
     <>
-      {loading && <div className="text-center py-20">Loading...</div>}
+      {loading && (
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="animate-pulse text-blue-600 text-2xl font-bold"></div>
+            </div>
+          </div>
+          <p className="mt-6 text-gray-600 text-lg font-medium">Đang tải...</p>
+        </div>
+      )}
       {error && (
         <div className="text-center py-20 text-red-500">Error: {error}</div>
       )}
@@ -448,11 +263,7 @@ const ProductDetails = () => {
                       selectedImage === idx ? "border-black" : "border-gray-200"
                     }`}
                   >
-                    <img
-                      src={img}
-                      alt={`Product ${idx + 1}`}
-                      className="product-thumb-image w-full h-full object-cover"
-                    />
+                    <ProductImage url={img} />
                   </div>
                 ))}
               </div>
@@ -463,12 +274,12 @@ const ProductDetails = () => {
                 className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
                 style={{ aspectRatio: "1 / 1", minHeight: 240 }}
               >
-                <img
-                  src={images[selectedImage]}
-                  alt="Product"
+                <div
                   className="product-main-image w-full h-full object-contain cursor-zoom-in"
                   onClick={() => setModalOpen(true)}
-                />
+                >
+                  <ProductImage url={images[selectedImage]} />
+                </div>
               </div>
             </div>
 
