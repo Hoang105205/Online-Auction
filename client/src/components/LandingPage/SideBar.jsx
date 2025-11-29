@@ -83,8 +83,7 @@ const SideBar = () => {
     <div onMouseLeave={() => setIsOpenMobile(false)}>
       <Button
         className="absolute md:hidden z-40 p-2 bg-gray-300 text-gray-700 rounded-full shadow-md hover:bg-gray-400 hover:text-gray-900 transition-colors duration-200"
-        onClick={() => setIsOpenMobile(!isOpenMobile)}
-      >
+        onClick={() => setIsOpenMobile(!isOpenMobile)}>
         <ChevronRight size={25} />
       </Button>
       {/* Mobile overlay (shown when sidebar is open) */}
@@ -99,13 +98,11 @@ const SideBar = () => {
         className={`fixed top-0 left-0 h-full w-[300px] bg-white p-4 transform transition-transform duration-300 z-40
         ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:static`}
-      >
+        } md:translate-x-0 md:static`}>
         <form className="max-w-md mx-auto">
           <label
             htmlFor="default-search"
-            className="mb-2 text-sm font-medium text-gray-900 sr-only"
-          >
+            className="mb-2 text-sm font-medium text-gray-900 sr-only">
             Search
           </label>
           <div className="relative">
@@ -115,8 +112,7 @@ const SideBar = () => {
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
-                viewBox="0 0 20 20"
-              >
+                viewBox="0 0 20 20">
                 <path
                   stroke="currentColor"
                   strokeLinecap="round"

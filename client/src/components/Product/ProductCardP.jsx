@@ -61,6 +61,12 @@ const ProductCardP = ({ product, isWon = false }) => {
 
   return (
     <>
+      <button
+        //onClick={}
+        className="relative z-10 top-12 left-2 p-2  rounded-full shadow transition-colors duration-300 
+      bg-gray-300 text-gray-400 hover:bg-white hover:text-red-500">
+        <HiHeart className="w-6 h-6" />
+      </button>
       <Link to={`/details/${product.id}`}>
         <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
           {/* Image */}
@@ -78,8 +84,7 @@ const ProductCardP = ({ product, isWon = false }) => {
                 className="
               absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 
               group-hover:opacity-100 group-hover:translate-y-0
-              translate-y-4 transition-all duration-300 w-[80%]"
-              >
+              translate-y-4 transition-all duration-300 w-[80%]">
                 Đấu giá ngay
               </Button>
             )}
@@ -117,113 +122,69 @@ const ProductCardP = ({ product, isWon = false }) => {
                 <div className="flex items-center gap-2 text-gray-600">
                   <HiUser className="text-gray-400 flex-shrink-0" />
                   <span className="truncate">
-                    Bởi:{" "}
+                    Người đặt giá cao nhất:{" "}
                     <span className="font-medium text-gray-900">
                       {maskBidderName(product.highestBidder)}
                     </span>
                   </span>
                 </div>
               )}
-              {!isWon && isEnded && (
-                <div className="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                  Đã kết thúc
+
+              {/* Buy Now Price - Only show if not won and has buyNowPrice */}
+              {!isWon && product.buyNowPrice && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <HiShoppingCart className="text-gray-400 flex-shrink-0" />
+                  <span className="truncate">
+                    Mua ngay:{" "}
+                    <span className="font-medium text-green-600">
+                      {formatPrice(product.buyNowPrice)}
+                    </span>
+                  </span>
                 </div>
               )}
-            </div>
 
-            {/* Content */}
-            <div className="p-4">
-              {/* Product Name */}
-              <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2 group-hover:text-sky-600 transition-colors">
-                {product.name}
-              </h3>
-
-              {/* Current Price */}
-              <div className="mb-3">
-                <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
-                <p className="text-2xl font-bold text-sky-600">
-                  {formatPrice(product.currentPrice)}
-                </p>
+              {/* Posted Date */}
+              <div className="flex items-center gap-2 text-gray-600">
+                <HiTag className="text-gray-400 flex-shrink-0" />
+                <span>Ngày đăng: {formatDate(product.postedDate)}</span>
               </div>
 
-              {/* Info Grid */}
-              <div className="space-y-2 text-sm">
-                {/* Highest Bidder - Only show if not won */}
-                {!isWon && product.highestBidder && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <HiUser className="text-gray-400 flex-shrink-0" />
-                    <span className="truncate">
-                      Bởi:{" "}
-                      <span className="font-medium text-gray-900">
-                        {maskBidderName(product.highestBidder)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-
-                {/* Buy Now Price - Only show if not won and has buyNowPrice */}
-                {!isWon && product.buyNowPrice && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <HiShoppingCart className="text-gray-400 flex-shrink-0" />
-                    <span className="truncate">
-                      Mua ngay:{" "}
-                      <span className="font-medium text-green-600">
-                        {formatPrice(product.buyNowPrice)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-
-                {/* Posted Date */}
+              {/* Time Remaining - Only show if not won */}
+              {!isWon && !isEnded && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <HiClock className="text-gray-400 flex-shrink-0" />
                   <span
                     className={`font-medium ${
                       isEnded ? "text-gray-500" : "text-orange-600"
-                    }`}
-                  >
+                    }`}>
                     {timeRemaining}
                   </span>
                 </div>
+              )}
 
-                {/* Time Remaining - Only show if not won */}
-                {!isWon && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <HiClock className="text-gray-400 flex-shrink-0" />
-                    <span
-                      className={`font-medium ${
-                        isEnded ? "text-gray-500" : "text-orange-600"
-                      }`}
-                    >
-                      {timeRemaining}
+              {/* Bid Count - Only show if not won */}
+              {!isWon && (
+                <div className="pt-2 border-t">
+                  <span className="text-gray-600">
+                    Số lượt đặt giá:{" "}
+                    <span className="font-semibold text-gray-900">
+                      {product.bidCount}
                     </span>
-                  </div>
-                )}
+                  </span>
+                </div>
+              )}
 
-                {/* Bid Count - Only show if not won */}
-                {!isWon && (
-                  <div className="pt-2 border-t">
-                    <span className="text-gray-600">
-                      Số lượt đặt giá:{" "}
-                      <span className="font-semibold text-gray-900">
-                        {product.bidCount}
-                      </span>
+              {/* Won Date - Only show if won */}
+              {isWon && product.wonDate && (
+                <div className="pt-2 border-t">
+                  <span className="text-gray-600">
+                    Ngày thắng:{" "}
+                    <span className="font-semibold text-green-600">
+                      {formatDate(product.wonDate)}
                     </span>
-                  </div>
-                )}
-
-                {/* Won Date - Only show if won */}
-                {isWon && product.wonDate && (
-                  <div className="pt-2 border-t">
-                    <span className="text-gray-600">
-                      Ngày thắng:{" "}
-                      <span className="font-semibold text-green-600">
-                        {formatDate(product.wonDate)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </div>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

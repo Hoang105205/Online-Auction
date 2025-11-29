@@ -1,6 +1,13 @@
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
+const storage = require("../config/cloudinaryStorage");
+const upload = multer({ storage });
+
 const ProductController = require("../controllers/ProductController");
+const verifyJWT = require("../middleware/verifyJWT");
+const verifyRoles = require("../middleware/verifyRoles");
+const ROLES_LIST = require("../config/roles_list");
 
 // POST /products - Create product (mock implementation for now)
 router.post("/", async (req, res) => {
@@ -52,5 +59,13 @@ router.get("/related/:id", ProductController.getRelatedProduct); // public
 
 // GET /products/:id - Get basic details of a product by ID
 router.get("/:id", ProductController.getProductBasicDetails); // public
+
+router.post(
+  "/:id/image",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Seller),
+  upload.single("image"),
+  ProductController.uploadImage
+);
 
 module.exports = router;
