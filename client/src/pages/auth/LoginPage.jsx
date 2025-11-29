@@ -37,13 +37,13 @@ const LoginPage = () => {
       try {
         const result = await login(data.email, data.password);
 
-        const { accessToken, id, roles, email, fullName } = result;
+        const { accessToken, roles, email, fullName } = result;
 
         // 1. XỬ LÝ LỖI ROLES: Đảm bảo roles là một mảng HỢP LỆ
         const userRoles = roles || [];
 
         // 2. LƯU THÔNG TIN VÀO CONTEXT (Global State)
-        setAuth({ accessToken, roles: userRoles, email, fullName, id }); // <-- Dùng roles: userRoles
+        setAuth({ accessToken, roles: userRoles, email, fullName }); // <-- Dùng roles: userRoles
 
         setLoginError(null);
       } catch (error) {
@@ -57,7 +57,19 @@ const LoginPage = () => {
   useEffect(() => {
     // Nếu Access Token xuất hiện trong Context, chuyển hướng
     if (auth?.accessToken) {
-      navigate("/");
+      // Kiểm tra xem user có role Admin hay không
+      const roles = auth.roles || [];
+      const isAdmin = Array.isArray(roles)
+        ? roles.some(
+            (r) => r === 5150 || r === "5150" || r === "Admin" || r === "admin"
+          )
+        : roles === 5150 || roles === "5150" || roles === "Admin";
+
+      if (isAdmin) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     }
   }, [auth, navigate]);
 

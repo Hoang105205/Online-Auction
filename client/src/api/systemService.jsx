@@ -128,6 +128,43 @@ export const removeCategory = async (categoryId) => {
   }
 };
 
+// Admin listings (moved from adminService)
+export const listUsers = async ({ page = 1, limit = 20, q = "" } = {}) => {
+  try {
+    const res = await axiosPrivate.get("/system/users", {
+      params: { page, limit, q },
+    });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const listProducts = async ({
+  page = 1,
+  limit = 20,
+  q = "",
+  status,
+} = {}) => {
+  try {
+    const params = { page, limit, q };
+    if (status) params.status = status;
+    const res = await axiosPrivate.get("/system/products", { params });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeProduct = async (productId) => {
+  try {
+    const res = await axiosPrivate.delete(`/system/products/${productId}`);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default {
   getSystemConfig,
   updateSystemConfig,
@@ -141,4 +178,6 @@ export default {
   addCategory,
   updateCategory,
   removeCategory,
+  listUsers,
+  listProducts,
 };

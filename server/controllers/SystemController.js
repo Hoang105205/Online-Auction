@@ -202,6 +202,47 @@ const removeCategory = async (req, res) => {
   }
 };
 
+const listUsers = async (req, res) => {
+  try {
+    const result = await SystemService.listUsers(req.query || {});
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const listProducts = async (req, res) => {
+  try {
+    const result = await SystemService.listProducts(req.query || {});
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const removeProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    if (!productId)
+      return res
+        .status(400)
+        .json({ message: "productId không được để trống." });
+
+    const deleted = await SystemService.removeProduct(productId);
+    return res
+      .status(200)
+      .json({ message: "Xóa sản phẩm thành công.", product: deleted });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getSystemConfig,
   updateSystemConfig,
@@ -216,4 +257,7 @@ module.exports = {
   addCategory,
   updateCategory,
   removeCategory,
+  listUsers,
+  listProducts,
+  removeProduct,
 };

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   HiSearch,
   HiTrash,
@@ -6,86 +6,59 @@ import {
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
-
-const MOCK_PRODUCTS = [
-  {
-    id: "#PR-1001",
-    name: "Breed Dry Dog Food",
-    image: "/auth-images/dog-food.jpg",
-    category: "Đồ ăn",
-    price: "100000₫",
-  },
-  {
-    id: "#PR-1002",
-    name: "Wireless Headphones",
-    image: "/auth-images/headphones.jpg",
-    category: "Điện tử",
-    price: "750000₫",
-  },
-  {
-    id: "#PR-1003",
-    name: "Running Shoes",
-    image: "/auth-images/shoes.jpg",
-    category: "Thời trang",
-    price: "420000₫",
-  },
-  {
-    id: "#PR-1004",
-    name: "Coffee Maker",
-    image: "/auth-images/coffee.jpg",
-    category: "Gia dụng",
-    price: "1.200.000₫",
-  },
-  {
-    id: "#PR-1005",
-    name: "Smart Watch",
-    image: "/auth-images/watch.jpg",
-    category: "Điện tử",
-    price: "2.500.000₫",
-  },
-  {
-    id: "#PR-1006",
-    name: "Cat Toy",
-    image: "/auth-images/cat-toy.jpg",
-    category: "Thú cưng",
-    price: "80000₫",
-  },
-  {
-    id: "#PR-1007",
-    name: "Novel Book",
-    image: "/auth-images/book.jpg",
-    category: "Sách",
-    price: "120000₫",
-  },
-];
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { listProducts, removeProduct } from "../../api/systemService";
 
 export default function ProductsPage() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [page, setPage] = useState(1);
-  const [products, setProducts] = useState(MOCK_PRODUCTS);
+  const [products, setProducts] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const pageSize = 6;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const axiosPrivate = useAxiosPrivate();
 
-  const filtered = useMemo(() => {
-    let data = products.slice();
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      data = data.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)
-      );
-    }
-    if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "price")
-      data.sort((a, b) => (a.price || "").length - (b.price || "").length);
-    return data;
-  }, [query, sortBy, products]);
+  // server-side pagination/search
+  const paginated = products;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const res = await listProducts({
+          page,
+          limit: pageSize,
+          q: query,
+        });
+        console.log("listProducts response:", res);
+        if (!isMounted) return;
+        setProducts(res.data || []);
+        setTotalPages(res.totalPages || 1);
+        setTotalCount(
+          typeof res.total === "number" ? res.total : (res.data || []).length
+        );
+      } catch (err) {
+        console.error("Fetch products failed", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchProducts();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [page, query]);
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -108,11 +81,27 @@ export default function ProductsPage() {
 
   function performDelete(id) {
     if (!id) return;
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    setShowDeleteModal(false);
-    setDeleteTarget("");
-    const newTotal = Math.max(1, Math.ceil((filtered.length - 1) / pageSize));
-    if (page > newTotal) setPage(newTotal);
+    // call API to remove product, then update UI
+    (async () => {
+      try {
+        setLoading(true);
+        await removeProduct(id);
+        setProducts((prev) => {
+          const next = prev.filter((p) => (p._id || p.id) !== id);
+          const newTotal = Math.max(1, Math.ceil(next.length / pageSize));
+          if (page > newTotal) setPage(newTotal);
+          return next;
+        });
+        setTotalCount((c) => Math.max(0, c - 1));
+      } catch (err) {
+        console.error("Delete product failed", err);
+        // optionally show error to user
+      } finally {
+        setShowDeleteModal(false);
+        setDeleteTarget("");
+        setLoading(false);
+      }
+    })();
   }
 
   return (
@@ -169,67 +158,91 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((p, idx) => (
-                <React.Fragment key={p.id}>
-                  <tr
-                    className={`text-sm text-gray-600 ${
-                      idx % 2 === 0 ? "" : "bg-gray-50"
-                    }`}
-                  >
-                    <td className="py-4 px-4">{p.id}</td>
-                    <>
-                      <td className="py-4 px-4 flex items-center gap-3">
-                        <img
-                          src={p.image}
-                          alt="thumb"
-                          className="w-10 h-10 rounded-md object-cover"
-                        />
-                        <div>{p.name}</div>
-                      </td>
-                      <td className="py-4 px-4">{p.category}</td>
-                      <td className="py-4 px-4">{p.price}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDeleteClick(p.id)}
-                            className="p-2 rounded-full bg-red-50 text-red-500"
-                          >
-                            <HiTrash />
-                          </button>
-                        </div>
-                      </td>
-                    </>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">
+                    Loading...
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((p, idx) => (
+                  <React.Fragment key={p._id || p.id}>
+                    <tr
+                      className={`text-sm text-gray-600 ${
+                        idx % 2 === 0 ? "" : "bg-gray-50"
+                      }`}
+                    >
+                      <td className="py-4 px-4">{p._id || p.id}</td>
+                      <>
+                        <td className="py-4 px-4 flex items-center gap-3">
+                          <img
+                            src={
+                              (p.detail &&
+                                p.detail.images &&
+                                p.detail.images[0]) ||
+                              "/auth-images/default.jpg"
+                            }
+                            alt="thumb"
+                            className="w-10 h-10 rounded-md object-cover"
+                          />
+                          <div>{(p.detail && p.detail.name) || "—"}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {(p.detail && p.detail.category) || "—"}
+                        </td>
+                        <td className="py-4 px-4">
+                          {(p.auction &&
+                            (p.auction.currentPrice ||
+                              p.auction.buyNowPrice)) ||
+                            "—"}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDeleteClick(p._id || p.id)}
+                              className="p-2 rounded-full bg-red-50 text-red-500"
+                            >
+                              <HiTrash />
+                            </button>
+                          </div>
+                        </td>
+                      </>
 
-                    <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => toggleRow(p.id)}
-                        className={`p-1 rounded ${
-                          openRows.has(p.id) ? "bg-gray-100" : "bg-white"
-                        }`}
-                      >
-                        <HiChevronDown
-                          className={`${
-                            openRows.has(p.id) ? "transform rotate-180" : ""
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          onClick={() => toggleRow(p._id || p.id)}
+                          className={`p-1 rounded ${
+                            openRows.has(p._id || p.id)
+                              ? "bg-gray-100"
+                              : "bg-white"
                           }`}
-                        />
-                      </button>
-                    </td>
-                  </tr>
-
-                  {openRows.has(p.id) && (
-                    <tr className="text-sm text-gray-600 bg-gray-50">
-                      <td className="py-3 px-4">&nbsp;</td>
-                      <td colSpan={4} className="py-3 px-4">
-                        <div className="text-sm text-gray-500">
-                          Mô tả: Đây là sản phẩm mô phỏng. Thêm thông tin chi
-                          tiết ở đây nếu cần.
-                        </div>
+                        >
+                          <HiChevronDown
+                            className={`${
+                              openRows.has(p._id || p.id)
+                                ? "transform rotate-180"
+                                : ""
+                            }`}
+                          />
+                        </button>
                       </td>
-                      <td className="py-3 px-4 text-right">&nbsp;</td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+
+                    {openRows.has(p._id || p.id) && (
+                      <tr className="text-sm text-gray-600 bg-gray-50">
+                        <td className="py-3 px-4">&nbsp;</td>
+                        <td colSpan={4} className="py-3 px-4">
+                          <div className="text-sm text-gray-500">
+                            {(p.detail && p.detail.description) ||
+                              "Mô tả: không có."}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">&nbsp;</td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
 
               {paginated.length === 0 && (
                 <tr>
@@ -279,8 +292,7 @@ export default function ProductsPage() {
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
             Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {products.length}{" "}
-            products
+            {(page - 1) * pageSize + paginated.length} of {totalCount} products
           </div>
           <div className="flex items-center gap-2">
             <button

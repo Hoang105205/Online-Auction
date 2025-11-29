@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   HiSearch,
   HiPencilAlt,
@@ -7,63 +7,14 @@ import {
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
-
-const MOCK_USERS = [
-  {
-    id: "#ESF-2025-8742",
-    name: "JasonDrake",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar1.jpg",
-  },
-  {
-    id: "#ESF-2025-6391",
-    name: "ElenaLiu",
-    role: "Người bán",
-    avatar: "/auth-images/avatar2.jpg",
-  },
-  {
-    id: "#ESF-2025-4129",
-    name: "MarcusJohnson",
-    role: "Người bán",
-    avatar: "/auth-images/avatar3.jpg",
-  },
-  {
-    id: "#ESF-2025-2875",
-    name: "SophiaNguyen",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar4.jpg",
-  },
-  {
-    id: "#ESF-2025-1493",
-    name: "RyanKim",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar5.jpg",
-  },
-  {
-    id: "#ESF-2025-0967",
-    name: "AmeliaMartinez",
-    role: "Người bán",
-    avatar: "/auth-images/avatar6.jpg",
-  },
-  {
-    id: "#ESF-2025-2234",
-    name: "LiamSmith",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar7.jpg",
-  },
-  {
-    id: "#ESF-2025-3345",
-    name: "OliviaBrown",
-    role: "Người bán",
-    avatar: "/auth-images/avatar8.jpg",
-  },
-];
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import systemService from "../../api/systemService";
 
 export default function UsersPage() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [page, setPage] = useState(1);
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
   const [editingId, setEditingId] = useState("");
   const [editName, setEditName] = useState("");
@@ -71,48 +22,105 @@ export default function UsersPage() {
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const pageSize = 6;
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const axiosPrivate = useAxiosPrivate();
+  const [totalCount, setTotalCount] = useState(0);
 
-  const filtered = useMemo(() => {
-    let data = users.slice();
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      data = data.filter(
-        (u) =>
-          u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)
-      );
+  const ROLE_LABEL = (r) => {
+    if (r === undefined || r === null) return "";
+    // accept number or numeric string or role name
+    const n = Number(r);
+    if (!Number.isNaN(n)) {
+      switch (n) {
+        case 5150:
+          return "Admin";
+        case 1984:
+          return "Người bán";
+        case 2001:
+          return "Người đấu giá";
+        default:
+          return String(r);
+      }
     }
-    if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
-    return data;
-  }, [query, sortBy, users]);
+    const s = String(r).toLowerCase();
+    if (s === "admin") return "Admin";
+    if (s === "seller" || s === "người bán") return "Người bán";
+    if (s === "bidder" || s === "người đấu giá") return "Người đấu giá";
+    return String(r);
+  };
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  // server-side pagination/search
+  const paginated = users;
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
     setPage(pp);
   }
 
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const res = await systemService.listUsers({
+          page,
+          limit: pageSize,
+          q: query,
+        });
+        if (!isMounted) return;
+        setUsers(res.data || []);
+        setTotalPages(res.totalPages || 1);
+        setTotalCount(
+          typeof res.total === "number" ? res.total : (res.data || []).length
+        );
+      } catch (err) {
+        console.error("Fetch users failed", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchUsers();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [page, query]);
+
   function toggleRow(id) {
+    const key = id;
     const s = new Set(openRows);
-    if (s.has(id)) s.delete(id);
-    else s.add(id);
+    if (s.has(key)) s.delete(key);
+    else s.add(key);
     setOpenRows(s);
   }
 
   function startEdit(id) {
-    const u = users.find((x) => x.id === id);
+    const u = users.find((x) => (x._id || x.id) === id);
     if (!u) return;
     setEditingId(id);
-    setEditName(u.name);
-    setEditRole(u.role);
+    setEditName(u.fullName || u.email || "");
+    const firstRole = Array.isArray(u.roles) ? u.roles[0] : u.role;
+    setEditRole(
+      firstRole !== undefined && firstRole !== null ? String(firstRole) : ""
+    );
   }
 
   function submitEdit() {
     if (!editingId) return;
     setUsers((prev) =>
       prev.map((u) =>
-        u.id === editingId ? { ...u, name: editName.trim(), role: editRole } : u
+        (u._id || u.id) === editingId
+          ? {
+              ...u,
+              fullName: editName.trim(),
+              roles: editRole ? [Number(editRole) || editRole] : [],
+            }
+          : u
       )
     );
     setEditingId("");
@@ -133,11 +141,16 @@ export default function UsersPage() {
 
   function performDelete(id) {
     if (!id) return;
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+    // remove by _id or id and recalc pagination based on remaining items
+    setUsers((prev) => {
+      const next = prev.filter((u) => (u._id || u.id) !== id);
+      setTotalCount((c) => Math.max(0, c - 1));
+      const newTotal = Math.max(1, Math.ceil(next.length / pageSize));
+      if (page > newTotal) setPage(newTotal);
+      return next;
+    });
     setShowDeleteModal(false);
     setDeleteTarget("");
-    const newTotal = Math.max(1, Math.ceil((filtered.length - 1) / pageSize));
-    if (page > newTotal) setPage(newTotal);
   }
 
   return (
@@ -192,118 +205,135 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((u, idx) => (
-                <React.Fragment key={u.id}>
-                  <tr
-                    className={`text-sm text-gray-600 ${
-                      idx % 2 === 0 ? "" : "bg-gray-50"
-                    }`}
-                  >
-                    <td className="py-4 px-4">{u.id}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-400">
+                    Loading...
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((u, idx) => (
+                  <React.Fragment key={u._id || u.id}>
+                    <tr
+                      className={`text-sm text-gray-600 ${
+                        idx % 2 === 0 ? "" : "bg-gray-50"
+                      }`}
+                    >
+                      <td className="py-4 px-4">{u._id || u.id}</td>
 
-                    {editingId === u.id ? (
-                      <>
-                        <td className="py-4 px-4 flex items-center gap-3">
-                          <img
-                            src={u.avatar}
-                            alt="av"
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                          <input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full px-2 py-1 border rounded"
-                          />
-                        </td>
-                        <td className="py-4 px-4">
-                          <select
-                            value={editRole}
-                            onChange={(e) => setEditRole(e.target.value)}
-                            className="px-2 py-1 border rounded"
-                          >
-                            <option>Người đấu giá</option>
-                            <option>Người bán</option>
-                            <option>Admin</option>
-                          </select>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={submitEdit}
-                              className="px-3 py-1 bg-green-600 text-white rounded"
+                      {editingId === (u._id || u.id) ? (
+                        <>
+                          <td className="py-4 px-4 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-50 text-purple-600 font-semibold">
+                              {u.fullName
+                                ? u.fullName.split(" ")[0][0] || "U"
+                                : "U"}
+                            </div>
+                            <input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="w-full px-2 py-1 border rounded"
+                            />
+                          </td>
+                          <td className="py-4 px-4">
+                            <select
+                              value={editRole}
+                              onChange={(e) => setEditRole(e.target.value)}
+                              className="px-2 py-1 border rounded"
                             >
-                              Lưu
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="px-3 py-1 bg-gray-100 rounded"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="py-4 px-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-50 text-purple-600 font-semibold">
-                            {u.name.split(" ")[0][0] || "U"}
-                          </div>
-                          <div className="flex flex-col">
-                            <div className="font-medium">{u.name}</div>
-                            <div className="text-xs text-gray-400">{u.id}</div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">{u.role}</td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => startEdit(u.id)}
-                              className="p-2 rounded-full bg-purple-50 text-purple-600"
-                            >
-                              <HiPencilAlt />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(u.id)}
-                              className="p-2 rounded-full bg-red-50 text-red-500"
-                            >
-                              <HiTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    )}
+                              <option value="2001">Người đấu giá</option>
+                              <option value="1984">Người bán</option>
+                              <option value="5150">Admin</option>
+                            </select>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={submitEdit}
+                                className="px-3 py-1 bg-green-600 text-white rounded"
+                              >
+                                Lưu
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="px-3 py-1 bg-gray-100 rounded"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-4 px-4 flex items-center gap-3">
+                            <div className="flex flex-col">
+                              <div className="font-medium">
+                                {u.fullName || u.email}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {u.email}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {Array.isArray(u.roles)
+                              ? u.roles.map((r) => ROLE_LABEL(r)).join(", ")
+                              : ROLE_LABEL(u.role) || ""}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => startEdit(u._id || u.id)}
+                                className="p-2 rounded-full bg-purple-50 text-purple-600"
+                              >
+                                <HiPencilAlt />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(u._id || u.id)}
+                                className="p-2 rounded-full bg-red-50 text-red-500"
+                              >
+                                <HiTrash />
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      )}
 
-                    <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => toggleRow(u.id)}
-                        className={`p-1 rounded ${
-                          openRows.has(u.id) ? "bg-gray-100" : "bg-white"
-                        }`}
-                      >
-                        <HiChevronDown
-                          className={`${
-                            openRows.has(u.id) ? "transform rotate-180" : ""
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          onClick={() => toggleRow(u._id || u.id)}
+                          className={`p-1 rounded ${
+                            openRows.has(u._id || u.id)
+                              ? "bg-gray-100"
+                              : "bg-white"
                           }`}
-                        />
-                      </button>
-                    </td>
-                  </tr>
-
-                  {openRows.has(u.id) && (
-                    <tr className="text-sm text-gray-600 bg-gray-50">
-                      <td className="py-3 px-4">&nbsp;</td>
-                      <td colSpan={3} className="py-3 px-4">
-                        <div className="text-sm text-gray-500">
-                          Thông tin thêm: email@example.com • Đã đăng ký:
-                          01/01/2024
-                        </div>
+                        >
+                          <HiChevronDown
+                            className={`${
+                              openRows.has(u._id || u.id)
+                                ? "transform rotate-180"
+                                : ""
+                            }`}
+                          />
+                        </button>
                       </td>
-                      <td className="py-3 px-4 text-right">&nbsp;</td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+
+                    {openRows.has(u._id || u.id) && (
+                      <tr className="text-sm text-gray-600 bg-gray-50">
+                        <td className="py-3 px-4">&nbsp;</td>
+                        <td colSpan={3} className="py-3 px-4">
+                          <div className="text-sm text-gray-500">
+                            Thông tin thêm: email@example.com • Đã đăng ký:
+                            01/01/2024
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">&nbsp;</td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
 
               {paginated.length === 0 && (
                 <tr>
@@ -326,7 +356,8 @@ export default function UsersPage() {
               <h3 className="text-lg font-semibold mb-2">Xác nhận xóa</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Bạn có chắc muốn xóa người dùng "
-                {users.find((x) => x.id === deleteTarget)?.name || deleteTarget}
+                {users.find((x) => (x._id || x.id) === deleteTarget)
+                  ?.fullName || deleteTarget}
                 "? Hành động này không thể hoàn tác.
               </p>
               <div className="flex justify-end gap-3">
@@ -350,7 +381,7 @@ export default function UsersPage() {
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
             Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {users.length} users
+            {(page - 1) * pageSize + paginated.length} of {totalCount} users
           </div>
           <div className="flex items-center gap-2">
             <button

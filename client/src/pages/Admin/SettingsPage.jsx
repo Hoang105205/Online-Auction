@@ -1,26 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { HiSave } from "react-icons/hi";
+import {
+  getSystemConfig,
+  updateTimeConfigs,
+  updateAutoExtend,
+  updateLatestProductTimeConfig,
+} from "../../api/systemService";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+
+// Only minutes are editable now. Helpers to map system DB values into settings/edited.
 
 const DEFAULT_SETTINGS = [
   {
     id: "s1",
     title: "Ngưỡng kích hoạt gia hạn",
-    fields: [
-      { key: "h", label: "Giờ" },
-      { key: "m", label: "Phút" },
-      { key: "s", label: "Giây" },
-    ],
-    values: { h: 0, m: 5, s: 0 },
+    fields: [{ key: "m", label: "Phút" }],
+    values: { m: 5 },
   },
   {
     id: "s2",
     title: "Thời gian gia hạn",
-    fields: [
-      { key: "h", label: "Giờ" },
-      { key: "m", label: "Phút" },
-      { key: "s", label: "Giây" },
-    ],
-    values: { h: 0, m: 10, s: 0 },
+    fields: [{ key: "m", label: "Phút" }],
+    values: { m: 10 },
   },
   {
     id: "s3",
@@ -29,6 +30,38 @@ const DEFAULT_SETTINGS = [
     values: { m: 3 },
   },
 ];
+
+function mapSystemToSettings(sys) {
+  const v1 = Number(sys?.autoExtendBefore ?? DEFAULT_SETTINGS[0].values.m) || 0;
+  const v2 =
+    Number(sys?.autoExtendDuration ?? DEFAULT_SETTINGS[1].values.m) || 0;
+  const v3 =
+    Number(sys?.latestProductTimeConfig ?? DEFAULT_SETTINGS[2].values.m) || 0;
+
+  return [
+    { ...DEFAULT_SETTINGS[0], values: { m: v1 } },
+    { ...DEFAULT_SETTINGS[1], values: { m: v2 } },
+    { ...DEFAULT_SETTINGS[2], values: { m: v3 } },
+  ];
+}
+
+function mapSystemToEdited(sys) {
+  return {
+    s1: {
+      m: Number(sys?.autoExtendBefore ?? DEFAULT_SETTINGS[0].values.m) || 0,
+    },
+    s2: {
+      m: Number(sys?.autoExtendDuration ?? DEFAULT_SETTINGS[1].values.m) || 0,
+    },
+    s3: {
+      m:
+        Number(sys?.latestProductTimeConfig ?? DEFAULT_SETTINGS[2].values.m) ||
+        0,
+    },
+  };
+}
+
+export { DEFAULT_SETTINGS, mapSystemToSettings, mapSystemToEdited };
 
 function NumberControl({ value, onChange }) {
   return (
@@ -40,7 +73,7 @@ function NumberControl({ value, onChange }) {
       >
         –
       </button>
-      <div className="w-12 text-center bg-slate-900 text-white rounded px-2 py-1 flex items-center justify-center">
+      <div className="w-12 text-center bg-gray-200 text-gray-900 rounded px-2 py-1 flex items-center justify-center">
         {value}
       </div>
       <button
@@ -55,6 +88,7 @@ function NumberControl({ value, onChange }) {
 }
 
 export default function SettingsPage() {
+  useAxiosPrivate();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [edited, setEdited] = useState(
     DEFAULT_SETTINGS.reduce((acc, s) => {
@@ -62,6 +96,33 @@ export default function SettingsPage() {
       return acc;
     }, {})
   );
+  const [loading, setLoading] = useState(false);
+
+  // Load system config and map to our settings (minutes)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const sys = await getSystemConfig();
+        if (!mounted) return;
+        // Map system keys to settings+edited
+        const newSettings = mapSystemToSettings(sys);
+        const newEdited = mapSystemToEdited(sys);
+        setSettings(newSettings);
+        setEdited(newEdited);
+      } catch (e) {
+        // ignore - keep defaults
+        console.error("Failed to load system config", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   // removed savedIds: we'll derive "has changes" by comparing edited -> saved values
 
   function hasChanges(id) {
@@ -81,11 +142,52 @@ export default function SettingsPage() {
     }));
   }
 
-  function saveSetting(id) {
-    setSettings((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, values: { ...edited[id] } } : s))
-    );
-    // after saving edited values match the saved values, button will show "Đã lưu" (disabled)
+  async function saveSetting(id) {
+    const values = edited[id];
+    if (!values) return;
+    // Build payload for updateTimeConfigs: only include changed keys
+    const payload = {};
+    if (id === "s1") payload.autoExtendBefore = Number(values.m || 0);
+    if (id === "s2") payload.autoExtendDuration = Number(values.m || 0);
+    if (id === "s3") payload.latestProductTimeConfig = Number(values.m || 0);
+
+    try {
+      setLoading(true);
+      if (id === "s1") {
+        await updateAutoExtend({ autoExtendBefore: Number(values.m || 0) });
+      } else if (id === "s2") {
+        await updateAutoExtend({ autoExtendDuration: Number(values.m || 0) });
+      } else if (id === "s3") {
+        await updateLatestProductTimeConfig(Number(values.m || 0));
+      } else {
+        // fallback
+        await updateTimeConfigs(payload);
+      }
+
+      // refresh system config from server to reflect canonical values
+      try {
+        const sys = await getSystemConfig();
+        const newSettings = mapSystemToSettings(sys);
+        const newEdited = mapSystemToEdited(sys);
+        setSettings(newSettings);
+        setEdited(newEdited);
+      } catch (e) {
+        // if refresh fails, still update local saved copy
+        setSettings((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, values: { ...values } } : s))
+        );
+      }
+
+      // quick user feedback
+      window.alert("Lưu cài đặt thành công");
+    } catch (err) {
+      console.error("Save setting failed", err);
+      window.alert(
+        "Lưu thất bại: " + (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -128,8 +230,8 @@ export default function SettingsPage() {
                   return (
                     <button
                       type="button"
-                      onClick={() => changed && saveSetting(s.id)}
-                      disabled={!changed}
+                      onClick={() => saveSetting(s.id)}
+                      disabled={!changed || loading}
                       className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
                         changed
                           ? "bg-blue-600 text-white hover:bg-blue-700"
@@ -137,7 +239,9 @@ export default function SettingsPage() {
                       }`}
                     >
                       <HiSave />
-                      <span>{changed ? "Lưu" : "Đã lưu"}</span>
+                      <span>
+                        {changed ? (loading ? "Đang lưu..." : "Lưu") : "Đã lưu"}
+                      </span>
                     </button>
                   );
                 })()}
