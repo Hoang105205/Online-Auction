@@ -74,9 +74,53 @@ const getFeedback = async (req, res) => {
   }
 };
 
+const addToWatchList = async (req, res) => {
+  try {
+    const userId = req.user;
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu productId" });
+    }
+
+    const result = await UserService.addToWatchList(userId, productId);
+
+    return res.status(200).json({
+      message: result.message || "Thêm vào danh sách theo dõi thành công",
+    });
+  } catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const removeFromWatchList = async (req, res) => {
+  try {
+    const userId = req.user;
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu productId" });
+    }
+
+    const result = await UserService.removeFromWatchList(userId, productId);
+
+    return res.status(200).json({
+      message: result.message || "Đã xóa sản phẩm khỏi danh sách theo dõi",
+    });
+  } catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getUserBasicProfile,
   updateUserProfile,
   updateUserPassword,
   getFeedback,
+  addToWatchList,
+  removeFromWatchList,
 };

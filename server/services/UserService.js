@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Product = require("../models/Product");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 const ROLES_LIST = require("../config/roles_list");
@@ -186,6 +187,55 @@ class UserService {
         totalPages: Math.ceil(totalCount / limit),
       },
     };
+  }
+
+  static async addToWatchList(userId, productId) {
+    const product = await Product.findById(productId).exec();
+    if (!product) {
+      const error = new Error("Sản phẩm không tồn tại.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const result = await User.updateOne(
+      { _id: userId },
+      { $addToSet: { watchList: productId } }
+    ).exec();
+
+    // 3. Kiểm tra xem User có tồn tại không
+    // matchedCount = 0 nghĩa là không tìm thấy user nào có ID đó
+    if (result.matchedCount === 0) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 4. Kiểm tra xem có thay đổi dữ liệu không (modifiedCount)
+    if (result.modifiedCount === 0) {
+      // Nếu = 0 nghĩa là productId đã có sẵn trong watchList
+      return { message: "Sản phẩm này đã có trong danh sách theo dõi rồi." };
+    }
+
+    return { message: "Đã thêm vào danh sách theo dõi thành công." };
+  }
+
+  static async removeFromWatchList(userId, productId) {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { watchList: productId } } // $pull: Kéo (xóa) phần tử ra khỏi mảng
+    ).exec();
+
+    if (result.matchedCount === 0) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (result.modifiedCount === 0) {
+      return { message: "Sản phẩm không có trong danh sách theo dõi." };
+    }
+
+    return { message: "Đã xóa sản phẩm khỏi danh sách theo dõi." };
   }
 }
 

@@ -91,6 +91,12 @@ const userSchema = new Schema(
       // Thời gian bắt đầu làm Seller
       startDate: { type: Date, default: null },
     },
+    watchList: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
   },
   {
     timestamps: true,

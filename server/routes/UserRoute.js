@@ -6,6 +6,8 @@ const {
   updateUserProfile,
   updateUserPassword,
   getFeedback,
+  addToWatchList,
+  removeFromWatchList,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -34,5 +36,21 @@ router.get(
   verifyRoles(ROLES_LIST.Bidder),
   getFeedback
 );
+
+router.post(
+  "/watchlist",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  addToWatchList
+);
+
+router.delete(
+  "/watchlist",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  removeFromWatchList
+);
+
+
 
 module.exports = router;
