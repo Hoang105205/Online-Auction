@@ -39,7 +39,7 @@ export default function WatchlistPage() {
         const mapped = (result.products || []).map((p) => ({
           id: p._id,
           name: p.detail?.name || "Sản phẩm",
-          image: (p.detail?.images && p.detail.images[0]),
+          image: p.detail?.images && p.detail.images[0],
           currentPrice: p.auction?.currentPrice ?? 0,
           buyNowPrice: p.auction?.buyNowPrice ?? null,
           highestBidder: p.auction?.highestBidderId?.fullName || "",
@@ -135,126 +135,157 @@ export default function WatchlistPage() {
             </div>
           </div>
         </div>
-        {/* Show Products */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleProducts.map((product) => (
-            <div key={product.id} className="relative">
-              {/* Nút xóa */}
-              <button
-                onClick={() => handleRemove(product.id)}
-                className="absolute z-10 top-2 left-2 p-2 bg-white rounded-full shadow hover:bg-gray-100"
-              >
-                <HiTrash className="w-5 h-5 text-red-500" />
-              </button>
-              <ProductCard key={product.id} product={product} />
+        {/* Product list or empty state */}
+        {visibleProducts.length === 0 ? (
+          <div className="w-full py-16 flex flex-col items-center justify-center text-center border border-dashed border-gray-300 rounded-xl bg-white">
+            <div className="text-6xl mb-4 select-none">📥</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Chưa có sản phẩm theo dõi
+            </h3>
+            <p className="text-gray-600 max-w-md mb-6 text-sm">
+              Danh sách theo dõi của bạn đang trống. Hãy khám phá các phiên đấu
+              giá và thêm sản phẩm để dễ dàng quản lý sau này.
+            </p>
+            <a
+              href="/"
+              className="inline-flex items-center px-5 py-2.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium shadow-sm transition-colors"
+            >
+              Khám phá sản phẩm
+            </a>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleProducts.map((product) => (
+                <div key={product.id} className="relative">
+                  {/* Nút xóa */}
+                  <button
+                    onClick={() => handleRemove(product.id)}
+                    className="absolute z-10 top-2 left-2 p-2 bg-white rounded-full shadow hover:bg-gray-100"
+                    aria-label="Xóa khỏi theo dõi"
+                  >
+                    <HiTrash className="w-5 h-5 text-red-500" />
+                  </button>
+                  <ProductCard key={product.id} product={product} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Pagination (responsive, similar to RatingsTab) */}
-        {totalPages > 1 && (
-          <div className="mt-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="text-sm text-gray-600 hidden md:block">
-                Trang {Math.min(currentPage, totalPages)} / {totalPages}
-              </div>
+            {/* Pagination (responsive, similar to RatingsTab) */}
+            {totalPages > 1 && (
+              <div className="mt-8">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="text-sm text-gray-600 hidden md:block">
+                    Trang {Math.min(currentPage, totalPages)} / {totalPages}
+                  </div>
 
-              {/* Desktop pagination */}
-              <div className="hidden md:flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  disabled={currentPage <= 1}
-                  className={`px-3 py-2 rounded-md border text-sm transition-colors ${
-                    currentPage <= 1
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (p) => (
+                  {/* Desktop pagination */}
+                  <div className="hidden md:flex items-center gap-1">
                     <button
-                      key={p}
                       type="button"
-                      onClick={() => handlePageChange(p)}
+                      onClick={() =>
+                        handlePageChange(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage <= 1}
                       className={`px-3 py-2 rounded-md border text-sm transition-colors ${
-                        currentPage === p
-                          ? "bg-sky-50 text-sky-700 border-sky-200"
-                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                        currentPage <= 1
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
                       }`}
                     >
-                      {p}
+                      Trước
                     </button>
-                  )
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    handlePageChange(Math.min(totalPages, currentPage + 1))
-                  }
-                  disabled={currentPage >= totalPages}
-                  className={`px-3 py-2 rounded-md border text-sm transition-colors ${
-                    currentPage >= totalPages
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Sau
-                </button>
-              </div>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => handlePageChange(p)}
+                          className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                            currentPage === p
+                              ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePageChange(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage >= totalPages}
+                      className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage >= totalPages
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      Sau
+                    </button>
+                  </div>
 
-              {/* Mobile pagination */}
-              <div className="flex md:hidden items-center gap-2">
-                <button
-                  type="button"
-                  aria-label="Trang trước"
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  disabled={currentPage <= 1}
-                  className={`px-2 py-2 rounded-md border text-sm transition-colors ${
-                    currentPage <= 1
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Trước
-                </button>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="watchlist-page-select" className="sr-only">
-                    Chọn trang
-                  </label>
-                  <select
-                    id="watchlist-page-select"
-                    value={currentPage}
-                    onChange={(e) => handlePageChange(Number(e.target.value))}
-                    className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white"
-                  >
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        Trang {i + 1}/{totalPages}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Mobile pagination */}
+                  <div className="flex md:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Trang trước"
+                      onClick={() =>
+                        handlePageChange(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage <= 1}
+                      className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage <= 1
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      Trước
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="watchlist-page-select"
+                        className="sr-only"
+                      >
+                        Chọn trang
+                      </label>
+                      <select
+                        id="watchlist-page-select"
+                        value={currentPage}
+                        onChange={(e) =>
+                          handlePageChange(Number(e.target.value))
+                        }
+                        className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white"
+                      >
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            Trang {i + 1}/{totalPages}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Trang sau"
+                      onClick={() =>
+                        handlePageChange(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage >= totalPages}
+                      className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage >= totalPages
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      Sau
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Trang sau"
-                  onClick={() =>
-                    handlePageChange(Math.min(totalPages, currentPage + 1))
-                  }
-                  disabled={currentPage >= totalPages}
-                  className={`px-2 py-2 rounded-md border text-sm transition-colors ${
-                    currentPage >= totalPages
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Sau
-                </button>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
