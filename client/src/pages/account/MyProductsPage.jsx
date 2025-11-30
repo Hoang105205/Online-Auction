@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button, Tooltip } from "flowbite-react";
 import {
@@ -8,90 +8,62 @@ import {
   HiLockClosed,
 } from "react-icons/hi";
 import ProductCard from "../../components/ProductCard";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { getMyProducts } from "../../api/userService";
+import { Spinner } from "flowbite-react";
 
-// Mock data for products user has posted
-const MOCK_MY_PRODUCTS = [
-  {
-    id: 201,
-    name: "Laptop Dell XPS 15 9520 i7-12700H",
-    image: "/img/image1.jpg",
-    currentPrice: 32000000,
-    buyNowPrice: 38000000,
-    highestBidder: "TranVanA",
-    postedDate: "2025-11-10",
-    endDate: "2025-11-28",
-    bidCount: 12,
-  },
-  {
-    id: 202,
-    name: "Ghế gaming DXRacer Formula Series",
-    image: "/img/image2.jpg",
-    currentPrice: 4500000,
-    buyNowPrice: 5500000,
-    highestBidder: "NguyenThiB",
-    postedDate: "2025-11-12",
-    endDate: "2025-11-25",
-    bidCount: 8,
-  },
-  {
-    id: 203,
-    name: "Bộ bàn phím + chuột Logitech MX Keys Combo",
-    image: "/img/image3.jpg",
-    currentPrice: 3200000,
-    buyNowPrice: null,
-    highestBidder: "LeVanC",
-    postedDate: "2025-11-08",
-    endDate: "2025-12-01",
-    bidCount: 15,
-  },
-  {
-    id: 204,
-    name: "Màn hình LG UltraGear 27 inch 144Hz",
-    image: "/img/image4.jpg",
-    currentPrice: 6800000,
-    buyNowPrice: 8000000,
-    highestBidder: "PhamThiD",
-    postedDate: "2025-11-15",
-    endDate: "2025-11-22",
-    bidCount: 20,
-  },
-  {
-    id: 205,
-    name: "Ổ cứng SSD Samsung 980 Pro 2TB",
-    image: "/img/image5.jpg",
-    currentPrice: 4200000,
-    buyNowPrice: 5000000,
-    highestBidder: "HoangVanE",
-    postedDate: "2025-11-05",
-    endDate: "2025-11-20",
-    bidCount: 18,
-  },
-  {
-    id: 206,
-    name: "Webcam Logitech Brio 4K Ultra HD",
-    image: "/img/image1.jpg",
-    currentPrice: 3500000,
-    buyNowPrice: 4200000,
-    highestBidder: "VuThiF",
-    postedDate: "2025-11-01",
-    endDate: "2025-11-18",
-    bidCount: 10,
-  },
-];
-
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 3; // server-sliced
 
 export default function MyProductsPage() {
+  const axiosPrivate = useAxiosPrivate();
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Mock user seller status - replace with actual user data from context/API
-  const isSeller = true; // Change to true to test seller view
+  const isSeller = true; // TODO: replace with real seller role from context
 
-  // Pagination calculations
-  const totalPages = Math.ceil(MOCK_MY_PRODUCTS.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentProducts = MOCK_MY_PRODUCTS.slice(startIndex, endIndex);
+  useEffect(() => {
+    let isMounted = true;
+    const run = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getMyProducts(axiosPrivate, {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        });
+        if (!isMounted) return;
+        const mapped = (result.products || []).map((p) => ({
+          id: p._id,
+          name: p.detail?.name || "Sản phẩm",
+          image: p.detail?.images && p.detail.images[0],
+          currentPrice: p.auction?.currentPrice ?? 0,
+          buyNowPrice: p.auction?.buyNowPrice ?? null,
+          highestBidder: p.auction?.highestBidderId?.fullName || "",
+          createdAt: p.createdAt,
+          endDate: p.auction?.endTime,
+          bidCount: p.auction?.bidders ?? 0,
+          status: p.auction?.status || "active",
+        }));
+        setProducts(mapped);
+        setTotalPages(result.pagination?.totalPages || 0);
+        setTotalItems(result.pagination?.totalItems || mapped.length);
+        setError(null);
+      } catch (err) {
+        if (!isMounted) return;
+        setError(err.message || "Không thể tải danh sách sản phẩm đã đăng.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    run();
+    return () => {
+      isMounted = false;
+    };
+  }, [axiosPrivate, currentPage]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -99,14 +71,41 @@ export default function MyProductsPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 relative">
+      {isLoading && (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm"
+          aria-live="polite"
+        >
+          <Spinner size="lg" color="info" />
+          <p className="mt-3 text-sm text-gray-700">
+            Đang tải sản phẩm của bạn...
+          </p>
+        </div>
+      )}
+
+      {error && !isLoading && (
+        <div className="p-8 flex flex-col items-center justify-center gap-4 text-center">
+          <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-red-700 mb-2">
+              Lỗi tải danh sách
+            </h2>
+            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={() => setCurrentPage(1)}
+              className="px-4 py-2 rounded-md text-sm font-medium bg-red-600 hover:bg-red-700 text-white shadow-sm"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Sản phẩm đã đăng</h2>
-          <p className="text-gray-600 mt-1">
-            Tổng cộng {MOCK_MY_PRODUCTS.length} sản phẩm
-          </p>
+          <p className="text-gray-600 mt-1">Tổng cộng {totalItems} sản phẩm</p>
         </div>
 
         {/* Create Product Button */}
@@ -127,73 +126,154 @@ export default function MyProductsPage() {
         )}
       </div>
 
-      {/* Products Grid */}
-      {MOCK_MY_PRODUCTS.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📦</div>
+      {/* Products Grid or Empty State */}
+      {products.length === 0 ? (
+        <div className="w-full py-16 flex flex-col items-center justify-center text-center border border-dashed border-gray-300 rounded-xl bg-white">
+          <div className="text-6xl mb-4 select-none">📦</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Chưa có sản phẩm nào
           </h3>
-          <p className="text-gray-600 mb-6">
-            Bạn chưa đăng sản phẩm nào.{" "}
+          <p className="text-gray-600 mb-6 text-sm max-w-md">
+            Bạn chưa đăng sản phẩm nào.
             {isSeller
-              ? "Hãy bắt đầu đăng sản phẩm đầu tiên!"
-              : "Bạn cần có quyền Seller để đăng sản phẩm."}
+              ? " Hãy bắt đầu đăng sản phẩm đầu tiên!"
+              : " Bạn cần có quyền Seller để đăng sản phẩm."}
           </p>
+          {isSeller ? (
+            <Link to="/account/my-products/create-product">
+              <Button className="bg-sky-600 hover:bg-sky-700" size="md">
+                <HiPlus className="mr-2 h-5 w-5" />
+                Đăng sản phẩm
+              </Button>
+            </Link>
+          ) : (
+            <Tooltip content="Bạn cần có quyền Seller để đăng sản phẩm">
+              <Button disabled size="md" color="gray">
+                <HiLockClosed className="mr-2 h-5 w-5" />
+                Đăng sản phẩm
+              </Button>
+            </Tooltip>
+          )}
         </div>
       ) : (
         <>
           {/* Show Products */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentProducts.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              {/* Previous Button */}
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`p-2 rounded-lg border transition-colors ${
-                  currentPage === 1
-                    ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-label="Trang trước">
-                <HiChevronLeft className="w-5 h-5" />
-              </button>
+            <div className="mt-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="text-sm text-gray-600 hidden md:block">
+                  Trang {Math.min(currentPage, totalPages)} / {totalPages}
+                </div>
 
-              {/* Page Numbers */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
+                {/* Desktop pagination */}
+                <div className="hidden md:flex items-center gap-1">
                   <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`min-w-[40px] h-10 px-3 rounded-lg border font-medium transition-colors ${
-                      currentPage === page
-                        ? "bg-sky-600 text-white border-sky-600"
-                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}>
-                    {page}
+                    type="button"
+                    onClick={() =>
+                      handlePageChange(Math.max(1, currentPage - 1))
+                    }
+                    disabled={currentPage <= 1}
+                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage <= 1
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Trước
                   </button>
-                )
-              )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handlePageChange(p)}
+                        className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                          currentPage === p
+                            ? "bg-sky-50 text-sky-700 border-sky-200"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage >= totalPages}
+                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage >= totalPages
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Sau
+                  </button>
+                </div>
 
-              {/* Next Button */}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`p-2 rounded-lg border transition-colors ${
-                  currentPage === totalPages
-                    ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-label="Trang sau">
-                <HiChevronRight className="w-5 h-5" />
-              </button>
+                {/* Mobile pagination */}
+                <div className="flex md:hidden items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Trang trước"
+                    onClick={() =>
+                      handlePageChange(Math.max(1, currentPage - 1))
+                    }
+                    disabled={currentPage <= 1}
+                    className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage <= 1
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Trước
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="my-products-page-select"
+                      className="sr-only"
+                    >
+                      Chọn trang
+                    </label>
+                    <select
+                      id="my-products-page-select"
+                      value={currentPage}
+                      onChange={(e) => handlePageChange(Number(e.target.value))}
+                      className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white"
+                    >
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          Trang {i + 1}/{totalPages}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Trang sau"
+                    onClick={() =>
+                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage >= totalPages}
+                    className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage >= totalPages
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>
