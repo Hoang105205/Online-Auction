@@ -33,9 +33,9 @@ export const getProductDescription = async (productId) => {
 };
 
 // Ham xu ly logic lay phan lich su dau gia cua san pham
-export const getAuctionHistory = async (productId) => {
+export const getAuctionHistory = async (productId, axiosPrivate) => {
   try {
-    const response = await axiosPublic.get(
+    const response = await axiosPrivate.get(
       `/products/auction-history/${productId}`
     );
     return response.data; // Tra ve { numberOfBids, historyList }
@@ -67,7 +67,7 @@ export const getRelatedProducts = async (productId) => {
 // Ham xu ly logic cap nhat phan mo ta san pham
 export const updateDescription = async (productId, description) => {
   try {
-    const response = await axiosPublic.put(
+    const response = await axiosPrivate.put(
       `/products/description/${productId}`,
       { description }
     );
