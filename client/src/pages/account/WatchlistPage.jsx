@@ -171,7 +171,7 @@ export default function WatchlistPage() {
               ))}
             </div>
 
-            {/* Pagination (responsive, similar to RatingsTab) */}
+            {/* Pagination (responsive, with ellipsis like RatingsTab) */}
             {totalPages > 1 && (
               <div className="mt-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -195,22 +195,45 @@ export default function WatchlistPage() {
                     >
                       Trước
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => handlePageChange(p)}
-                          className={`px-3 py-2 rounded-md border text-sm transition-colors ${
-                            currentPage === p
-                              ? "bg-sky-50 text-sky-700 border-sky-200"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      )
-                    )}
+                    {(() => {
+                      const buildPageList = (current, total) => {
+                        if (total <= 7)
+                          return Array.from({ length: total }, (_, i) => i + 1);
+                        const pages = [];
+                        pages.push(1);
+                        const left = Math.max(2, current - 1);
+                        const right = Math.min(total - 1, current + 1);
+                        if (left > 2) pages.push("...");
+                        for (let p = left; p <= right; p++) pages.push(p);
+                        if (right < total - 1) pages.push("...");
+                        pages.push(total);
+                        return pages;
+                      };
+                      const pageList = buildPageList(currentPage, totalPages);
+                      return pageList.map((p, idx) =>
+                        p === "..." ? (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-3 py-2 text-sm text-gray-500"
+                          >
+                            ...
+                          </span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => handlePageChange(p)}
+                            className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                              currentPage === p
+                                ? "bg-sky-50 text-sky-700 border-sky-200"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      );
+                    })()}
                     <button
                       type="button"
                       onClick={() =>

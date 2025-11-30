@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button, Tooltip } from "flowbite-react";
 import {
@@ -69,6 +69,24 @@ export default function MyProductsPage() {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Build pagination list with ellipsis when pages are many
+  const buildPageList = (current, total) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    const left = Math.max(2, current - 1);
+    const right = Math.min(total - 1, current + 1);
+    if (left > 2) pages.push("...");
+    for (let p = left; p <= right; p++) pages.push(p);
+    if (right < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  };
+  const pageList = useMemo(
+    () => buildPageList(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
 
   return (
     <div className="p-6 md:p-8 relative">
@@ -188,8 +206,15 @@ export default function MyProductsPage() {
                   >
                     Trước
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (p) => (
+                  {pageList.map((p, idx) =>
+                    p === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-3 py-2 text-sm text-gray-500"
+                      >
+                        ...
+                      </span>
+                    ) : (
                       <button
                         key={p}
                         type="button"
