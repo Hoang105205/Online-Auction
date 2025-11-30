@@ -37,13 +37,13 @@ const LoginPage = () => {
       try {
         const result = await login(data.email, data.password);
 
-        const { accessToken, roles, email, fullName } = result;
+        const { accessToken, id, roles, email, fullName } = result;
 
         // 1. XỬ LÝ LỖI ROLES: Đảm bảo roles là một mảng HỢP LỆ
         const userRoles = roles || [];
 
         // 2. LƯU THÔNG TIN VÀO CONTEXT (Global State)
-        setAuth({ accessToken, roles: userRoles, email, fullName }); // <-- Dùng roles: userRoles
+        setAuth({ accessToken, id, roles: userRoles, email, fullName }); // <-- Dùng roles: userRoles
 
         setLoginError(null);
       } catch (error) {
