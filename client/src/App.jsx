@@ -3,6 +3,7 @@ import {
   createBrowserRouter,
   RouterProvider,
   createRoutesFromElements,
+  Navigate,
 } from "react-router-dom";
 // Admin related pages and layout
 import AdminLayout from "./layouts/AdminLayout";
@@ -83,6 +84,7 @@ const router = createBrowserRouter(
         {/* Admin route */}
         <Route element={<RequireAuth allowedRoles={[ROLES.Admin]} />}>
           <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="products" element={<ProductsPage />} />
