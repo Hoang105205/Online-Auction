@@ -65,4 +65,7 @@ router.post(
   ProductController.uploadImage
 );
 
+// GET /products - Get first 5 products
+router.get("/", ProductController.getFirstProducts);
+
 module.exports = router;

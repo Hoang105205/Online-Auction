@@ -197,6 +197,33 @@ class ProductService {
       throw new Error("Error getting related products: " + error.message);
     }
   }
+
+  static async getFirstProducts(limit = 5) {
+    try {
+      const products = await Product.find()
+        .limit(limit)
+        .populate("detail.sellerId", "fullName feedBackAsSeller")
+        .populate("auction.highestBidderId", "fullName") // lấy tên highest bidder
+        .exec();
+
+      return products.map((product) => ({
+        id: product._id,
+        name: product.detail.name,
+        image: product.detail.images?.[0] || null, // lấy ảnh đầu tiên
+        currentPrice:
+          product.auction.currentPrice || product.auction.startPrice || 0,
+        buyNowPrice: product.auction.buyNowPrice || null,
+        highestBidder: product.auction.highestBidderId?.fullName || null,
+        postedDate: product.createdAt?.toISOString().split("T")[0] || null,
+        endDate: product.auction.endTime?.toISOString().split("T")[0] || null,
+        bidCount: product.auctionHistory.numberOfBids || 0,
+      }));
+    } catch (error) {
+      throw new Error("Error getting products: " + error.message);
+    }
+  }
+
+  static async;
 }
 
 module.exports = ProductService;
