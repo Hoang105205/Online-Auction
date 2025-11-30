@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Star, User, Clock } from "lucide-react";
-import { Card } from "flowbite-react";
 import ProductDetailsInformation from "./ProductDetailsInformation";
 import ProductDetailsAuction from "./ProductDetailsAuction";
 import ProductDetailsANA from "./ProductDetailsANA";
@@ -10,6 +9,8 @@ import ProductImage from "../ProductImage";
 import ProductCardP from "../Product/ProductCardP";
 
 import useAuth from "../../hooks/useAuth";
+
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 import {
   getProductBasicDetails,
@@ -21,21 +22,20 @@ import {
 
 const ProductDetails = () => {
   const { auth } = useAuth();
-  const [currentUserId, setCurrentUserId] = useState(
-    "6922ec91a628dffaa2414479"
-  );
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  // useEffect(() => {
-  //   let isMounted = true;
+  const axiosPrivate = useAxiosPrivate();
 
-  //   if (!auth) return;
-
-  //   setCurrentUserId(auth.id);
-
-  //   return () => {
-  //     isMounted = false;
-  //   }
-  // }, [auth]);
+  useEffect(() => {
+    let isMounted = true;
+    if (!auth) {
+      return;
+    }
+    setCurrentUserId(auth.id);
+    return () => {
+      isMounted = false;
+    };
+  }, [auth]);
 
   const products = [
     {
@@ -115,6 +115,7 @@ const ProductDetails = () => {
   const mainImageRef = useRef(null);
   const thumbsRef = useRef(null);
 
+  // for public axios
   useEffect(() => {
     const fetchProductData = async () => {
       try {
@@ -124,15 +125,11 @@ const ProductDetails = () => {
         const basicBata = await getProductBasicDetails(productId);
         const auctionData = await getProductAuction(productId);
         const descData = await getProductDescription(productId);
-        const aucHisData = await getAuctionHistory(productId);
         const qaData = await getProductQA(productId);
-
-        console.log("Fetched QA data:", qaData);
 
         setProductInfoData(basicBata);
         setProductAuctionData(auctionData);
         setProductDescData(descData);
-        setProductAuctHisData(aucHisData);
         setProductQAData(qaData);
       } catch (error) {
         setError(error.message);
@@ -144,6 +141,29 @@ const ProductDetails = () => {
       fetchProductData();
     }
   }, [productId]);
+
+  // for private axios
+  useEffect(() => {
+    const fetchProductData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (auth?.accessToken) {
+          const aucHisData = await getAuctionHistory(productId, axiosPrivate);
+          setProductAuctHisData(aucHisData);
+        }
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (productId && auth?.accessToken) {
+      console.log("Fetching private data for user:", auth.id);
+      fetchProductData();
+    }
+  }, [auth, productId, axiosPrivate]);
 
   useEffect(() => {
     const VISIBLE_THUMBS = 4;
@@ -246,13 +266,13 @@ const ProductDetails = () => {
             <span className="text-black font-medium">T-shirts</span>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Left Side - Images */}
-            <div className="flex gap-4">
+            <div className="flex flex-col lg:flex-row gap-4 order-1">
               {/* Thumbnail Images */}
               <div
                 ref={thumbsRef}
-                className="flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar"
+                className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1"
                 style={{ minWidth: 96 }}
               >
                 {images.map((img, idx) => (
@@ -271,7 +291,7 @@ const ProductDetails = () => {
               {/* Main Image */}
               <div
                 ref={mainImageRef}
-                className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
+                className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center order-1 lg:order-2"
                 style={{ aspectRatio: "1 / 1", minHeight: 240 }}
               >
                 <div
@@ -284,18 +304,18 @@ const ProductDetails = () => {
             </div>
 
             {/* Right Side - Product Info */}
-            <div>
-              <h1 className="text-3xl font-bold mb-4">
+            <div className="order-2">
+              <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4">
                 {productInfoData.detail.name}
               </h1>
 
               {/* Seller Info */}
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-gray-600">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 lg:mb-4">
+                <span className="text-sm lg:text-base text-gray-600">
                   Seller: @{productInfoData.detail.sellerId.fullName}
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="font-semibold">
+                  <span className="font-semibold text-sm lg:text-base">
                     {productInfoData.detail.sellerId.feedBackAsSeller.point}
                   </span>
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -303,51 +323,67 @@ const ProductDetails = () => {
               </div>
 
               {/* Date Range */}
-              <div className="text-gray-700 mb-4">
-                Bắt đầu:{" "}
-                {new Date(
-                  productAuctionData.auction.startTime
-                ).toLocaleDateString("vi-VN")}{" "}
-                - Kết thúc:{" "}
-                {new Date(
-                  productAuctionData.auction.endTime
-                ).toLocaleDateString("vi-VN")}
+              <div className="text-sm lg:text-base text-gray-700 mb-3 lg:mb-4">
+                <span className="block sm:inline">
+                  Bắt đầu:{" "}
+                  {new Date(
+                    productAuctionData.auction.startTime
+                  ).toLocaleDateString("vi-VN")}
+                </span>
+                <span className="block sm:inline">
+                  - Kết thúc:{" "}
+                  {new Date(
+                    productAuctionData.auction.endTime
+                  ).toLocaleDateString("vi-VN")}
+                </span>
               </div>
 
               {/* Stats */}
-              <div className="flex items-center gap-6 mb-6">
+              <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
                 <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-gray-600" />
-                  <span>{productAuctionData.auction.bidders}</span>
+                  <User className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                  <span className="text-sm lg:text-base">
+                    {productAuctionData.auction.bidders}
+                  </span>
                 </div>
               </div>
 
               {/* Price Info */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600">Ra giá cao nhất:</span>
-                  <span className="text-3xl font-bold text-red-500">
-                    ${productAuctionData.auction.currentPrice}
+              <div className="bg-gray-50 p-3 lg:p-4 rounded-lg mb-4 lg:mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 lg:mb-4 pb-3 border-b border-gray-200">
+                  <span className="text-sm lg:text-base text-gray-600">
+                    Ra giá cao nhất:
                   </span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-600">
-                      bởi: @
-                      {productAuctionData.auction.highestBidderId.fullName}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 lg:mb-4 pb-3 border-b border-gray-200">
+                    <span className="text-3xl font-bold text-red-500">
+                      {productAuctionData.auction.currentPrice}đ
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold">
-                        {
-                          productAuctionData.auction.highestBidderId
-                            .feedBackAsBidder.point
-                        }
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs lg:text-sm text-gray-600">
+                        bởi: @
+                        {productAuctionData.auction.highestBidderId.fullName}
                       </span>
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs lg:text-sm font-semibold">
+                          {
+                            productAuctionData.auction.highestBidderId
+                              .feedBackAsBidder.point
+                          }
+                        </span>
+                        <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">Mua ngay với giá:</span>{" "}
+                  <span className="text-3xl font-bold text-green-500 ml-24">
+                    {productAuctionData.auction.buyNowPrice}đ
+                  </span>
+                </div>
 
                 {/* Countdown */}
-                <div className="flex items-center gap-2 text-gray-700">
+                <div className="flex items-center gap-2 text-gray-700 py-4">
                   <Clock className="w-5 h-5" />
                   <span className="text-red-500 font-semibold">
                     {timeRemaining}
@@ -416,6 +452,7 @@ const ProductDetails = () => {
                   productId={productId}
                   auctionData={productAuctionData}
                   auctionHistoryData={productAuctHisData}
+                  authUser={auth}
                 />
               )}
               {activeTab === "qa" && (
@@ -427,7 +464,7 @@ const ProductDetails = () => {
             </div>
           </div>
 
-          <div className="mt-12 items-center justify-center">
+          <div className="mt-12 items-center justify-center flex flex-wrap">
             <h1 className="text-2xl font-bold mr-6 text-center">
               Sản Phẩm Liên Quan
             </h1>

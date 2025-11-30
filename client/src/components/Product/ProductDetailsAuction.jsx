@@ -1,12 +1,34 @@
 import React, { useState } from "react";
 import { Clock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { LogIn } from "lucide-react";
 
 const ProductDetailsAuction = ({
   productId,
   auctionData,
   auctionHistoryData,
+  authUser,
 }) => {
   const [bidAmount, setBidAmount] = useState("");
+
+  if (!authUser?.accessToken) {
+    return (
+      <div className="py-12 text-center">
+        <div className="max-w-md mx-auto bg-gray-50 p-8 rounded-lg shadow-md">
+          <LogIn className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2 py-2">
+            Vui lòng đăng nhập để tham gia đấu giá sản phẩm này.
+          </h3>
+          <Link
+            to="/login"
+            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Đăng nhập ngay
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!auctionData || !auctionHistoryData) {
     return (
