@@ -39,7 +39,7 @@ export default function WatchlistPage() {
         const mapped = (result.products || []).map((p) => ({
           id: p._id,
           name: p.detail?.name || "Sản phẩm",
-          image: (p.detail?.images && p.detail.images[0]) || "/img/image1.jpg",
+          image: (p.detail?.images && p.detail.images[0]),
           currentPrice: p.auction?.currentPrice ?? 0,
           buyNowPrice: p.auction?.buyNowPrice ?? null,
           highestBidder: p.auction?.highestBidderId?.fullName || "",

@@ -1,5 +1,6 @@
 import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
 import { Link } from "react-router-dom";
+import ProductImage from "./ProductImage";
 
 const ProductCard = ({ product, isWon = false }) => {
   // Calculate time remaining
@@ -56,11 +57,9 @@ const ProductCard = ({ product, isWon = false }) => {
       <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <ProductImage url={product.image} />
+          </div>
           {isWon && (
             <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
               ✓ Đã thắng
