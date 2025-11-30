@@ -72,13 +72,8 @@ const ProductCardP = ({ product, isWon = false }) => {
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
             <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-              <ProductImage url="cld-sample-5" />
+              <ProductImage url={product.image} />
             </div>
-            {/* <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          /> */}
             {!isEnded && (
               <Button
                 className="

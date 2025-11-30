@@ -408,6 +408,19 @@ class ProductController {
       return res.status(500).json({ message: error.message });
     }
   }
+
+  // GET /products - Get first 5 products
+  static async getFirstProducts(req, res) {
+    try {
+      const limit = parseInt(req.query.limit) || 5;
+      const products = await ProductService.getFirstProducts(limit);
+      return res.status(200).json(products);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error getting products" });
+    }
+  }
 }
 
 module.exports = ProductController;

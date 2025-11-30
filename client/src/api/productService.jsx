@@ -119,3 +119,12 @@ export const addProduct = async (product, axiosInstance) => {
     throw error;
   }
 };
+
+export const getFirstProducts = async (limit = 5) => {
+  try {
+    const response = await axiosPublic.get(`/products?limit=${limit}`);
+    return response.data; // trả về danh sách products
+  } catch (error) {
+    throw error;
+  }
+};
