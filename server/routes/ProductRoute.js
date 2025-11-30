@@ -3,34 +3,22 @@ const multer = require("multer");
 const router = express.Router();
 const storage = require("../config/cloudinaryStorage");
 const upload = multer({ storage });
+// memory upload for creating product so we can upload to Cloudinary after productId exists
+const memoryUpload = multer({ storage: multer.memoryStorage() });
 
 const ProductController = require("../controllers/ProductController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
 const ROLES_LIST = require("../config/roles_list");
 
-// POST /products - Create product (mock implementation for now)
-router.post("/", async (req, res) => {
-  try {
-    // Create a mock product id and echo back basic info
-    const id = String(Date.now());
-    const product = {
-      _id: id,
-      name: req.body.name || "(Tên sản phẩm mẫu)",
-      startingPrice: req.body.startingPrice || 0,
-      step: req.body.step || 0,
-      category: req.body.category || null,
-      subcategory: req.body.subcategory || null,
-      endDate: req.body.endDate || null,
-      description: req.body.description || "",
-      images: [],
-    };
-
-    return res.status(201).json({ _id: id, product });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
+// POST /products - Create product with optional images upload
+router.post(
+  "/",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Seller),
+  memoryUpload.array("images", 10),
+  require("../controllers/ProductController").createProduct
+);
 
 // GET /products/description/:id - Get product description by ID
 router.get("/description/:id", ProductController.getProductDescription); // public

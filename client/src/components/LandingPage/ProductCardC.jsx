@@ -63,27 +63,25 @@ const ProductCardC = ({ product, isWon = false }) => {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
 
-            {/* Time Remaining - Only show if not won */}
-            {!isWon && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <HiClock className="text-gray-400 flex-shrink-0" />
-                <span
-                  className={`font-medium ${
-                    isEnded ? "text-gray-500" : "text-orange-600"
-                  }`}
-                >
-                  {timeRemaining}
-                </span>
-              </div>
-            )}
+          {/* Time Remaining - Only show if not won */}
+          {!isWon && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <HiClock className="text-gray-400 flex-shrink-0" />
+              <span
+                className={`font-medium ${
+                  isEnded ? "text-gray-500" : "text-orange-600"
+                }`}>
+                {timeRemaining}
+              </span>
+            </div>
+          )}
 
           {!isEnded && (
             <Button
               className="
               absolute bottom-2 font-bold left-1/2 -translate-x-1/2 opacity-0 bg-white text-gray-800 hover:bg-gray-100 hover:text-sky-600
               group-hover:opacity-100 group-hover:translate-y-0
-              translate-y-4 transition-all duration-300 w-[80%]" 
-            >
+              translate-y-4 transition-all duration-300 w-[80%]">
               CHỈ CÒN {timeRemaining}
             </Button>
           )}
@@ -107,7 +105,7 @@ const ProductCardC = ({ product, isWon = false }) => {
 
           {/* Current Price */}
           <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+            <p className="text-xs text-gray-500 mb-1">Giá đấu hiện tại</p>
             <p className="text-2xl font-bold text-sky-600">
               {formatPrice(product.currentPrice)}
             </p>
