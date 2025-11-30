@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Label, TextInput, Textarea, Checkbox } from "flowbite-react";
 import { HiArrowLeft, HiX, HiPlus, HiSearch, HiCalendar } from "react-icons/hi";
+import { addProduct } from "../../api/productService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 // Zod validation schema
@@ -130,7 +131,7 @@ export default function CreateProductPage() {
   const [subcategorySearch, setSubcategorySearch] = useState("");
   const [selectedImages, setSelectedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadProgress, setUploadProgress] = useState(0);
   const axiosPrivate = useAxiosPrivate();
 
   const {
@@ -223,76 +224,84 @@ export default function CreateProductPage() {
 
       // Prepare product payload (convert numeric strings to numbers)
       const payload = {
-        name: data.productName,
-        startingPrice: Number(data.startingPrice),
-        step: Number(data.step),
+        detail: {
+          sellerID: "",
+          name: data.productName,
+          category: data.category?.id ?? null,
+          subCategory: data.subcategory?.id ?? null,
+          description: data.description,
+          images: [],
+          followers: 0,
+        },
+        auction: {
+          startPrice: Number(data.startingPrice),
+          stepPrice: Number(data.step),
+          buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
+          autoExtend: data.autoExtend,
+          status: "pending",
+          bidders: 0,
+        },
+        auctionHistory: {
+          numberOfBids: 0,
+          historyList: [],
+        },
+        chat: [],
+      };
+
+      //   name: data.productName,
+      //   startingPrice: Number(data.startingPrice),
+      //   step: Number(data.step),
+      //   hasBuyNowPrice: data.hasBuyNowPrice,
+      //   buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
+      //   autoExtend: data.autoExtend,
+      //   category: data.category?.id ?? null,
+      //   subcategory: data.subcategory?.id ?? null,
+      //   endDate: data.endDate,
+      //   description: data.description,
+      // };
+
+      // Build FormData: include product info and all images so server can create product
+      const productPayload = {
+        productName: data.productName,
+        startingPrice: data.startingPrice,
+        step: data.step,
         hasBuyNowPrice: data.hasBuyNowPrice,
-        buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
+        buyNowPrice: data.buyNowPrice,
         autoExtend: data.autoExtend,
-        category: data.category?.id ?? null,
-        subcategory: data.subcategory?.id ?? null,
+        category: data.category,
+        subcategory: data.subcategory,
         endDate: data.endDate,
         description: data.description,
       };
 
-      // // 1) Create product on server
-      // const createRes = await axiosPrivate.post("/products", payload);
+      const fd = new FormData();
+      fd.append("product", JSON.stringify(productPayload));
+      selectedImages.forEach((img) => fd.append("images", img.file));
 
-      // // Try to resolve created id from common response shapes
-      // const newProductId =
-      //   createRes?.data?._id ||
-      //   createRes?.data?.id ||
-      //   createRes?.data?.product?._id;
+      setUploadProgress(0);
+      let progress = 0;
+      let isDone = false;
+      const interval = setInterval(() => {
+        if (isDone) {
+          setUploadProgress(100);
+          return;
+        }
+        progress += Math.random() * 1 + Math.random() * 3;
+        if (progress >= 99) progress = 99;
+        setUploadProgress(Math.round(progress));
+      }, 150);
 
-      // if (!newProductId) {
-      //   throw new Error("Không lấy được ID sản phẩm mới từ server.");
-      // }
+      const res = await addProduct(fd, axiosPrivate);
 
-      // 2) Upload each selected image to /products/:id/image
-      const uploadedPublicIds = [];
+      isDone = true;
+      clearInterval(interval);
+      setUploadProgress(100);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      const newProductId = "abcccccx";
-
-      const total = selectedImages.length;
-
-      // initialize progress entries for all images to 0
-      setUploadProgress((prev) => {
-        const next = { ...prev };
-        selectedImages.forEach((img) => (next[img.id] = 0));
-        return next;
-      });
-
-      for (let i = 0; i < selectedImages.length; i++) {
-        const img = selectedImages[i];
-        const formData = new FormData();
-        formData.append("image", img.file);
-
-        const res = await axiosPrivate.post(
-          `/products/${newProductId}/image`,
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-            onUploadProgress: (e) => {
-              const imgPercent = Math.round((e.loaded * 100) / e.total);
-              setUploadProgress((prev) => ({ ...prev, [img.id]: imgPercent }));
-            },
-          }
-        );
-
-        // ensure this image is marked 100% after upload completes
-        setUploadProgress((prev) => ({ ...prev, [img.id]: 100 }));
-
-        const publicId =
-          res?.data?.publicId || res?.data?.id || res?.data?.filename;
-        uploadedPublicIds.push(publicId);
-      }
-
-      // Optionally: you can send uploadedPublicIds to server to attach to product
-      // if your backend requires a separate call. For now we simply log them.
-      console.log("Uploaded images publicIds:", uploadedPublicIds);
-
-      alert("Sản phẩm đã được tạo và ảnh đã được tải lên thành công!");
-      navigate("/account/my-products");
+      setTimeout(() => {
+        alert("Sản phẩm đã được tạo và ảnh đã được tải lên thành công!");
+        navigate("/account/my-products");
+      }, 0);
     } catch (error) {
       console.error(error);
       alert("Có lỗi xảy ra khi tạo sản phẩm hoặc tải ảnh. Vui lòng thử lại.");
@@ -325,15 +334,6 @@ export default function CreateProductPage() {
       )
     : [];
 
-  // compute overall upload progress based on selectedImages (count missing as 0)
-  const totalImages = selectedImages.length || 0;
-  const sumProgress = selectedImages.reduce(
-    (acc, img) => acc + (uploadProgress[img.id] || 0),
-    0
-  );
-  const avgProgress =
-    totalImages > 0 ? Math.round(sumProgress / totalImages) : 0;
-
   return (
     <div className="p-6 md:p-8">
       {uploading && (
@@ -357,7 +357,7 @@ export default function CreateProductPage() {
                 d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
             </svg>
             <div className="mb-2 font-medium text-gray-800">
-              Đang tải lên ảnh…
+              Đang đăng tải thông tin sản phẩm…
             </div>
             <div className="text-sm text-gray-600">
               Vui lòng không đóng hoặc rời khỏi trang.
@@ -366,10 +366,12 @@ export default function CreateProductPage() {
               <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
                 <div
                   className="bg-green-500 h-3"
-                  style={{ width: `${avgProgress}%` }}
+                  style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              <div className="text-sm text-gray-700 mt-2">{avgProgress}%</div>
+              <div className="text-sm text-gray-700 mt-2">
+                {uploadProgress}%
+              </div>
             </div>
           </div>
         </div>

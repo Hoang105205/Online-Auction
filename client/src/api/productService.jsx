@@ -102,3 +102,20 @@ export const addReply = async (productId, chatId, message) => {
     throw error;
   }
 };
+
+export const addProduct = async (product, axiosInstance) => {
+  try {
+    if (product instanceof FormData) {
+      const response = await axiosInstance.post("/products", product, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    }
+
+    // Nếu là JSON
+    const response = await axiosInstance.post("/products", product);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
