@@ -379,6 +379,35 @@ class UserService {
       },
     };
   }
+
+  static async getMyProducts(userId, { page = 1, limit = 3 }) {
+    const query = { "detail.sellerId": userId };
+
+    const totalItems = await Product.countDocuments(query).exec();
+
+    const products = await Product.find(query)
+      .select(
+        "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.endTime auction.bidders auction.status auction.highestBidderId createdAt"
+      )
+      .populate({
+        path: "auction.highestBidderId",
+        select: "fullName",
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .exec();
+
+    return {
+      products: products,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems: totalItems,
+        limit: parseInt(limit),
+      },
+    };
+  }
 }
 
 module.exports = UserService;

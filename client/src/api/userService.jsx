@@ -135,3 +135,25 @@ export const getParticipatingAuctions = async (
     throw error;
   }
 };
+
+/**
+ * Lấy danh sách sản phẩm của người dùng với phân trang
+ * API: GET /api/users/my-products
+ */
+export const getMyProducts = async (
+  axiosInstance,
+  { page = 1, limit = 3 } 
+) => {
+  try {
+    const response = await axiosInstance.get("/users/my-products", {
+      params: {
+        page,
+        limit,
+      },
+    });
+    return response.data;
+  }
+  catch (error) {
+    throw error;
+  }
+}
