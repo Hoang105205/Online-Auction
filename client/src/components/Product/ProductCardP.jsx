@@ -60,7 +60,7 @@ const ProductCardP = ({ product, isWon = false }) => {
   const isEnded = timeRemaining === "Đã kết thúc";
 
   return (
-    <>
+    <div>
       <button
         //onClick={}
         className="relative z-10 top-12 left-2 p-2  rounded-full shadow transition-colors duration-300 
@@ -189,7 +189,7 @@ const ProductCardP = ({ product, isWon = false }) => {
           </div>
         </div>
       </Link>
-    </>
+    </div>
   );
 };
 
