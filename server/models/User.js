@@ -97,6 +97,12 @@ const userSchema = new Schema(
         ref: "Product",
       },
     ],
+    auctionsParticipated: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
   },
   {
     timestamps: true,

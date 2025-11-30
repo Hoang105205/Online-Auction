@@ -113,3 +113,25 @@ export const removeFromWatchList = async (axiosInstance, productId) => {
     throw error;
   }
 };
+
+/**
+ * Lấy danh sách đấu giá người dùng đã tham gia với phân trang và bộ lọc
+ * API: GET /api/users/participating-auctions
+ */
+export const getParticipatingAuctions = async (
+  axiosInstance,
+  { page = 1, limit = 3, filter = "all" }
+) => {
+  try {
+    const response = await axiosInstance.get("/users/participating-auctions", {
+      params: {
+        page,
+        limit,
+        filter,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

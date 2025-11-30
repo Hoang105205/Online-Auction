@@ -9,6 +9,7 @@ const {
   addToWatchList,
   removeFromWatchList,
   getWatchList,
+  getParticipatingAuctions,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -52,6 +53,13 @@ router.get(
   verifyJWT,
   verifyRoles(ROLES_LIST.Bidder),
   getWatchList
+);
+
+router.get(
+  "/participating-auctions",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  getParticipatingAuctions
 );
 
 module.exports = router;

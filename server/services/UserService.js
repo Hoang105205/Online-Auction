@@ -297,6 +297,88 @@ class UserService {
       },
     };
   }
+
+  static async getParticipatingAuctions(
+    userId,
+    { page = 1, limit = 3, filter = "all" }
+  ) {
+    const now = new Date();
+
+    let matchOptions = {};
+
+    switch (filter) {
+      case "active":
+        matchOptions = {
+          "auction.endTime": { $gt: now },
+        };
+        break;
+
+      case "ending_soon":
+        const threeDaysLater = new Date(
+          now.getTime() + 3 * 24 * 60 * 60 * 1000
+        );
+        matchOptions = {
+          "auction.endTime": { $gt: now, $lte: threeDaysLater },
+        };
+        break;
+
+      case "all":
+      default:
+        matchOptions = {};
+        break;
+    }
+
+    const userForCount = await User.findById(userId)
+      .select("auctionsParticipated")
+      .populate({
+        path: "auctionsParticipated",
+        match: matchOptions,
+        select: "_id",
+      })
+      .exec();
+
+    if (!userForCount) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const validCountList = userForCount.auctionsParticipated.filter(
+      (p) => p !== null
+    );
+    const totalItems = validCountList.length;
+
+    const user = await User.findById(userId)
+      .select("auctionsParticipated")
+      .populate({
+        path: "auctionsParticipated",
+        match: matchOptions,
+        select:
+          "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.endTime auction.bidders auction.status auction.highestBidderId createdAt",
+        options: {
+          sort: { "auction.endTime": 1 },
+          skip: (page - 1) * limit,
+          limit: parseInt(limit),
+        },
+        populate: {
+          path: "auction.highestBidderId",
+          select: "fullName",
+        },
+      })
+      .exec();
+
+    const products = user.auctionsParticipated.filter((p) => p !== null);
+
+    return {
+      products: products,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems: totalItems,
+        limit: parseInt(limit),
+      },
+    };
+  }
 }
 
 module.exports = UserService;

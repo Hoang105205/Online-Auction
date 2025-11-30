@@ -81,7 +81,7 @@ const ProductCard = ({ product, isWon = false }) => {
 
           {/* Current Price */}
           <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+            <p className="text-xs text-gray-500 mb-1">Giá đấu hiện tại</p>
             <p className="text-2xl font-bold text-sky-600">
               {formatPrice(product.currentPrice)}
             </p>
@@ -94,7 +94,7 @@ const ProductCard = ({ product, isWon = false }) => {
               <div className="flex items-center gap-2 text-gray-600">
                 <HiUser className="text-gray-400 flex-shrink-0" />
                 <span className="truncate">
-                  Người đặt giá cao nhất:{" "}
+                  Bởi:{" "}
                   <span className="font-medium text-gray-900">
                     {maskBidderName(product.highestBidder)}
                   </span>
