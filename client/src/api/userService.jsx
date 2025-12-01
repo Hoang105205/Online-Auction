@@ -140,10 +140,7 @@ export const getParticipatingAuctions = async (
  * Lấy danh sách sản phẩm của người dùng với phân trang
  * API: GET /api/users/my-products
  */
-export const getMyProducts = async (
-  axiosInstance,
-  { page = 1, limit = 3 } 
-) => {
+export const getMyProducts = async (axiosInstance, { page = 1, limit = 3 }) => {
   try {
     const response = await axiosInstance.get("/users/my-products", {
       params: {
@@ -152,8 +149,20 @@ export const getMyProducts = async (
       },
     });
     return response.data;
-  }
-  catch (error) {
+  } catch (error) {
     throw error;
   }
-}
+};
+
+/**
+ * Gửi yêu cầu trở thành người bán
+ * API: POST /api/users/request-seller
+ */
+export const requestSeller = async (axiosInstance) => {
+  try {
+    const response = await axiosInstance.post("/users/request-seller");
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

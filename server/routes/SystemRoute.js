@@ -41,6 +41,7 @@ router.put(
 );
 
 // Admin can list, approve, reject
+// ===== Hoang =====
 router.get(
   "/seller-requests",
   verifyJWT,
@@ -48,7 +49,6 @@ router.get(
   SystemController.listSellerRequests
 );
 
-// ===== Hoang =====
 router.put(
   "/seller-requests/:bidderId/approve",
   verifyJWT,

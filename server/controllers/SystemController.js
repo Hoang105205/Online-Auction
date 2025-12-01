@@ -76,12 +76,15 @@ const updateTimeConfigs = async (req, res) => {
   }
 };
 
+// ===== Hoang =====
 const listSellerRequests = async (req, res) => {
   try {
-    const populate =
-      req.query?.populate === "true" || req.query?.populate === "1";
-    const list = await SystemService.listSellerRequests(populate);
-    return res.status(200).json(list);
+    const page = req.query?.page ? parseInt(req.query.page) : 1;
+    const limit = req.query?.limit ? parseInt(req.query.limit) : 6;
+    const sortBy = req.query?.sortBy || "date";
+
+    const result = await SystemService.getSellerRequests({ page, limit, sortBy });
+    return res.status(200).json(result);
   } catch (err) {
     return res
       .status(err.statusCode || 500)
@@ -89,7 +92,6 @@ const listSellerRequests = async (req, res) => {
   }
 };
 
-// ===== Hoang =====
 const approveSellerRequest = async (req, res) => {
   try {
     const { bidderId } = req.params;

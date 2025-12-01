@@ -34,7 +34,7 @@ const wrapEmail = (
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" width="100%" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(2,6,23,0.06)">
     <tr>
       <td style="background:${titleColor}; padding:16px 20px; color:#fff; font-family:Segoe UI,Arial,Helvetica,sans-serif;">
-        <strong style="font-size:16px;">Online Auction</strong>
+        <strong style="font-size:16px;">Auctify</strong>
       </td>
     </tr>
     <tr>
@@ -158,29 +158,65 @@ class SystemService {
     return sys;
   }
 
-  static async listSellerRequests(populate = false) {
-    const sys = await SystemSetting.findOne().exec();
-    if (!sys) return [];
-    if (!populate) return sys.sellerRequests;
+  // ===== Hoang =====
+  static async getSellerRequests({ page = 1, limit = 6, sortBy = "date" }) {
+    const order = sortBy === "name" ? "asc" : "desc";
 
-    // populate user info for each request
-    const ids = sys.sellerRequests.map((r) => r.bidderId);
-    const users = await User.find({ _id: { $in: ids } })
-      .select("-password -refreshToken -otp -otpExpires -__v")
+    const sys = await SystemSetting.findOne()
+      .select("sellerRequests")
+      .populate({
+        path: "sellerRequests.bidderId",
+        select: "fullName",
+      })
+      .lean()
       .exec();
-    // map users by id for easy lookup
-    const byId = users.reduce((acc, u) => {
-      acc[u._id.toString()] = u;
-      return acc;
-    }, {});
 
-    return sys.sellerRequests.map((r) => ({
-      ...r.toObject(),
-      user: byId[r.bidderId.toString()] || null,
-    }));
+    if (!sys || !sys.sellerRequests) {
+      return {
+        requests: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          limit: limit,
+        },
+      };
+    }
+
+    let requests = sys.sellerRequests.filter((r) => r.bidderId); // filter out invalid requests
+
+    // Sort
+    requests.sort((a, b) => {
+      let compareA, compareB;
+
+      if (sortBy === "name") {
+        compareA = a.bidderId.fullName.toLowerCase();
+        compareB = b.bidderId.fullName.toLowerCase();
+      } else {
+        compareA = new Date(a.dateStart).getTime();
+        compareB = new Date(b.dateStart).getTime();
+      }
+
+      if (compareA < compareB) return order === "asc" ? -1 : 1;
+      if (compareA > compareB) return order === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    const totalItems = requests.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedRequests = requests.slice((page - 1) * limit, page * limit);
+
+    return {
+      requests: paginatedRequests,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+    };
   }
 
-  // ===== Hoang =====
   static async approveSellerRequest(bidderId) {
     if (!bidderId) {
       const error = new Error("bidderId is required");

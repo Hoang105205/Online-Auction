@@ -1,74 +1,62 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   HiSearch,
   HiCheck,
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
-
-const MOCK_REQUESTS = [
-  {
-    id: "#ESF-2025-8742",
-    name: "JasonDrake",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar1.jpg",
-  },
-  {
-    id: "#ESF-2025-6391",
-    name: "ElenaLiu",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar2.jpg",
-  },
-  {
-    id: "#ESF-2025-4129",
-    name: "MarcusJohnson",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar3.jpg",
-  },
-  {
-    id: "#ESF-2025-2875",
-    name: "SophiaNguyen",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar4.jpg",
-  },
-  {
-    id: "#ESF-2025-1493",
-    name: "RyanKim",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar5.jpg",
-  },
-  {
-    id: "#ESF-2025-0967",
-    name: "AmeliaMartinez",
-    role: "Người đấu giá",
-    avatar: "/auth-images/avatar6.jpg",
-  },
-];
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { listSellerRequests, approveSellerRequest, rejectSellerRequest } from "../../api/systemService";
+import { toast } from "react-toastify";
 
 export default function UpgradePage() {
-  const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [page, setPage] = useState(1);
-  const [requests, setRequests] = useState(MOCK_REQUESTS);
+  const [requests, setRequests] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [acceptTarget, setAcceptTarget] = useState("");
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const pageSize = 6;
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const axiosPrivate = useAxiosPrivate();
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const filtered = useMemo(() => {
-    let data = requests.slice();
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      data = data.filter(
-        (r) =>
-          r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q)
-      );
-    }
-    if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
-    return data;
-  }, [query, sortBy, requests]);
+  // Fetch seller requests from API (server paginated)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const res = await listSellerRequests(axiosPrivate, {
+          page,
+          limit: pageSize,
+          sortBy,
+        });
+        if (!mounted) return;
+        const items = (res.requests || []).map((r) => ({
+          id: r.bidderId?._id || "",
+          name: r.bidderId?.fullName || "Người dùng",
+          dateStart: r.dateStart,
+        }));
+        setRequests(items);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalItems(res.pagination?.totalItems || items.length);
+        setError(null);
+      } catch (e) {
+        if (!mounted) return;
+        setError(e.message || "Không thể tải danh sách yêu cầu.");
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [axiosPrivate, page, sortBy, reloadToken]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const paginated = requests; // server already slices
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -80,15 +68,45 @@ export default function UpgradePage() {
     setShowAcceptModal(true);
   }
 
-  function performAccept(id) {
+  async function performAccept(id) {
     if (!id) return;
-    // In a real app we'd call an API to upgrade the user. For mock, remove from requests.
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-    setShowAcceptModal(false);
-    setAcceptTarget("");
-    const newTotal = Math.max(1, Math.ceil((filtered.length - 1) / pageSize));
-    if (page > newTotal) setPage(newTotal);
+    try {
+      const res = await approveSellerRequest(axiosPrivate, id);
+      toast.success(res.message || "Phê duyệt yêu cầu thành công.");
+      setShowAcceptModal(false);
+      setReloadToken(Date.now());
+    }
+    catch (err){
+      toast.error(err.response?.data?.message || "Phê duyệt yêu cầu thất bại.");
+    }
   }
+
+  async function performReject(id) {
+    if (!id) return;
+    try {
+      const res = await rejectSellerRequest(axiosPrivate, id);
+      toast.success(res.message || "Từ chối yêu cầu thành công.");
+      setReloadToken(Date.now());
+    }
+    catch (err){
+      toast.error(err.response?.data?.message || "Từ chối yêu cầu thất bại.");
+    }
+  }
+
+  // Pagination list with ellipsis
+  const pageList = useMemo(() => {
+    const total = totalPages;
+    const current = page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [1];
+    const left = Math.max(2, current - 1);
+    const right = Math.min(total - 1, current + 1);
+    if (left > 2) pages.push("...");
+    for (let p = left; p <= right; p++) pages.push(p);
+    if (right < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -101,22 +119,7 @@ export default function UpgradePage() {
 
       <div className="bg-white rounded-2xl p-6 shadow-lg ring-1 ring-blue-100/60">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative max-w-xl">
-              <HiSearch className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search player..."
-                className="w-full pl-10 pr-4 py-2 border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -133,20 +136,34 @@ export default function UpgradePage() {
           </div>
         </div>
 
+        {isLoading && (
+          <div className="py-10 text-center text-gray-500">
+            Đang tải yêu cầu...
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="py-6 text-center">
+            <div className="inline-block px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded">
+              {error}
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[640px] md:min-w-0">
             <thead>
               <tr className="text-sm text-gray-500 border-b">
                 <th className="py-4 px-4 whitespace-nowrap">ID</th>
                 <th className="py-4 px-4">Name</th>
+                <th className="py-4 px-4 whitespace-nowrap">Requested At</th>
                 <th className="py-4 px-4">Action</th>
-                <th className="py-4 px-4 hidden sm:table-cell"></th>
               </tr>
             </thead>
             <tbody>
               {paginated.map((r, idx) => (
                 <tr
-                  key={r.id}
+                  key={`${r.id}-${idx}`}
                   className={`text-sm text-gray-600 ${
                     idx % 2 === 0 ? "" : "bg-gray-50"
                   }`}
@@ -154,24 +171,32 @@ export default function UpgradePage() {
                   <td className="py-4 px-4">{r.id}</td>
                   <td className="py-4 px-4 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-50 text-purple-600 font-semibold">
-                      {r.name.split(" ")[0][0] || "U"}
+                      {(r.name || "U").slice(0, 1).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
                       <div className="font-medium">{r.name}</div>
                       <div className="text-xs text-gray-400">{r.role}</div>
                     </div>
                   </td>
-                  <td className="py-4 px-4">
-                    <button
-                      onClick={() => openAccept(r.id)}
-                      className="w-full sm:inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm"
-                    >
-                      <HiCheck />
-                      <span>Chấp nhận</span>
-                    </button>
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    {new Date(r.dateStart).toLocaleString("vi-VN")}
                   </td>
-                  <td className="py-4 px-4 text-right hidden sm:table-cell">
-                    &nbsp;
+                  <td className="py-4 px-4">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => openAccept(r.id)}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus:ring-2 focus:ring-purple-300 text-white rounded-full text-sm transition-colors"
+                      >
+                        <HiCheck />
+                        <span>Chấp nhận</span>
+                      </button>
+                      <button
+                        onClick={() => performReject(r.id)}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 hover:bg-red-50 hover:border-red-300 active:bg-red-100 focus:ring-2 focus:ring-red-300 text-red-600 rounded-full text-sm transition-colors"
+                      >
+                        <span>Từ chối</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -179,7 +204,7 @@ export default function UpgradePage() {
               {paginated.length === 0 && (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-gray-400">
-                    No upgrade requests.
+                    Không có yêu cầu nâng cấp.
                   </td>
                 </tr>
               )}
@@ -221,9 +246,9 @@ export default function UpgradePage() {
 
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
-            Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {requests.length}{" "}
-            requests
+            Hiển thị {(page - 1) * pageSize + (paginated.length ? 1 : 0)} đến{" "}
+            {(page - 1) * pageSize + paginated.length} trong tổng {totalItems}{" "}
+            yêu cầu
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -233,9 +258,15 @@ export default function UpgradePage() {
             >
               <HiChevronLeft />
             </button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              return (
+            {pageList.map((p, idx) =>
+              p === "..." ? (
+                <span
+                  key={`ellipsis-${idx}`}
+                  className="w-8 h-8 flex items-center justify-center text-sm text-gray-500"
+                >
+                  …
+                </span>
+              ) : (
                 <button
                   key={p}
                   onClick={() => goto(p)}
@@ -247,8 +278,8 @@ export default function UpgradePage() {
                 >
                   {p}
                 </button>
-              );
-            })}
+              )
+            )}
             <button
               onClick={() => goto(page + 1)}
               className="p-2 rounded-full bg-gray-100"

@@ -12,9 +12,6 @@ const sellerRequestSchema = new Schema(
       type: Date,
       default: Date.now,
     },
-    dateEnd: {
-      type: Date,
-    },
   },
   { _id: false }
 );

@@ -57,31 +57,26 @@ export const updateTimeConfigs = async (payload = {}) => {
 };
 
 // Seller requests
-export const addSellerRequest = async ({ dateEnd } = {}) => {
+// ===== Hoang =====
+export const listSellerRequests = async (axiosInstance, {page = 1, limit = 6, sortBy = "date"}) => {
   try {
-    const res = await axiosPrivate.post("/app_settings/seller-requests", {
-      dateEnd,
+    const res = await axiosInstance.get(`/app_settings/seller-requests`, {
+      params: {
+        page: page,
+        limit: limit,
+        sortBy: sortBy,
+      }
     });
+
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const listSellerRequests = async (populate = false) => {
+export const approveSellerRequest = async (axiosInstance, bidderId) => {
   try {
-    const res = await axiosPrivate.get(
-      `/app_settings/seller-requests?populate=${populate ? 1 : 0}`
-    );
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const approveSellerRequest = async (bidderId) => {
-  try {
-    const res = await axiosPrivate.put(
+    const res = await axiosInstance.put(
       `/app_settings/seller-requests/${bidderId}/approve`
     );
     return res.data;
@@ -89,6 +84,19 @@ export const approveSellerRequest = async (bidderId) => {
     throw error;
   }
 };
+
+export const rejectSellerRequest = async (axiosInstance, bidderId) => {
+  try {
+    const res = await axiosInstance.delete(
+      `/app_settings/seller-requests/${bidderId}`
+    );
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+// ===== Hoang =====
+
 
 // Categories
 export const getCategories = async () => {
@@ -176,7 +184,6 @@ export default {
   updateAutoExtend,
   updateLatestProductTimeConfig,
   updateTimeConfigs,
-  addSellerRequest,
   listSellerRequests,
   approveSellerRequest,
   getCategories,

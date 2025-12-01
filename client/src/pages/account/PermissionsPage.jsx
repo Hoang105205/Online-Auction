@@ -3,9 +3,10 @@ import { Button } from "flowbite-react";
 import { HiShieldCheck, HiClock } from "react-icons/hi";
 
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { getUserBasicProfile } from "../../api/userService";
+import { getUserBasicProfile, requestSeller } from "../../api/userService";
 
 import { Spinner } from "flowbite-react";
+import { toast } from "react-toastify";
 
 const PermissionsPage = () => {
   const axiosPrivate = useAxiosPrivate();
@@ -21,6 +22,7 @@ const PermissionsPage = () => {
   const [requestPending, setRequestPending] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -45,7 +47,7 @@ const PermissionsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [axiosPrivate]);
+  }, [axiosPrivate, reloadToken]);
 
   useEffect(() => {
     if (sellerRequest.status === "none") {
@@ -71,11 +73,17 @@ const PermissionsPage = () => {
 
   const daysRemaining = calculateDaysRemaining();
 
-  const handleRequestSeller = () => {
-    // Handle request to become seller
-    console.log("Requesting seller permission...");
-    setRequestPending(true);
-    // In real app, send API request here
+  const handleRequestSeller = async () => {
+    try {
+      const result = await requestSeller(axiosPrivate);
+      setReloadToken(Date.now());
+      toast.success(result.message || "Yêu cầu đã được gửi thành công!");
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          "Đã có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại."
+      );
+    }
   };
 
   return (
