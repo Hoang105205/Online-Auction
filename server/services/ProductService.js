@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const User = require("../models/User");
+const cloudinary = require("../config/cloudinary");
 
 class ProductService {
   // get product basic details (for above information)
@@ -178,6 +179,131 @@ class ProductService {
     } catch (error) {
       throw new Error("Error getting auction history: " + error.message);
     }
+  }
+
+  // create product (with optional uploaded images)
+  static async createProduct(payload, files, userId) {
+    function getPublicId(url) {
+      const parts = url.split("products/");
+      if (parts.length < 2) return null;
+
+      const rest = parts[1]; // "692be247386a087837e12afe/1764483664931_2.png"
+      const withoutExt = rest.replace(/\.[^/.]+$/, ""); // bỏ .png
+
+      return "products/" + withoutExt;
+    }
+
+    // --- VALIDATION ---
+    if (!payload.endDate) throw new Error("endDate is required");
+
+    const endTimeParsed = Date.parse(payload.endDate);
+    if (isNaN(endTimeParsed)) throw new Error("Invalid endDate format");
+
+    const startPriceVal = Number(payload.startingPrice || payload.startPrice);
+    const stepPriceVal = Number(payload.step || payload.stepPrice);
+
+    if (!startPriceVal || startPriceVal <= 0)
+      throw new Error("Invalid starting price");
+
+    if (!stepPriceVal || stepPriceVal <= 0)
+      throw new Error("Invalid step price");
+
+    if (!payload.productName && !payload.name)
+      throw new Error("Product name is required");
+
+    if (
+      !payload.category &&
+      !(payload.category && payload.category.name) &&
+      !payload.categoryName
+    )
+      throw new Error("Category is required");
+
+    if (
+      !payload.subcategory &&
+      !(payload.subcategory && payload.subcategory.name) &&
+      !payload.subCategory
+    )
+      throw new Error("Subcategory is required");
+
+    // --- BUILD DETAIL + AUCTION ---
+    const detail = {
+      sellerId: userId,
+      name: payload.productName || payload.name || "(No name)",
+      category:
+        payload.category?.name ||
+        payload.category ||
+        payload.categoryName ||
+        "",
+      subCategory:
+        payload.subcategory?.name ||
+        payload.subcategory ||
+        payload.subCategory ||
+        "",
+      description: payload.description || "",
+      images: [],
+    };
+
+    const auction = {
+      startPrice: startPriceVal,
+      stepPrice: stepPriceVal,
+      buyNowPrice: Number(payload.buyNowPrice) || null,
+      currentPrice: Number(payload.startingPrice) || null,
+      highestBidderId: null,
+      startTime: payload.startTime ? new Date(payload.startTime) : new Date(),
+      endTime: payload.endDate ? new Date(payload.endDate) : null,
+      autoExtend: !!payload.autoExtend,
+      status:
+        payload.startTime && new Date(payload.startTime) > new Date()
+          ? "pending"
+          : "active",
+    };
+
+    const newProduct = new Product({ detail, auction });
+    await newProduct.save();
+
+    // --- HANDLE IMAGES ---
+    if (Array.isArray(files) && files.length > 0) {
+      const urls = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+
+        // If multer already uploaded
+        if (f.path || f.location || f.url) {
+          urls.push(f.path || f.location || f.url);
+          continue;
+        }
+
+        // Upload buffer → Cloudinary
+        if (f.buffer) {
+          const dataUri = `data:${f.mimetype};base64,${f.buffer.toString(
+            "base64"
+          )}`;
+
+          try {
+            const result = await cloudinary.uploader.upload(dataUri, {
+              folder: `products/${newProduct._id}`,
+              public_id: `${Date.now()}_${i}`,
+              quality: "auto",
+              fetch_format: "auto",
+              transformation: [{ width: 1800, height: 1800, crop: "limit" }],
+            });
+
+            if (result?.secure_url || result?.url) {
+              const full = result.secure_url || result.url;
+              urls.push(getPublicId(full));
+            }
+          } catch (err) {
+            console.error("Cloudinary upload error:", err);
+          }
+        }
+      }
+
+      newProduct.detail.images = urls.filter(Boolean);
+      await newProduct.save();
+    }
+
+    return newProduct;
   }
 
   // take 5 ralated products from the same category
