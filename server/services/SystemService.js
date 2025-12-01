@@ -3,6 +3,54 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
 const ROLES_LIST = require("../config/roles_list");
+const sendEmail = require("../utils/sendEmail");
+
+// Helpers for email formatting
+const formatDateVN = (date) =>
+  new Date(date).toLocaleDateString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+const wrapEmail = (
+  titleColor,
+  heading,
+  bodyHtml,
+  footerNote = "Đây là email tự động, vui lòng không trả lời."
+) => `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auctify</title>
+  <style>
+    .btn{ display:inline-block; padding:10px 16px; background:${titleColor}; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600 }
+  </style>
+</head>
+<body style="margin:0;background:#f6f8fb;padding:24px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" width="100%" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(2,6,23,0.06)">
+    <tr>
+      <td style="background:${titleColor}; padding:16px 20px; color:#fff; font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+        <strong style="font-size:16px;">Online Auction</strong>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px; font-family:Segoe UI,Arial,Helvetica,sans-serif; color:#0f172a;">
+        ${heading}
+        ${bodyHtml}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 20px; font-family:Segoe UI,Arial,Helvetica,sans-serif; color:#64748b; font-size:12px; background:#f8fafc;">
+        ${footerNote}
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
 class SystemService {
   static async getConfig() {
@@ -110,26 +158,6 @@ class SystemService {
     return sys;
   }
 
-  static async addSellerRequest(bidderId, dateEnd = null) {
-    if (!bidderId) {
-      const error = new Error("bidderId is required");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const request = {
-      bidderId: mongoose.Types.ObjectId(bidderId),
-    };
-    if (dateEnd) request.dateEnd = dateEnd;
-
-    const sys = await SystemSetting.findOneAndUpdate(
-      {},
-      { $push: { sellerRequests: request } },
-      { new: true, upsert: true }
-    ).exec();
-    return sys;
-  }
-
   static async listSellerRequests(populate = false) {
     const sys = await SystemSetting.findOne().exec();
     if (!sys) return [];
@@ -152,6 +180,7 @@ class SystemService {
     }));
   }
 
+  // ===== Hoang =====
   static async approveSellerRequest(bidderId) {
     if (!bidderId) {
       const error = new Error("bidderId is required");
@@ -175,11 +204,6 @@ class SystemService {
       throw error;
     }
 
-    // remove the request
-    sys.sellerRequests.splice(idx, 1);
-    await sys.save();
-
-    // give the user the Seller role (if not already)
     const user = await User.findById(bidderId).exec();
     if (!user) {
       const error = new Error("User not found");
@@ -187,14 +211,98 @@ class SystemService {
       throw error;
     }
 
-    if (!Array.isArray(user.roles)) user.roles = [];
     if (!user.roles.includes(ROLES_LIST.Seller)) {
       user.roles.push(ROLES_LIST.Seller);
-      await user.save();
     }
 
-    return { system: sys, user };
+    user.sellerRequest = {
+      status: "approved",
+      startDate: new Date(),
+    };
+
+    await user.save();
+
+    // 3. Gửi Email chúc mừng (UI chuyên nghiệp) và tính đúng ngày kết thúc
+    const subject = "🎉 Yêu cầu trở thành Seller đã được chấp thuận";
+    const startDate = new Date(user.sellerRequest.startDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 7);
+
+    const heading = `<h2 style="margin:0 0 10px 0; font-size:20px;">Chúc mừng, ${user.fullName}! 🎉</h2>`;
+    const bodyHtml = `
+      <p style="margin:0 0 12px 0; line-height:1.6;">Yêu cầu trở thành <strong>Người bán (Seller)</strong> của bạn đã được Admin phê duyệt.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin:14px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+        <tr>
+          <td style="padding:12px 14px; font-size:14px; color:#0f172a;">
+            <div style="margin-bottom:6px;"><strong>Hiệu lực từ:</strong> ${formatDateVN(
+              startDate
+            )}</div>
+            <div><strong>Hết hạn vào:</strong> ${formatDateVN(endDate)}</div>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 18px 0; color:#334155; line-height:1.6;">Bạn có thể bắt đầu đăng sản phẩm và quản lý các phiên đấu giá của mình ngay bây giờ.</p>
+      <p style="margin:18px 0 0 0; font-size:12px; color:#64748b;">Lưu ý: Quyền Seller có thời hạn 7 ngày kể từ ngày được phê duyệt.</p>
+    `;
+    const html = wrapEmail("#0ea5e9", heading, bodyHtml);
+    sendEmail(user.email, subject, html).catch(console.error);
+
+    // 4. Xóa request khỏi hàng đợi System
+    sys.sellerRequests.splice(idx, 1);
+    await sys.save();
+
+    return { message: "Đã duyệt thành công." };
   }
+
+  static async rejectSellerRequest(bidderId) {
+    if (!bidderId) {
+      const error = new Error("bidderId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const sys = await SystemSetting.findOne().exec();
+    if (!sys) {
+      const error = new Error("System config not found");
+      error.statusCode = 500;
+      throw error;
+    }
+
+    const idx = sys.sellerRequests.findIndex(
+      (r) => r.bidderId && r.bidderId.toString() === bidderId.toString()
+    );
+
+    if (idx === -1) {
+      const error = new Error("Seller request not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const user = await User.findById(bidderId).exec();
+    if (user) {
+      user.sellerRequest = {
+        status: "none",
+        startDate: null,
+      };
+      await user.save();
+
+      const subject = "❌ Yêu cầu trở thành Seller bị từ chối";
+      const heading = `<h2 style=\"margin:0 0 10px 0; font-size:20px;\">Rất tiếc, ${user.fullName} 😔</h2>`;
+      const bodyHtml = `
+        <p style=\"margin:0 0 12px 0; line-height:1.6;\">Yêu cầu trở thành <strong>Người bán (Seller)</strong> của bạn chưa được chấp thuận vào thời điểm này.</p>
+        <p style=\"margin:0 0 12px 0; line-height:1.6;\">Bạn có thể xem lại hồ sơ, bổ sung thông tin cần thiết và gửi yêu cầu lại sau.</p>
+        `;
+      const html = wrapEmail("#ef4444", heading, bodyHtml);
+      sendEmail(user.email, subject, html).catch(console.error);
+    }
+
+    // Xóa request khỏi hàng đợi System
+    sys.sellerRequests.splice(idx, 1);
+    await sys.save();
+
+    return { message: "Đã từ chối yêu cầu thành công." };
+  }
+  // ===== Hoang =====
 
   // Categories management
   static async getCategories() {

@@ -180,6 +180,23 @@ const getMyProducts = async (req, res) => {
   }
 };
 
+const requestSeller = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    const result = await UserService.requestSellerUpgrade(userId);
+
+    return res.status(200).json({
+      message: result.message || "Yêu cầu trở thành người bán đã được gửi",
+    });
+  }
+  catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+}
+
 module.exports = {
   getUserBasicProfile,
   updateUserProfile,
@@ -190,4 +207,5 @@ module.exports = {
   getWatchList,
   getParticipatingAuctions,
   getMyProducts,
+  requestSeller,
 };

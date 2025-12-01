@@ -76,24 +76,6 @@ const updateTimeConfigs = async (req, res) => {
   }
 };
 
-// Seller request endpoints
-const addSellerRequest = async (req, res) => {
-  try {
-    // bidderId may come from authenticated user (req.user) or body.bidderId (admin)
-    const bidderId = req.user || req.body?.bidderId;
-    const { dateEnd } = req.body || {};
-    if (!bidderId)
-      return res.status(400).json({ message: "bidderId không được để trống." });
-
-    const sys = await SystemService.addSellerRequest(bidderId, dateEnd);
-    return res.status(200).json(sys);
-  } catch (err) {
-    return res
-      .status(err.statusCode || 500)
-      .json({ message: err.message || "Server error" });
-  }
-};
-
 const listSellerRequests = async (req, res) => {
   try {
     const populate =
@@ -107,6 +89,7 @@ const listSellerRequests = async (req, res) => {
   }
 };
 
+// ===== Hoang =====
 const approveSellerRequest = async (req, res) => {
   try {
     const { bidderId } = req.params;
@@ -114,7 +97,9 @@ const approveSellerRequest = async (req, res) => {
       return res.status(400).json({ message: "bidderId không được để trống." });
 
     const result = await SystemService.approveSellerRequest(bidderId);
-    return res.status(200).json({ message: "Phê duyệt thành công.", result });
+    return res
+      .status(200)
+      .json({ message: result.message || "Phê duyệt thành công." });
   } catch (err) {
     return res
       .status(err.statusCode || 500)
@@ -128,16 +113,17 @@ const rejectSellerRequest = async (req, res) => {
     if (!bidderId)
       return res.status(400).json({ message: "bidderId không được để trống." });
 
-    const sys = await SystemService.rejectSellerRequest(bidderId);
+    const result = await SystemService.rejectSellerRequest(bidderId);
     return res
       .status(200)
-      .json({ message: "Từ chối yêu cầu thành công.", system: sys });
+      .json({ message: result.message || "Từ chối yêu cầu thành công." });
   } catch (err) {
     return res
       .status(err.statusCode || 500)
       .json({ message: err.message || "Server error" });
   }
 };
+// ===== Hoang =====
 
 // Categories
 const getCategories = async (req, res) => {
@@ -249,7 +235,6 @@ module.exports = {
   updateAutoExtend,
   updateLatestProductTimeConfig,
   updateTimeConfigs,
-  addSellerRequest,
   listSellerRequests,
   approveSellerRequest,
   rejectSellerRequest,

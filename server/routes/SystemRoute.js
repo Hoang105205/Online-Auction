@@ -40,14 +40,6 @@ router.put(
   SystemController.updateTimeConfigs
 );
 
-// Seller requests
-// Any authenticated bidder can create a request
-router.post(
-  "/seller-requests",
-  verifyJWT,
-  verifyRoles(ROLES_LIST.Bidder),
-  SystemController.addSellerRequest
-);
 // Admin can list, approve, reject
 router.get(
   "/seller-requests",
@@ -55,6 +47,8 @@ router.get(
   verifyRoles(ROLES_LIST.Admin),
   SystemController.listSellerRequests
 );
+
+// ===== Hoang =====
 router.put(
   "/seller-requests/:bidderId/approve",
   verifyJWT,
@@ -67,6 +61,7 @@ router.delete(
   verifyRoles(ROLES_LIST.Admin),
   SystemController.rejectSellerRequest
 );
+// ===== Hoang =====
 
 // Categories (Admin)
 router.get(

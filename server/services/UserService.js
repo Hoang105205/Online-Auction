@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
+const SystemSetting = require("../models/System");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 const ROLES_LIST = require("../config/roles_list");
@@ -407,6 +408,50 @@ class UserService {
         limit: parseInt(limit),
       },
     };
+  }
+
+  static async requestSellerUpgrade(userId) {
+    const user = await User.findById(userId).exec();
+
+    if (!user) {
+      const error = new Error("Người dùng không tồn tại.");
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
+    if (user.roles.includes(ROLES_LIST.Seller)) {
+      const error = new Error("Bạn đã là người bán hàng.");
+      error.statusCode = 400; // Bad Request
+      throw error;
+    }
+
+    if (user.sellerRequest.status === "pending") {
+      const error = new Error("Yêu cầu nâng cấp của bạn đang chờ xử lý.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    user.sellerRequest.status = "pending";
+    user.sellerRequest.startDate = null;
+    await user.save();
+
+    await SystemSetting.findOneAndUpdate(
+      {},
+      {
+        $push: {
+          sellerRequests: {
+            bidderId: userId,
+            dateStart: new Date(),
+          }
+        },
+        // Đảm bảo các field khác không bị null nếu tạo mới (optional)
+        $setOnInsert: { autoExtendBefore: 0, autoExtendDuration: 0 }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    )
+    .exec();
+
+    return { message: "Gửi yêu cầu thành công. Vui lòng chờ Admin duyệt." };
   }
 }
 
