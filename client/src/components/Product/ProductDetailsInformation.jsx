@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 import { updateDescription } from "../../api/productService";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const ProductDetailsInformation = ({
   productId,
@@ -8,6 +9,7 @@ const ProductDetailsInformation = ({
   isOwner,
   onSave,
 }) => {
+  const axiosPrivate = useAxiosPrivate();
   const [isEditing, setIsEditing] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -39,7 +41,11 @@ const ProductDetailsInformation = ({
       ${editorContent}
     `;
 
-      const response = await updateDescription(productId, updatedDescription);
+      const response = await updateDescription(
+        productId,
+        updatedDescription,
+        axiosPrivate
+      );
 
       console.log("Update description response:", response);
 

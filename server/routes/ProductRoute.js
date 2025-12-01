@@ -38,10 +38,20 @@ router.get("/auction/:id", ProductController.getProductAuction); // public
 router.get("/qa/:id", ProductController.getProductQA); // public
 
 // POST /products/qa/:id - Add a new Q entry for a product by ID
-router.post("/qa/:id", ProductController.addQuestion); // protected (bidder only)
+router.post(
+  "/qa/:id",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
+  ProductController.addQuestion
+); // protected (bidder only)
 
 // POST /products/qa/:id/reply/:chatId - Add a new A entry for a product by ID
-router.post("/qa/:id/reply/:chatId", ProductController.addReply); // protected (seller only)
+router.post(
+  "/qa/:id/reply/:chatId",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Seller),
+  ProductController.addReply
+); // protected (seller only)
 
 // GET /products/auction-history/:id - Get auction history details for a product by ID
 router.get(

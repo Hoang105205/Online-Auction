@@ -18,23 +18,6 @@ const bidHistorySchema = new Schema({
   },
 });
 
-const replySchema = new Schema({
-  sendId: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  message: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  time: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
 const chatSchema = new Schema({
   type: {
     type: String,
@@ -46,10 +29,6 @@ const chatSchema = new Schema({
     ref: "User",
     required: true,
   },
-  receiveId: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-  },
   time: {
     type: Date,
     default: Date.now,
@@ -59,9 +38,14 @@ const chatSchema = new Schema({
     required: true,
     trim: true,
   },
-  replies: {
-    type: [replySchema],
-    default: [],
+  reply: {
+    message: {
+      type: String,
+      trim: true,
+    },
+    time: {
+      type: Date,
+    },
   },
 });
 

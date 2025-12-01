@@ -165,38 +165,6 @@ const ProductDetails = () => {
     }
   }, [auth, productId, axiosPrivate]);
 
-  useEffect(() => {
-    const VISIBLE_THUMBS = 4;
-    const THUMB_PX = 96;
-    const GAP_PX = 16;
-    const MAX_THUMBS_HEIGHT =
-      VISIBLE_THUMBS * THUMB_PX + (VISIBLE_THUMBS - 1) * GAP_PX;
-
-    const updateThumbsHeight = () => {
-      if (mainImageRef.current && thumbsRef.current) {
-        const mainH = mainImageRef.current.clientHeight;
-        const target = Math.min(mainH, MAX_THUMBS_HEIGHT);
-        thumbsRef.current.style.height = `${target}px`;
-        thumbsRef.current.style.maxHeight = `${MAX_THUMBS_HEIGHT}px`;
-      }
-    };
-
-    updateThumbsHeight();
-    window.addEventListener("resize", updateThumbsHeight);
-
-    const imgs = document.querySelectorAll(
-      ".product-main-image, .product-thumb-image"
-    );
-    imgs.forEach((img) => img.addEventListener("load", updateThumbsHeight));
-
-    return () => {
-      window.removeEventListener("resize", updateThumbsHeight);
-      imgs.forEach((img) =>
-        img.removeEventListener("load", updateThumbsHeight)
-      );
-    };
-  }, [productInfoData, selectedImage]);
-
   const calculateTimeRemaining = (endTime) => {
     const now = new Date();
     const end = new Date(endTime);
@@ -266,20 +234,24 @@ const ProductDetails = () => {
             <span className="text-black font-medium">T-shirts</span>
           </nav>
 
+          <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4 pb-4">
+            {productInfoData.detail.name}
+          </h1>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Left Side - Images */}
-            <div className="flex flex-col lg:flex-row gap-4 order-1">
+            <div className="flex flex-col lg:flex-row gap-4 order-1 items-center">
               {/* Thumbnail Images */}
               <div
                 ref={thumbsRef}
-                className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1"
-                style={{ minWidth: 96 }}
+                className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1 max-h-28 lg:max-h-[400px]"
+                style={{ minWidth: "auto" }}
               >
                 {images.map((img, idx) => (
                   <div
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className={`w-24 h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 ${
+                    className={`w-20 h-20 lg:w-24 lg:h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 ${
                       selectedImage === idx ? "border-black" : "border-gray-200"
                     }`}
                   >
@@ -305,16 +277,12 @@ const ProductDetails = () => {
 
             {/* Right Side - Product Info */}
             <div className="order-2">
-              <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4">
-                {productInfoData.detail.name}
-              </h1>
-
               {/* Seller Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 lg:mb-4">
+              <div className="flex items-center gap-2 mb-3 lg:mb-4">
                 <span className="text-sm lg:text-base text-gray-600">
                   Seller: @{productInfoData.detail.sellerId.fullName}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 ml-4">
                   <span className="font-semibold text-sm lg:text-base">
                     {productInfoData.detail.sellerId.feedBackAsSeller.point}
                   </span>
@@ -324,46 +292,50 @@ const ProductDetails = () => {
 
               {/* Date Range */}
               <div className="text-sm lg:text-base text-gray-700 mb-3 lg:mb-4">
-                <span className="block sm:inline">
-                  Bắt đầu:{" "}
-                  {new Date(
-                    productAuctionData.auction.startTime
-                  ).toLocaleDateString("vi-VN")}
-                </span>
-                <span className="block sm:inline">
-                  - Kết thúc:{" "}
-                  {new Date(
-                    productAuctionData.auction.endTime
-                  ).toLocaleDateString("vi-VN")}
-                </span>
+                <div className="space-y-1 sm:space-y-0">
+                  <span className="block sm:inline">
+                    Bắt đầu:{" "}
+                    {new Date(
+                      productAuctionData.auction.startTime
+                    ).toLocaleDateString("vi-VN")}
+                  </span>
+                  <span className="block sm:inline sm:ml-2">
+                    - Kết thúc:{" "}
+                    {new Date(
+                      productAuctionData.auction.endTime
+                    ).toLocaleDateString("vi-VN")}
+                  </span>
+                </div>
               </div>
 
               {/* Stats */}
               <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
-                  <span className="text-sm lg:text-base">
-                    {productAuctionData.auction.bidders}
+                  <span className="text-sm lg:text-base text-red-400 font-semibold">
+                    {productAuctionData.auction.bidders} người đấu giá
                   </span>
                 </div>
               </div>
 
               {/* Price Info */}
               <div className="bg-gray-50 p-3 lg:p-4 rounded-lg mb-4 lg:mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 lg:mb-4 pb-3 border-b border-gray-200">
-                  <span className="text-sm lg:text-base text-gray-600">
-                    Ra giá cao nhất:
-                  </span>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 lg:mb-4 pb-3 border-b border-gray-200">
-                    <span className="text-3xl font-bold text-red-500">
-                      {productAuctionData.auction.currentPrice}đ
-                    </span>
-                    <div className="flex items-center gap-2">
+                {/* Highest Bid */}
+                <div className="mb-4 pb-4">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <div className="text-sm lg:text-base text-gray-600">
+                      Ra giá cao nhất:
+                    </div>
+                    <div className="text-2xl lg:text-3xl font-bold text-red-500">
+                      {productAuctionData.auction.currentPrice.toLocaleString()}
+                      đ
+                    </div>
+                    <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                       <span className="text-xs lg:text-sm text-gray-600">
                         bởi: @
                         {productAuctionData.auction.highestBidderId.fullName}
                       </span>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         <span className="text-xs lg:text-sm font-semibold">
                           {
                             productAuctionData.auction.highestBidderId
@@ -374,18 +346,40 @@ const ProductDetails = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Mobile: Bidder info on separate row */}
+                  <div className="flex items-center gap-2 mt-2 sm:hidden">
+                    <span className="text-xs text-gray-600">
+                      bởi: @
+                      {productAuctionData.auction.highestBidderId.fullName}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-xs font-semibold">
+                        {
+                          productAuctionData.auction.highestBidderId
+                            .feedBackAsBidder.point
+                        }
+                      </span>
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600">Mua ngay với giá:</span>{" "}
-                  <span className="text-3xl font-bold text-green-500 ml-24">
-                    {productAuctionData.auction.buyNowPrice}đ
-                  </span>
+
+                {/* Buy Now */}
+                <div className="mb-4 pb-4">
+                  <div className="flex items-center gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <div className="text-sm lg:text-base text-gray-600">
+                      Mua ngay với giá:
+                    </div>
+                    <div className="text-2xl lg:text-3xl font-bold text-green-500">
+                      {productAuctionData.auction.buyNowPrice.toLocaleString()}đ
+                    </div>
+                  </div>
                 </div>
 
                 {/* Countdown */}
-                <div className="flex items-center gap-2 text-gray-700 py-4">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-red-500 font-semibold">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                  <span className="text-sm lg:text-base text-red-500 font-semibold">
                     {timeRemaining}
                   </span>
                 </div>
@@ -459,11 +453,14 @@ const ProductDetails = () => {
                 <ProductDetailsANA
                   productId={productId}
                   qaData={productQAData}
+                  sellerId={productInfoData.detail.sellerId}
+                  authUser={auth}
                 />
               )}
             </div>
           </div>
 
+          {/* Related Products */}
           <div className="mt-12 items-center justify-center flex flex-wrap">
             <h1 className="text-2xl font-bold mr-6 text-center">
               Sản Phẩm Liên Quan
@@ -487,12 +484,16 @@ const ProductDetails = () => {
               >
                 ✕
               </button>
-              <img
-                src={images[selectedImage]}
-                alt="Full"
-                className="max-w-[90vw] max-h-[90vh] object-contain"
+              <div
+                className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
                 onClick={(e) => e.stopPropagation()}
-              />
+              >
+                <ProductImage
+                  url={images[selectedImage]}
+                  defaultWidth="75%"
+                  defaultHeight="75%"
+                />
+              </div>
             </div>
           )}
         </div>

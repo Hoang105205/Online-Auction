@@ -3,14 +3,24 @@ import { AdvancedImage } from "@cloudinary/react";
 import { auto } from "@cloudinary/url-gen/actions/resize";
 import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 
-const ProductImage = ({ url }) => {
-  const img = cld
-    .image(url)
-    .format("auto")
-    .quality("auto")
-    .resize(auto().gravity(autoGravity()).width(500).height(500));
+const ProductImage = ({
+  url,
+  defaultWidth = "100%",
+  defaultHeight = "100%",
+}) => {
+  const img = cld.image(url).format("auto").quality("auto");
 
-  return <AdvancedImage cldImg={img} />;
+  return (
+    <AdvancedImage
+      cldImg={img}
+      style={{
+        width: defaultWidth,
+        height: defaultHeight,
+        objectFit: "contain",
+        objectPosition: "center",
+      }}
+    />
+  );
 };
 
 export default ProductImage;

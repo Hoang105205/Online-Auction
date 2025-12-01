@@ -294,8 +294,7 @@ class ProductController {
     try {
       const { id } = req.params;
       const { message, type } = req.body;
-      // const sendId = req.user.id; // mocked
-      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
+      const sendId = req.user;
 
       if (!id || !message) {
         return res
@@ -303,7 +302,7 @@ class ProductController {
           .json({ error: "Product ID, message, and type are required" });
       }
 
-      const product = await ProductService.addQuestion(
+      const chat = await ProductService.addQuestion(
         id,
         sendId,
         message,
@@ -311,7 +310,7 @@ class ProductController {
       );
 
       return res.status(201).json({
-        product,
+        chat,
         message: "Question added successfully",
       });
     } catch (error) {
@@ -326,8 +325,7 @@ class ProductController {
     try {
       const { id, chatId } = req.params;
       const { message } = req.body;
-      // const sendId = req.user.id; // mocked
-      const sendId = "6922ec91a628dffaa2414479"; // hardcoded for testing
+      const sellerId = req.user;
 
       if (!id || !chatId || !message) {
         return res
@@ -335,15 +333,10 @@ class ProductController {
           .json({ error: "Product ID, chat ID, and message are required" });
       }
 
-      const product = await ProductService.addReply(
-        id,
-        chatId,
-        sendId,
-        message
-      );
+      const chat = await ProductService.addReply(id, chatId, sellerId, message);
 
       return res.status(201).json({
-        product,
+        chat,
         message: "Reply added successfully",
       });
     } catch (error) {
