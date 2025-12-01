@@ -78,10 +78,10 @@ const systemSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "system",
+    collection: "app_settings",
   }
 );
 
-const System = mongoose.model("system", systemSchema);
+const SystemSetting = mongoose.model("SystemSetting", systemSchema);
 
-module.exports = System;
+module.exports = SystemSetting;

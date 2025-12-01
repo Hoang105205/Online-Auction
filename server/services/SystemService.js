@@ -1,4 +1,4 @@
-const System = require("../models/System");
+const SystemSetting = require("../models/System");
 const User = require("../models/User");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
@@ -6,15 +6,15 @@ const ROLES_LIST = require("../config/roles_list");
 
 class SystemService {
   static async getConfig() {
-    let sys = await System.findOne().exec();
+    let sys = await SystemSetting.findOne().exec();
     if (!sys) {
-      sys = await System.create({});
+      sys = await SystemSetting.create({});
     }
     return sys;
   }
 
   static async updateConfig(updateData) {
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $set: updateData },
       { new: true, upsert: true }
@@ -47,9 +47,10 @@ class SystemService {
       update.autoExtendDuration = n;
     }
 
-    if (Object.keys(update).length === 0) return await System.findOne().exec();
+    if (Object.keys(update).length === 0)
+      return await SystemSetting.findOne().exec();
 
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $set: update },
       { new: true, upsert: true }
@@ -67,7 +68,7 @@ class SystemService {
       throw error;
     }
 
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $set: { latestProductTimeConfig: n } },
       { new: true, upsert: true }
@@ -98,10 +99,10 @@ class SystemService {
     }
 
     if (Object.keys(update).length === 0) {
-      return await System.findOne().exec();
+      return await SystemSetting.findOne().exec();
     }
 
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $set: update },
       { new: true, upsert: true }
@@ -121,7 +122,7 @@ class SystemService {
     };
     if (dateEnd) request.dateEnd = dateEnd;
 
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $push: { sellerRequests: request } },
       { new: true, upsert: true }
@@ -130,7 +131,7 @@ class SystemService {
   }
 
   static async listSellerRequests(populate = false) {
-    const sys = await System.findOne().exec();
+    const sys = await SystemSetting.findOne().exec();
     if (!sys) return [];
     if (!populate) return sys.sellerRequests;
 
@@ -158,7 +159,7 @@ class SystemService {
       throw error;
     }
 
-    const sys = await System.findOne().exec();
+    const sys = await SystemSetting.findOne().exec();
     if (!sys) {
       const error = new Error("System config not found");
       error.statusCode = 500;
@@ -222,7 +223,7 @@ class SystemService {
     // remove undefined fields to keep doc clean
     if (!cat.categoryId) delete cat.categoryId;
 
-    const sys = await System.findOneAndUpdate(
+    const sys = await SystemSetting.findOneAndUpdate(
       {},
       { $push: { categories: cat } },
       { new: true, upsert: true }
@@ -237,7 +238,7 @@ class SystemService {
       throw error;
     }
 
-    const sys = await System.findOne().exec();
+    const sys = await SystemSetting.findOne().exec();
     if (!sys) {
       const error = new Error("System config not found");
       error.statusCode = 500;
@@ -275,7 +276,7 @@ class SystemService {
       throw error;
     }
 
-    const sys = await System.findOne().exec();
+    const sys = await SystemSetting.findOne().exec();
     if (!sys) return null;
 
     // find the category first
