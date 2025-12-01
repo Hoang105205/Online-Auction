@@ -28,6 +28,10 @@ const subCategorySchema = new Schema({
     type: String,
     trim: true,
   },
+  slug: {
+    type: String,
+    trim: true,
+  },
 });
 
 const categorySchema = new Schema({
@@ -36,6 +40,10 @@ const categorySchema = new Schema({
     ref: "Category",
   },
   categoryName: {
+    type: String,
+    trim: true,
+  },
+  slug: {
     type: String,
     trim: true,
   },
