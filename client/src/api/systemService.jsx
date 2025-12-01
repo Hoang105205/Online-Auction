@@ -3,7 +3,7 @@ import { axiosPrivate } from "../config/axios";
 // System configuration - client API
 export const getSystemConfig = async () => {
   try {
-    const res = await axiosPrivate.get("/system");
+    const res = await axiosPrivate.get("/app_settings");
     return res.data;
   } catch (error) {
     throw error;
@@ -12,7 +12,7 @@ export const getSystemConfig = async () => {
 
 export const updateSystemConfig = async (data) => {
   try {
-    const res = await axiosPrivate.put("/system", data);
+    const res = await axiosPrivate.put("/app_settings", data);
     return res.data;
   } catch (error) {
     throw error;
@@ -24,7 +24,7 @@ export const updateAutoExtend = async ({
   autoExtendDuration,
 }) => {
   try {
-    const res = await axiosPrivate.put("/system/auto-extend", {
+    const res = await axiosPrivate.put("/app_settings/auto-extend", {
       autoExtendBefore,
       autoExtendDuration,
     });
@@ -38,7 +38,7 @@ export const updateLatestProductTimeConfig = async (
   latestProductTimeConfig
 ) => {
   try {
-    const res = await axiosPrivate.put("/system/latest-product-time", {
+    const res = await axiosPrivate.put("/app_settings/latest-product-time", {
       latestProductTimeConfig,
     });
     return res.data;
@@ -49,7 +49,7 @@ export const updateLatestProductTimeConfig = async (
 
 export const updateTimeConfigs = async (payload = {}) => {
   try {
-    const res = await axiosPrivate.put("/system/time-configs", payload);
+    const res = await axiosPrivate.put("/app_settings/time-configs", payload);
     return res.data;
   } catch (error) {
     throw error;
@@ -59,7 +59,9 @@ export const updateTimeConfigs = async (payload = {}) => {
 // Seller requests
 export const addSellerRequest = async ({ dateEnd } = {}) => {
   try {
-    const res = await axiosPrivate.post("/system/seller-requests", { dateEnd });
+    const res = await axiosPrivate.post("/app_settings/seller-requests", {
+      dateEnd,
+    });
     return res.data;
   } catch (error) {
     throw error;
@@ -69,7 +71,7 @@ export const addSellerRequest = async ({ dateEnd } = {}) => {
 export const listSellerRequests = async (populate = false) => {
   try {
     const res = await axiosPrivate.get(
-      `/system/seller-requests?populate=${populate ? 1 : 0}`
+      `/app_settings/seller-requests?populate=${populate ? 1 : 0}`
     );
     return res.data;
   } catch (error) {
@@ -80,7 +82,7 @@ export const listSellerRequests = async (populate = false) => {
 export const approveSellerRequest = async (bidderId) => {
   try {
     const res = await axiosPrivate.put(
-      `/system/seller-requests/${bidderId}/approve`
+      `/app_settings/seller-requests/${bidderId}/approve`
     );
     return res.data;
   } catch (error) {
@@ -91,7 +93,7 @@ export const approveSellerRequest = async (bidderId) => {
 // Categories
 export const getCategories = async () => {
   try {
-    const res = await axiosPrivate.get(`/system/categories`);
+    const res = await axiosPrivate.get(`/app_settings/categories`);
     return res.data;
   } catch (error) {
     throw error;
@@ -100,7 +102,7 @@ export const getCategories = async () => {
 
 export const addCategory = async (payload) => {
   try {
-    const res = await axiosPrivate.post(`/system/categories`, payload);
+    const res = await axiosPrivate.post(`/app_settings/categories`, payload);
     return res.data;
   } catch (error) {
     throw error;
@@ -110,7 +112,7 @@ export const addCategory = async (payload) => {
 export const updateCategory = async (categoryId, payload) => {
   try {
     const res = await axiosPrivate.put(
-      `/system/categories/${categoryId}`,
+      `/app_settings/categories/${categoryId}`,
       payload
     );
     return res.data;
@@ -121,17 +123,18 @@ export const updateCategory = async (categoryId, payload) => {
 
 export const removeCategory = async (categoryId) => {
   try {
-    const res = await axiosPrivate.delete(`/system/categories/${categoryId}`);
+    const res = await axiosPrivate.delete(
+      `/app_settings/categories/${categoryId}`
+    );
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Admin listings (moved from adminService)
 export const listUsers = async ({ page = 1, limit = 20, q = "" } = {}) => {
   try {
-    const res = await axiosPrivate.get("/system/users", {
+    const res = await axiosPrivate.get("/app_settings/users", {
       params: { page, limit, q },
     });
     return res.data;
@@ -149,7 +152,7 @@ export const listProducts = async ({
   try {
     const params = { page, limit, q };
     if (status) params.status = status;
-    const res = await axiosPrivate.get("/system/products", { params });
+    const res = await axiosPrivate.get("/app_settings/products", { params });
     return res.data;
   } catch (error) {
     throw error;
@@ -158,7 +161,9 @@ export const listProducts = async ({
 
 export const removeProduct = async (productId) => {
   try {
-    const res = await axiosPrivate.delete(`/system/products/${productId}`);
+    const res = await axiosPrivate.delete(
+      `/app_settings/products/${productId}`
+    );
     return res.data;
   } catch (error) {
     throw error;

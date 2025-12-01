@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { HiSave } from "react-icons/hi";
+import { toast } from "react-toastify";
 import {
   getSystemConfig,
   updateTimeConfigs,
@@ -7,8 +8,6 @@ import {
   updateLatestProductTimeConfig,
 } from "../../api/systemService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-
-// Only minutes are editable now. Helpers to map system DB values into settings/edited.
 
 const DEFAULT_SETTINGS = [
   {
@@ -97,6 +96,7 @@ export default function SettingsPage() {
     }, {})
   );
   const [loading, setLoading] = useState(false);
+  const [loadingById, setLoadingById] = useState({});
 
   // Load system config and map to our settings (minutes)
   useEffect(() => {
@@ -123,7 +123,6 @@ export default function SettingsPage() {
       mounted = false;
     };
   }, []);
-  // removed savedIds: we'll derive "has changes" by comparing edited -> saved values
 
   function hasChanges(id) {
     const setting = settings.find((s) => s.id === id);
@@ -152,7 +151,8 @@ export default function SettingsPage() {
     if (id === "s3") payload.latestProductTimeConfig = Number(values.m || 0);
 
     try {
-      setLoading(true);
+      // mark this specific setting as loading
+      setLoadingById((p) => ({ ...p, [id]: true }));
       if (id === "s1") {
         await updateAutoExtend({ autoExtendBefore: Number(values.m || 0) });
       } else if (id === "s2") {
@@ -164,29 +164,21 @@ export default function SettingsPage() {
         await updateTimeConfigs(payload);
       }
 
-      // refresh system config from server to reflect canonical values
-      try {
-        const sys = await getSystemConfig();
-        const newSettings = mapSystemToSettings(sys);
-        const newEdited = mapSystemToEdited(sys);
-        setSettings(newSettings);
-        setEdited(newEdited);
-      } catch (e) {
-        // if refresh fails, still update local saved copy
-        setSettings((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, values: { ...values } } : s))
-        );
-      }
+      setSettings((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, values: { ...values } } : s))
+      );
+      setEdited((prev) => ({ ...prev, [id]: { ...values } }));
 
       // quick user feedback
-      window.alert("Lưu cài đặt thành công");
+      toast.success("Lưu cài đặt thành công");
     } catch (err) {
       console.error("Save setting failed", err);
-      window.alert(
+      toast.error(
         "Lưu thất bại: " + (err.response?.data?.message || err.message)
       );
     } finally {
-      setLoading(false);
+      // clear loading for this id
+      setLoadingById((p) => ({ ...p, [id]: false }));
     }
   }
 
@@ -227,11 +219,12 @@ export default function SettingsPage() {
                 {/** Button enabled only when there are changes compared to saved values */}
                 {(() => {
                   const changed = hasChanges(s.id);
+                  const thisLoading = !!loadingById[s.id];
                   return (
                     <button
                       type="button"
                       onClick={() => saveSetting(s.id)}
-                      disabled={!changed || loading}
+                      disabled={!changed || loading || thisLoading}
                       className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
                         changed
                           ? "bg-blue-600 text-white hover:bg-blue-700"
@@ -240,7 +233,11 @@ export default function SettingsPage() {
                     >
                       <HiSave />
                       <span>
-                        {changed ? (loading ? "Đang lưu..." : "Lưu") : "Đã lưu"}
+                        {changed
+                          ? thisLoading
+                            ? "Đang lưu..."
+                            : "Lưu"
+                          : "Đã lưu"}
                       </span>
                     </button>
                   );
