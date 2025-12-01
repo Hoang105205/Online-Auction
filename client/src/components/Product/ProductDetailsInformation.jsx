@@ -88,6 +88,7 @@ const ProductDetailsInformation = ({
                 init={{
                   height: 200,
                   menubar: false,
+                  resize: false,
                   plugins: [
                     "advlist",
                     "autolink",

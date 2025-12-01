@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Editor } from "@tinymce/tinymce-react";
 import { Button, Label, TextInput, Textarea, Checkbox } from "flowbite-react";
 import { HiArrowLeft, HiX, HiPlus, HiSearch, HiCalendar } from "react-icons/hi";
 import { addProduct } from "../../api/productService";
@@ -59,7 +60,16 @@ const productSchema = z
           message: "Ngày hết hạn phải sau thời điểm hiện tại",
         }
       ),
-    description: z.string().min(20, "Mô tả phải có ít nhất 20 ký tự"),
+    description: z.string().refine(
+      (val) => {
+        // Strip HTML tags and check plain text length
+        const plainText = val.replace(/<[^>]*>/g, "").trim();
+        return plainText.length >= 20;
+      },
+      {
+        message: "Mô tả phải có ít nhất 20 ký tự",
+      }
+    ),
   })
   .refine(
     (data) => {
@@ -133,7 +143,9 @@ export default function CreateProductPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const axiosPrivate = useAxiosPrivate();
+  const editorRef = useRef(null);
 
+  // call useForm hook
   const {
     register,
     handleSubmit,
@@ -343,18 +355,21 @@ export default function CreateProductPage() {
               className="mx-auto mb-4 h-10 w-10 text-gray-700 animate-spin"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
-              viewBox="0 0 24 24">
+              viewBox="0 0 24 24"
+            >
               <circle
                 className="opacity-25"
                 cx="12"
                 cy="12"
                 r="10"
                 stroke="currentColor"
-                strokeWidth="4"></circle>
+                strokeWidth="4"
+              ></circle>
               <path
                 className="opacity-75"
                 fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              ></path>
             </svg>
             <div className="mb-2 font-medium text-gray-800">
               Đang đăng tải thông tin sản phẩm…
@@ -385,346 +400,389 @@ export default function CreateProductPage() {
           className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
             uploading ? "opacity-50 cursor-not-allowed" : ""
           }`}
-          aria-label="Quay lại">
+          aria-label="Quay lại"
+        >
           <HiArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
         <h2 className="text-2xl font-bold text-gray-900">Đăng sản phẩm</h2>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-3xl mx-auto space-y-6">
           {/* Left Column - Form Fields */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Product Name */}
-            <div>
-              <Label htmlFor="productName" value="Tên sản phẩm" />
-              <TextInput
-                id="productName"
-                {...register("productName")}
-                color={errors.productName ? "failure" : "gray"}
-                placeholder="Nhập tên sản phẩm"
-              />
-              {errors.productName && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.productName.message}
-                </p>
-              )}
-            </div>
-
-            {/* Starting Price */}
-            <div>
-              <Label htmlFor="startingPrice" value="Giá khởi điểm" />
-              <Controller
-                name="startingPrice"
-                control={control}
-                render={({ field }) => (
-                  <TextInput
-                    id="startingPrice"
-                    type="text"
-                    value={formatThousand(field.value)}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "");
-                      field.onChange(raw);
-                    }}
-                    color={errors.startingPrice ? "failure" : "gray"}
-                    placeholder="Nhập giá khởi điểm (VND)"
-                  />
-                )}
-              />
-              {errors.startingPrice && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.startingPrice.message}
-                </p>
-              )}
-            </div>
-
-            {/* Step Price */}
-            <div>
-              <Label htmlFor="step" value="Bước giá" />
-              <Controller
-                name="step"
-                control={control}
-                render={({ field }) => (
-                  <TextInput
-                    id="step"
-                    type="text"
-                    value={formatThousand(field.value)}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "");
-                      field.onChange(raw);
-                    }}
-                    color={errors.step ? "failure" : "gray"}
-                    placeholder="Nhập bước giá (VND)"
-                  />
-                )}
-              />
-              {errors.step && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.step.message}
-                </p>
-              )}
-            </div>
-
-            {/* Buy Now Price (Optional) */}
-            <div>
-              <Label
-                htmlFor="hasBuyNowPrice"
-                className="flex items-center gap-3 mb-2 cursor-pointer select-none">
-                <Controller
-                  name="hasBuyNowPrice"
-                  control={control}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="hasBuyNowPrice"
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e.target.checked);
-                        if (!e.target.checked) {
-                          setValue("buyNowPrice", "");
-                        }
-                      }}
-                    />
-                  )}
-                />
-                <span className="text-sm font-medium text-gray-900">
-                  Giá mua ngay (tùy chọn)
-                </span>
-              </Label>
-              {hasBuyNowPrice && (
-                <>
-                  <Controller
-                    name="buyNowPrice"
-                    control={control}
-                    render={({ field }) => (
-                      <TextInput
-                        id="buyNowPrice"
-                        type="text"
-                        value={formatThousand(field.value)}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, "");
-                          field.onChange(raw);
-                        }}
-                        placeholder="Nhập giá mua ngay (VND)"
-                        color={errors.buyNowPrice ? "failure" : "gray"}
-                      />
-                    )}
-                  />
-                  {errors.buyNowPrice && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.buyNowPrice.message}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Auto Extend */}
-            <div>
-              <Label
-                htmlFor="autoExtend"
-                className="flex items-start gap-3 cursor-pointer select-none">
-                <Controller
-                  name="autoExtend"
-                  control={control}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="autoExtend"
-                      checked={field.value}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-                <span className="text-sm font-medium text-gray-900">
-                  Tự động gia hạn
-                </span>
-              </Label>
-              <p className="text-xs text-gray-500 mt-1 pl-7">
-                Nếu có bất kỳ lượt đặt giá nào trong 5 phút cuối, hệ thống sẽ tự
-                động gia hạn thêm 5 phút để đảm bảo công bằng.
+          {/* Product Name */}
+          <div>
+            <Label htmlFor="productName" value="Tên sản phẩm" />
+            <TextInput
+              id="productName"
+              {...register("productName")}
+              color={errors.productName ? "failure" : "gray"}
+              placeholder="Nhập tên sản phẩm"
+            />
+            {errors.productName && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.productName.message}
               </p>
-            </div>
+            )}
+          </div>
 
-            {/* Category Selection */}
+          {/* Starting Price */}
+          <div>
+            <Label htmlFor="startingPrice" value="Giá khởi điểm" />
+            <Controller
+              name="startingPrice"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  id="startingPrice"
+                  type="text"
+                  value={formatThousand(field.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    field.onChange(raw);
+                  }}
+                  color={errors.startingPrice ? "failure" : "gray"}
+                  placeholder="Nhập giá khởi điểm (VND)"
+                />
+              )}
+            />
+            {errors.startingPrice && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.startingPrice.message}
+              </p>
+            )}
+          </div>
+
+          {/* Step Price */}
+          <div>
+            <Label htmlFor="step" value="Bước giá" />
+            <Controller
+              name="step"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  id="step"
+                  type="text"
+                  value={formatThousand(field.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    field.onChange(raw);
+                  }}
+                  color={errors.step ? "failure" : "gray"}
+                  placeholder="Nhập bước giá (VND)"
+                />
+              )}
+            />
+            {errors.step && (
+              <p className="text-sm text-red-600 mt-1">{errors.step.message}</p>
+            )}
+          </div>
+
+          {/* Buy Now Price (Optional) */}
+          <div>
+            <Label
+              htmlFor="hasBuyNowPrice"
+              className="flex items-center gap-3 mb-2 cursor-pointer select-none"
+            >
+              <Controller
+                name="hasBuyNowPrice"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="hasBuyNowPrice"
+                    checked={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.checked);
+                      if (!e.target.checked) {
+                        setValue("buyNowPrice", "");
+                      }
+                    }}
+                  />
+                )}
+              />
+              <span className="text-sm font-medium text-gray-900">
+                Giá mua ngay (tùy chọn)
+              </span>
+            </Label>
+            {hasBuyNowPrice && (
+              <>
+                <Controller
+                  name="buyNowPrice"
+                  control={control}
+                  render={({ field }) => (
+                    <TextInput
+                      id="buyNowPrice"
+                      type="text"
+                      value={formatThousand(field.value)}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        field.onChange(raw);
+                      }}
+                      placeholder="Nhập giá mua ngay (VND)"
+                      color={errors.buyNowPrice ? "failure" : "gray"}
+                    />
+                  )}
+                />
+                {errors.buyNowPrice && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.buyNowPrice.message}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Auto Extend */}
+          <div>
+            <Label
+              htmlFor="autoExtend"
+              className="flex items-start gap-3 cursor-pointer select-none"
+            >
+              <Controller
+                name="autoExtend"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="autoExtend"
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <span className="text-sm font-medium text-gray-900">
+                Tự động gia hạn
+              </span>
+            </Label>
+            <p className="text-xs text-gray-500 mt-1 pl-7">
+              Nếu có bất kỳ lượt đặt giá nào trong 5 phút cuối, hệ thống sẽ tự
+              động gia hạn thêm 5 phút để đảm bảo công bằng.
+            </p>
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <Label value="Chọn danh mục" />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCategoryDropdown(!showCategoryDropdown);
+                  setShowSubcategoryDropdown(false);
+                }}
+                className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
+              >
+                <span className={selectedCategory ? "" : "text-gray-500"}>
+                  {selectedCategory ? selectedCategory.name : "Chọn danh mục"}
+                </span>
+                <HiSearch className="text-gray-400" />
+              </button>
+
+              {showCategoryDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                  <div className="p-2 border-b sticky top-0 bg-white">
+                    <TextInput
+                      icon={HiSearch}
+                      placeholder="Tìm kiếm..."
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="p-2">
+                    {filteredCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setValue("category", cat);
+                          setValue("subcategory", null);
+                          setShowCategoryDropdown(false);
+                          setCategorySearch("");
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {errors.category && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.category.message}
+              </p>
+            )}
+          </div>
+
+          {/* Subcategory Selection */}
+          {selectedCategory && (
             <div>
-              <Label value="Chọn danh mục" />
+              <Label value="Chọn danh mục con" />
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
-                  <span className={selectedCategory ? "" : "text-gray-500"}>
-                    {selectedCategory ? selectedCategory.name : "Chọn danh mục"}
+                  onClick={() => {
+                    setShowSubcategoryDropdown(!showSubcategoryDropdown);
+                    setShowCategoryDropdown(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
+                >
+                  <span className={watch("subcategory") ? "" : "text-gray-500"}>
+                    {watch("subcategory")
+                      ? watch("subcategory").name
+                      : "Chọn danh mục con"}
                   </span>
                   <HiSearch className="text-gray-400" />
                 </button>
 
-                {showCategoryDropdown && (
+                {showSubcategoryDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                     <div className="p-2 border-b sticky top-0 bg-white">
                       <TextInput
                         icon={HiSearch}
                         placeholder="Tìm kiếm..."
-                        value={categorySearch}
-                        onChange={(e) => setCategorySearch(e.target.value)}
+                        value={subcategorySearch}
+                        onChange={(e) => setSubcategorySearch(e.target.value)}
                       />
                     </div>
                     <div className="p-2">
-                      {filteredCategories.map((cat) => (
+                      {filteredSubcategories.map((sub) => (
                         <button
-                          key={cat.id}
+                          key={sub.id}
                           type="button"
                           onClick={() => {
-                            setValue("category", cat);
-                            setValue("subcategory", null);
-                            setShowCategoryDropdown(false);
-                            setCategorySearch("");
+                            setValue("subcategory", sub);
+                            setShowSubcategoryDropdown(false);
+                            setSubcategorySearch("");
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                          {cat.name}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
+                        >
+                          {sub.name}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              {errors.category && (
+            </div>
+          )}
+
+          {/* End Date */}
+          <div>
+            <Label htmlFor="endDate" value="Chọn ngày hết hạn" />
+            <div className="relative">
+              <TextInput
+                id="endDate"
+                type="datetime-local"
+                {...register("endDate")}
+                color={errors.endDate ? "failure" : "gray"}
+                icon={HiCalendar}
+              />
+              {errors.endDate && (
                 <p className="text-sm text-red-600 mt-1">
-                  {errors.category.message}
-                </p>
-              )}
-            </div>
-
-            {/* Subcategory Selection */}
-            {selectedCategory && (
-              <div>
-                <Label value="Chọn danh mục con" />
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowSubcategoryDropdown(!showSubcategoryDropdown)
-                    }
-                    className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
-                    <span
-                      className={watch("subcategory") ? "" : "text-gray-500"}>
-                      {watch("subcategory")
-                        ? watch("subcategory").name
-                        : "Chọn danh mục con"}
-                    </span>
-                    <HiSearch className="text-gray-400" />
-                  </button>
-
-                  {showSubcategoryDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                      <div className="p-2 border-b sticky top-0 bg-white">
-                        <TextInput
-                          icon={HiSearch}
-                          placeholder="Tìm kiếm..."
-                          value={subcategorySearch}
-                          onChange={(e) => setSubcategorySearch(e.target.value)}
-                        />
-                      </div>
-                      <div className="p-2">
-                        {filteredSubcategories.map((sub) => (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => {
-                              setValue("subcategory", sub);
-                              setShowSubcategoryDropdown(false);
-                              setSubcategorySearch("");
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                            {sub.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* End Date */}
-            <div>
-              <Label htmlFor="endDate" value="Chọn ngày hết hạn" />
-              <div className="relative">
-                <TextInput
-                  id="endDate"
-                  type="datetime-local"
-                  {...register("endDate")}
-                  color={errors.endDate ? "failure" : "gray"}
-                  icon={HiCalendar}
-                />
-                {errors.endDate && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.endDate.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <Label value="Ảnh mô tả" />
-              <p className="text-sm text-gray-500 mb-2">Tối thiểu 3 ảnh</p>
-              <div className="grid grid-cols-3 gap-4">
-                {/* Upload Button */}
-                <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-sky-500 hover:bg-sky-50 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <HiPlus className="w-8 h-8 text-gray-400" />
-                </label>
-
-                {/* Preview Images */}
-                {selectedImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group">
-                    <img
-                      src={img.url}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(img.id)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <HiX className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {selectedImages.length < 3 && (
-                <p className="text-sm text-red-600 mt-2">
-                  Vui lòng tải lên ít nhất 3 ảnh
+                  {errors.endDate.message}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Right Column - Description */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <Label htmlFor="description" value="Mô tả sản phẩm" />
-              <Textarea
-                id="description"
-                {...register("description")}
-                rows={20}
-                placeholder="Nhập mô tả chi tiết về sản phẩm..."
-                color={errors.description ? "failure" : "gray"}
-              />
-              {errors.description && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.description.message}
-                </p>
+          {/* Description */}
+          <div>
+            <Label htmlFor="description" value="Mô tả sản phẩm" />
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => (
+                <Editor
+                  apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                  onInit={(evt, editor) => (editorRef.current = editor)}
+                  value={field.value}
+                  init={{
+                    height: 400,
+                    menubar: false,
+                    resize: false,
+                    plugins: [
+                      "advlist",
+                      "autolink",
+                      "lists",
+                      "link",
+                      "image",
+                      "charmap",
+                      "preview",
+                      "anchor",
+                      "searchreplace",
+                      "visualblocks",
+                      "code",
+                      "fullscreen",
+                      "insertdatetime",
+                      "media",
+                      "table",
+                      "code",
+                      "help",
+                      "wordcount",
+                    ],
+                    toolbar:
+                      "undo redo | blocks | " +
+                      "bold italic forecolor | alignleft aligncenter " +
+                      "alignright alignjustify | bullist numlist outdent indent | " +
+                      "removeformat | help",
+                    content_style:
+                      "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
+                  }}
+                  onEditorChange={(content) => field.onChange(content)}
+                />
               )}
+            />
+            {errors.description && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.description.message}
+              </p>
+            )}
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <Label value="Ảnh mô tả" />
+            <p className="text-sm text-gray-500 mb-2">Tối thiểu 3 ảnh</p>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Upload Button */}
+              <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-sky-500 hover:bg-sky-50 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <HiPlus className="w-8 h-8 text-gray-400" />
+              </label>
+
+              {/* Preview Images */}
+              {selectedImages.map((img) => (
+                <div
+                  key={img.id}
+                  className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group"
+                >
+                  <img
+                    src={img.url}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(img.id)}
+                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <HiX className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
+            {selectedImages.length < 3 && (
+              <p className="text-sm text-red-600 mt-2">
+                Vui lòng tải lên ít nhất 3 ảnh
+              </p>
+            )}
           </div>
         </div>
 
@@ -735,7 +793,8 @@ export default function CreateProductPage() {
             color="gray"
             size="lg"
             onClick={handleBack}
-            disabled={uploading}>
+            disabled={uploading}
+          >
             Hủy
           </Button>
           <Button
@@ -744,7 +803,8 @@ export default function CreateProductPage() {
             className={`bg-green-500 hover:bg-green-600 ${
               uploading ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            size="lg">
+            size="lg"
+          >
             {uploading ? "Đang tải..." : "Tạo mới"}
           </Button>
         </div>
