@@ -8,6 +8,10 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "flowbite-react";
 import ProductImage from "../ProductImage";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { addToWatchList } from "../../api/userService";
+import useAuth from "../../hooks/useAuth";
+import { toast } from "react-toastify";
 
 const ProductCardP = ({ product, isWon = false }) => {
   // Calculate time remaining
@@ -59,10 +63,27 @@ const ProductCardP = ({ product, isWon = false }) => {
   const timeRemaining = getTimeRemaining(product.endDate);
   const isEnded = timeRemaining === "Đã kết thúc";
 
+  const axiosPrivate = useAxiosPrivate();
+  const { auth } = useAuth();
+
+  const handleAddToWatchlist = async (productId) => {
+    if (!auth?.accessToken) {
+      toast.error("Vui lòng đăng nhập để thêm vào danh sách theo dõi.");
+      return;
+    }
+    try {
+      const result = await addToWatchList(axiosPrivate, productId);
+      toast.success(result.message);
+    }
+    catch (error) {
+      toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
+    }
+  }
+
   return (
     <div>
       <button
-        //onClick={}
+        onClick={() => handleAddToWatchlist(product.id)}
         className="relative z-10 top-12 left-2 p-2  rounded-full shadow transition-colors duration-300 
       bg-gray-300 text-gray-400 hover:bg-white hover:text-red-500">
         <HiHeart className="w-6 h-6" />
