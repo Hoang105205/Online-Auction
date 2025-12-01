@@ -3,8 +3,9 @@ import ProductCard from "../../components/ProductCard";
 import { HiTrash } from "react-icons/hi";
 
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { getWatchList } from "../../api/userService";
+import { removeFromWatchList, getWatchList } from "../../api/userService";
 import { Spinner } from "flowbite-react";
+import { toast } from "react-toastify";
 
 const ITEMS_PER_PAGE = 3; // fallback only; server returns paginated results
 
@@ -49,7 +50,7 @@ export default function WatchlistPage() {
           status: p.auction?.status || "active",
         }));
         setProducts(mapped);
-        setCount(mapped.length);
+        setCount(result.pagination?.totalItems);
         setTotalPages(result.pagination?.totalPages || 0);
         setError(null);
       } catch (err) {
@@ -73,9 +74,15 @@ export default function WatchlistPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleRemove = (id) => {
-    setProducts((prev) => prev.filter((item) => item.id !== id));
-    setCount(products.length);
+  const handleRemove = async (id) => {
+    try {
+      const result = await removeFromWatchList(axiosPrivate, id);
+      toast.success(result.message);
+      // Reload list
+      setReloadToken(Date.now());
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi khi xóa khỏi danh sách theo dõi.");
+    }
   };
 
   return (
