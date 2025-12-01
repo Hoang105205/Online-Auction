@@ -17,7 +17,7 @@ router.post(
   verifyJWT,
   verifyRoles(ROLES_LIST.Seller),
   memoryUpload.array("images", 10),
-  require("../controllers/ProductController").createProduct
+  ProductController.createProduct
 );
 
 // GET /products/description/:id - Get product description by ID
