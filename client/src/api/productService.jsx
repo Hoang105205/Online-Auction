@@ -33,9 +33,9 @@ export const getProductDescription = async (productId) => {
 };
 
 // Ham xu ly logic lay phan lich su dau gia cua san pham
-export const getAuctionHistory = async (productId, axiosPrivate) => {
+export const getAuctionHistory = async (productId, axiosInstance) => {
   try {
-    const response = await axiosPrivate.get(
+    const response = await axiosInstance.get(
       `/products/auction-history/${productId}`
     );
     return response.data; // Tra ve { numberOfBids, historyList }
@@ -65,9 +65,13 @@ export const getRelatedProducts = async (productId) => {
 };
 
 // Ham xu ly logic cap nhat phan mo ta san pham
-export const updateDescription = async (productId, description) => {
+export const updateDescription = async (
+  productId,
+  description,
+  axiosInstance
+) => {
   try {
-    const response = await axiosPrivate.put(
+    const response = await axiosInstance.put(
       `/products/description/${productId}`,
       { description }
     );
@@ -78,26 +82,31 @@ export const updateDescription = async (productId, description) => {
 };
 
 // Ham xu ly logic them cau hoi moi cho san pham
-export const addQuestion = async (productId, message, type = "public") => {
+export const addQuestion = async (
+  productId,
+  message,
+  type = "public",
+  axiosInstance
+) => {
   try {
-    const response = await axiosPublic.post(`/products/qa/${productId}`, {
+    const response = await axiosInstance.post(`/products/qa/${productId}`, {
       message,
       type,
     });
-    return response.data; // Tra ve {message, type }
+    return response.data; // Tra ve {chat, message}
   } catch (error) {
     throw error;
   }
 };
 
 // Ham xu ly logic them cau tra loi moi cho san pham
-export const addReply = async (productId, chatId, message) => {
+export const addReply = async (productId, chatId, message, axiosInstance) => {
   try {
-    const response = await axiosPublic.post(
+    const response = await axiosInstance.post(
       `/products/qa/${productId}/reply/${chatId}`,
       { message }
     );
-    return response.data; // Tra ve { product, message }
+    return response.data; // Tra ve { chat, message }
   } catch (error) {
     throw error;
   }

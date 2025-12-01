@@ -88,26 +88,32 @@ class ProductService {
       product.chat.push({
         type,
         sendId,
-        receiveId: product.detail.sellerId,
         message,
         time: new Date(),
-        replies: [],
+        reply: {},
       });
 
       await product.save();
 
-      return product;
+      await product.populate("chat.sendId", "fullName");
+
+      return product.chat;
     } catch (error) {
       throw new Error("Error adding question: " + error.message);
     }
   }
 
   // add reply to a question
-  static async addReply(productId, chatId, sendId, message) {
+  static async addReply(productId, chatId, sellerId, message) {
     try {
       const product = await Product.findById(productId);
       if (!product) {
         throw new Error("Product not found");
+      }
+
+      // Verify seller
+      if (product.detail.sellerId.toString() !== sellerId) {
+        throw new Error("Unauthorized: Only the seller can add replies");
       }
 
       const chat = product.chat.id(chatId);
@@ -115,15 +121,20 @@ class ProductService {
         throw new Error("Chat not found");
       }
 
-      chat.replies.push({
-        sendId,
+      if (chat.reply && chat.reply.message) {
+        throw new Error("Reply already exists for this question");
+      }
+
+      chat.reply = {
         message,
         time: new Date(),
-      });
+      };
 
       await product.save();
 
-      return product;
+      await product.populate("chat.sendId", "fullName");
+
+      return product.chat;
     } catch (error) {
       throw new Error("Error adding reply: " + error.message);
     }
@@ -134,8 +145,6 @@ class ProductService {
     try {
       const product = await Product.findById(productId)
         .populate("chat.sendId", "fullName")
-        .populate("chat.receiveId", "fullName")
-        .populate("chat.replies.sendId", "fullName")
         .exec();
 
       if (!product) {
