@@ -15,9 +15,9 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
   const isSeller = currentUserId === sellerId._id;
   const isLoggedIn = authUser?.accessToken;
 
-  const anonymizeName = (fullName) => {
-    if (!fullName || fullName.length < 7) return fullName || "Unknown";
-    return `${fullName.slice(0, 3)}xxxx${fullName.slice(-3)}`;
+  const maskBidderName = (name) => {
+    if (!name || name.length <= 4) return name;
+    return name.substring(0, 4) + "***";
   };
 
   const formatDateTime = (time) => {
@@ -103,7 +103,7 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
                   {/* User Info */}
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">
-                      {anonymizeName(item.sendId?.fullName)}
+                      {maskBidderName(item.sendId?.fullName)}
                     </span>
                     <span className="text-xs text-gray-500">
                       {formatDateTime(item.time)}

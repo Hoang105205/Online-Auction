@@ -165,6 +165,15 @@ const ProductDetails = () => {
     }
   }, [auth, productId, axiosPrivate]);
 
+  const maskBidderName = (name) => {
+    if (!name || name.length <= 4) return name;
+    return name.substring(0, 4) + "***";
+  };
+
+  const formatPrice = (price) => {
+    return price.toLocaleString("vi-VN");
+  };
+
   const calculateTimeRemaining = (endTime) => {
     const now = new Date();
     const end = new Date(endTime);
@@ -327,41 +336,48 @@ const ProductDetails = () => {
                       Ra giá cao nhất:
                     </div>
                     <div className="text-2xl lg:text-3xl font-bold text-red-500">
-                      {productAuctionData.auction.currentPrice.toLocaleString()}
-                      đ
+                      {formatPrice(productAuctionData.auction.currentPrice)}đ
                     </div>
-                    <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <span className="text-xs lg:text-sm text-gray-600">
+                    {productAuctionData.auction.highestBidderId && (
+                      <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="text-xs lg:text-sm text-gray-600">
+                          bởi: @
+                          {maskBidderName(
+                            productAuctionData.auction.highestBidderId.fullName
+                          )}
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-xs lg:text-sm font-semibold">
+                            {
+                              productAuctionData.auction.highestBidderId
+                                .feedBackAsBidder.point
+                            }
+                          </span>
+                          <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Mobile: Bidder info on separate row */}
+                  {productAuctionData.auction.highestBidderId && (
+                    <div className="flex items-center gap-2 mt-2 sm:hidden">
+                      <span className="text-xs text-gray-600">
                         bởi: @
-                        {productAuctionData.auction.highestBidderId.fullName}
+                        {formatPrice(
+                          productAuctionData.auction.highestBidderId.fullName
+                        )}
                       </span>
                       <div className="flex items-center gap-0.5">
-                        <span className="text-xs lg:text-sm font-semibold">
+                        <span className="text-xs font-semibold">
                           {
                             productAuctionData.auction.highestBidderId
                               .feedBackAsBidder.point
                           }
                         </span>
-                        <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                       </div>
                     </div>
-                  </div>
-                  {/* Mobile: Bidder info on separate row */}
-                  <div className="flex items-center gap-2 mt-2 sm:hidden">
-                    <span className="text-xs text-gray-600">
-                      bởi: @
-                      {productAuctionData.auction.highestBidderId.fullName}
-                    </span>
-                    <div className="flex items-center gap-0.5">
-                      <span className="text-xs font-semibold">
-                        {
-                          productAuctionData.auction.highestBidderId
-                            .feedBackAsBidder.point
-                        }
-                      </span>
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Buy Now */}
@@ -371,7 +387,7 @@ const ProductDetails = () => {
                       Mua ngay với giá:
                     </div>
                     <div className="text-2xl lg:text-3xl font-bold text-green-500">
-                      {productAuctionData.auction.buyNowPrice.toLocaleString()}đ
+                      {formatPrice(productAuctionData.auction.buyNowPrice)}đ
                     </div>
                   </div>
                 </div>

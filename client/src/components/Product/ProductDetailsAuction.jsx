@@ -41,9 +41,9 @@ const ProductDetailsAuction = ({
   const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
   const { numberOfBids, historyList } = auctionHistoryData;
 
-  const anonymizeId = (fullName) => {
-    if (fullName.length < 7) return fullName;
-    return `${fullName.slice(0, 3)}xxxx${fullName.slice(-3)}`;
+  const maskBidderName = (name) => {
+    if (!name || name.length <= 4) return name;
+    return name.substring(0, 4) + "***";
   };
 
   const formatPrice = (price) => {
@@ -175,7 +175,7 @@ const ProductDetailsAuction = ({
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 w-[35%]">
                           <span className="text-xs sm:text-sm font-medium text-gray-800">
-                            {anonymizeId(bid.bidderId?.fullName)}
+                            {maskBidderName(bid.bidderId?.fullName)}
                           </span>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-right w-[30%]">
