@@ -1,31 +1,43 @@
 import { axiosPrivate } from "../config/axios";
 
 // System configuration - client API
-export const getSystemConfig = async () => {
+export const getSystemConfig = async (axiosInstance) => {
   try {
-    const res = await axiosPrivate.get("/app_settings");
+    const res = await axiosInstance.get("/app_settings");
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const updateSystemConfig = async (data) => {
+export const updateSystemConfig = async (axiosInstance, data) => {
   try {
-    const res = await axiosPrivate.put("/app_settings", data);
+    const res = await axiosInstance.put("/app_settings", data);
     return res.data;
   } catch (error) {
     throw error;
   }
 };
-
-export const updateAutoExtend = async ({
-  autoExtendBefore,
-  autoExtendDuration,
-}) => {
+export const updateAutoExtendBefore = async (
+  axiosInstance,
+  autoExtendBefore
+) => {
   try {
-    const res = await axiosPrivate.put("/app_settings/auto-extend", {
+    const res = await axiosInstance.put("/app_settings/auto-extend-before", {
       autoExtendBefore,
+    });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateAutoExtendDuration = async (
+  axiosInstance,
+  autoExtendDuration
+) => {
+  try {
+    const res = await axiosInstance.put("/app_settings/auto-extend-duration", {
       autoExtendDuration,
     });
     return res.data;
@@ -35,10 +47,11 @@ export const updateAutoExtend = async ({
 };
 
 export const updateLatestProductTimeConfig = async (
+  axiosInstance,
   latestProductTimeConfig
 ) => {
   try {
-    const res = await axiosPrivate.put("/app_settings/latest-product-time", {
+    const res = await axiosInstance.put("/app_settings/latest-product-time", {
       latestProductTimeConfig,
     });
     return res.data;
@@ -47,9 +60,9 @@ export const updateLatestProductTimeConfig = async (
   }
 };
 
-export const updateTimeConfigs = async (payload = {}) => {
+export const updateTimeConfigs = async (axiosInstance, payload = {}) => {
   try {
-    const res = await axiosPrivate.put("/app_settings/time-configs", payload);
+    const res = await axiosInstance.put("/app_settings/time-configs", payload);
     return res.data;
   } catch (error) {
     throw error;
@@ -58,14 +71,17 @@ export const updateTimeConfigs = async (payload = {}) => {
 
 // Seller requests
 // ===== Hoang =====
-export const listSellerRequests = async (axiosInstance, {page = 1, limit = 6, sortBy = "date"}) => {
+export const listSellerRequests = async (
+  axiosInstance,
+  { page = 1, limit = 6, sortBy = "date" }
+) => {
   try {
     const res = await axiosInstance.get(`/app_settings/seller-requests`, {
       params: {
         page: page,
         limit: limit,
         sortBy: sortBy,
-      }
+      },
     });
 
     return res.data;
@@ -97,29 +113,28 @@ export const rejectSellerRequest = async (axiosInstance, bidderId) => {
 };
 // ===== Hoang =====
 
-
 // Categories
-export const getCategories = async () => {
+export const getCategories = async (axiosInstance) => {
   try {
-    const res = await axiosPrivate.get(`/app_settings/categories`);
+    const res = await axiosInstance.get(`/app_settings/categories`);
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const addCategory = async (payload) => {
+export const addCategory = async (axiosInstance, payload) => {
   try {
-    const res = await axiosPrivate.post(`/app_settings/categories`, payload);
+    const res = await axiosInstance.post(`/app_settings/categories`, payload);
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const updateCategory = async (categoryId, payload) => {
+export const updateCategory = async (axiosInstance, categoryId, payload) => {
   try {
-    const res = await axiosPrivate.put(
+    const res = await axiosInstance.put(
       `/app_settings/categories/${categoryId}`,
       payload
     );
@@ -129,9 +144,9 @@ export const updateCategory = async (categoryId, payload) => {
   }
 };
 
-export const removeCategory = async (categoryId) => {
+export const removeCategory = async (axiosInstance, categoryId) => {
   try {
-    const res = await axiosPrivate.delete(
+    const res = await axiosInstance.delete(
       `/app_settings/categories/${categoryId}`
     );
     return res.data;
@@ -140,9 +155,12 @@ export const removeCategory = async (categoryId) => {
   }
 };
 
-export const listUsers = async ({ page = 1, limit = 20, q = "" } = {}) => {
+export const listUsers = async (
+  axiosInstance,
+  { page = 1, limit = 20, q = "" } = {}
+) => {
   try {
-    const res = await axiosPrivate.get("/app_settings/users", {
+    const res = await axiosInstance.get("/app_settings/users", {
       params: { page, limit, q },
     });
     return res.data;
@@ -151,25 +169,23 @@ export const listUsers = async ({ page = 1, limit = 20, q = "" } = {}) => {
   }
 };
 
-export const listProducts = async ({
-  page = 1,
-  limit = 20,
-  q = "",
-  status,
-} = {}) => {
+export const listProducts = async (
+  axiosInstance,
+  { page = 1, limit = 20, q = "", status } = {}
+) => {
   try {
     const params = { page, limit, q };
     if (status) params.status = status;
-    const res = await axiosPrivate.get("/app_settings/products", { params });
+    const res = await axiosInstance.get("/app_settings/products", { params });
     return res.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const removeProduct = async (productId) => {
+export const removeProduct = async (axiosInstance, productId) => {
   try {
-    const res = await axiosPrivate.delete(
+    const res = await axiosInstance.delete(
       `/app_settings/products/${productId}`
     );
     return res.data;
@@ -181,7 +197,8 @@ export const removeProduct = async (productId) => {
 export default {
   getSystemConfig,
   updateSystemConfig,
-  updateAutoExtend,
+  updateAutoExtendBefore,
+  updateAutoExtendDuration,
   updateLatestProductTimeConfig,
   updateTimeConfigs,
   listSellerRequests,

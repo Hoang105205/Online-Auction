@@ -33,7 +33,7 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const res = await listProducts({
+        const res = await listProducts(axiosPrivate, {
           page,
           limit: pageSize,
           q: query,
@@ -85,7 +85,7 @@ export default function ProductsPage() {
     (async () => {
       try {
         setLoading(true);
-        await removeProduct(id);
+        await removeProduct(axiosPrivate, id);
         setProducts((prev) => {
           const next = prev.filter((p) => (p._id || p.id) !== id);
           const newTotal = Math.max(1, Math.ceil(next.length / pageSize));

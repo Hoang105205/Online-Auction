@@ -28,12 +28,23 @@ const updateSystemConfig = async (req, res) => {
   }
 };
 
-const updateAutoExtend = async (req, res) => {
+const updateAutoExtendBefore = async (req, res) => {
   try {
-    const { autoExtendBefore, autoExtendDuration } = req.body || {};
+    const { autoExtendBefore } = req.body || {};
 
-    const sys = await SystemService.updateAutoExtend(
-      autoExtendBefore,
+    const sys = await SystemService.updateAutoExtendBefore(autoExtendBefore);
+    return res.status(200).json(sys);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+const updateAutoExtendDuration = async (req, res) => {
+  try {
+    const { autoExtendDuration } = req.body || {};
+
+    const sys = await SystemService.updateAutoExtendDuration(
       autoExtendDuration
     );
     return res.status(200).json(sys);
@@ -43,7 +54,6 @@ const updateAutoExtend = async (req, res) => {
       .json({ message: err.message || "Server error" });
   }
 };
-
 const updateLatestProductTimeConfig = async (req, res) => {
   try {
     const { latestProductTimeConfig } = req.body || {};
@@ -83,7 +93,11 @@ const listSellerRequests = async (req, res) => {
     const limit = req.query?.limit ? parseInt(req.query.limit) : 6;
     const sortBy = req.query?.sortBy || "date";
 
-    const result = await SystemService.getSellerRequests({ page, limit, sortBy });
+    const result = await SystemService.getSellerRequests({
+      page,
+      limit,
+      sortBy,
+    });
     return res.status(200).json(result);
   } catch (err) {
     return res
@@ -234,7 +248,8 @@ const removeProduct = async (req, res) => {
 module.exports = {
   getSystemConfig,
   updateSystemConfig,
-  updateAutoExtend,
+  updateAutoExtendBefore,
+  updateAutoExtendDuration,
   updateLatestProductTimeConfig,
   updateTimeConfigs,
   listSellerRequests,
