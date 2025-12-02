@@ -22,10 +22,16 @@ router.put(
 
 // Auto-extend/time configs (Admin)
 router.put(
-  "/auto-extend",
+  "/auto-extend-before",
   verifyJWT,
   verifyRoles(ROLES_LIST.Admin),
-  SystemController.updateAutoExtend
+  SystemController.updateAutoExtendBefore
+);
+router.put(
+  "/auto-extend-duration",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.updateAutoExtendDuration
 );
 router.put(
   "/latest-product-time",

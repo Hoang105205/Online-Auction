@@ -4,10 +4,12 @@ import { toast } from "react-toastify";
 import {
   getSystemConfig,
   updateTimeConfigs,
-  updateAutoExtend,
+  updateAutoExtendBefore,
+  updateAutoExtendDuration,
   updateLatestProductTimeConfig,
 } from "../../api/systemService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { axiosPrivate } from "../../config/axios";
 
 const DEFAULT_SETTINGS = [
   {
@@ -104,7 +106,7 @@ export default function SettingsPage() {
     (async () => {
       try {
         setLoading(true);
-        const sys = await getSystemConfig();
+        const sys = await getSystemConfig(axiosPrivate);
         if (!mounted) return;
         // Map system keys to settings+edited
         const newSettings = mapSystemToSettings(sys);
@@ -154,14 +156,17 @@ export default function SettingsPage() {
       // mark this specific setting as loading
       setLoadingById((p) => ({ ...p, [id]: true }));
       if (id === "s1") {
-        await updateAutoExtend({ autoExtendBefore: Number(values.m || 0) });
+        await updateAutoExtendBefore(axiosPrivate, Number(values.m || 0));
       } else if (id === "s2") {
-        await updateAutoExtend({ autoExtendDuration: Number(values.m || 0) });
+        await updateAutoExtendDuration(axiosPrivate, Number(values.m || 0));
       } else if (id === "s3") {
-        await updateLatestProductTimeConfig(Number(values.m || 0));
+        await updateLatestProductTimeConfig(
+          axiosPrivate,
+          Number(values.m || 0)
+        );
       } else {
         // fallback
-        await updateTimeConfigs(payload);
+        await updateTimeConfigs(axiosPrivate, payload);
       }
 
       setSettings((prev) =>

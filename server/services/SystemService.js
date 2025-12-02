@@ -70,42 +70,38 @@ class SystemService {
     return sys;
   }
 
-  static async updateAutoExtend(autoExtendBefore, autoExtendDuration) {
-    const update = {};
-    if (autoExtendBefore !== undefined) {
-      const n = Number(autoExtendBefore);
-      if (Number.isNaN(n) || n < 0) {
-        const error = new Error(
-          "autoExtendBefore must be a non-negative number"
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-      update.autoExtendBefore = n;
+  static async updateAutoExtendBefore(value) {
+    const n = Number(value);
+    if (Number.isNaN(n) || n < 0) {
+      const error = new Error("autoExtendBefore must be a non-negative number");
+      error.statusCode = 400;
+      throw error;
     }
-    if (autoExtendDuration !== undefined) {
-      const n = Number(autoExtendDuration);
-      if (Number.isNaN(n) || n < 0) {
-        const error = new Error(
-          "autoExtendDuration must be a non-negative number"
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-      update.autoExtendDuration = n;
-    }
-
-    if (Object.keys(update).length === 0)
-      return await SystemSetting.findOne().exec();
 
     const sys = await SystemSetting.findOneAndUpdate(
       {},
-      { $set: update },
+      { $set: { autoExtendBefore: n } },
       { new: true, upsert: true }
     ).exec();
     return sys;
   }
+  static async updateAutoExtendDuration(value) {
+    const n = Number(value);
+    if (Number.isNaN(n) || n < 0) {
+      const error = new Error(
+        "autoExtendDuration must be a non-negative number"
+      );
+      error.statusCode = 400;
+      throw error;
+    }
 
+    const sys = await SystemSetting.findOneAndUpdate(
+      {},
+      { $set: { autoExtendDuration: n } },
+      { new: true, upsert: true }
+    ).exec();
+    return sys;
+  }
   static async updateLatestProductTimeConfig(value) {
     const n = Number(value);
     if (Number.isNaN(n) || n < 0) {

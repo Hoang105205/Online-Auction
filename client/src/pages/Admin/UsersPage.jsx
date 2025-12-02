@@ -65,7 +65,7 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const res = await systemService.listUsers({
+        const res = await systemService.listUsers(axiosPrivate, {
           page,
           limit: pageSize,
           q: query,
