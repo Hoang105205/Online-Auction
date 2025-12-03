@@ -338,24 +338,27 @@ class SystemService {
 
   // Categories management
   static async getCategories() {
-    const sys = await System.findOne().exec();
+    const sys = await SystemSetting.findOne().exec();
     return sys ? sys.categories : [];
   }
 
   static async addCategory({
     categoryId = null,
     categoryName = "",
+    slug = "",
     subCategories = [],
   } = {}) {
     const cat = {
       categoryId: categoryId ? mongoose.Types.ObjectId(categoryId) : undefined,
       categoryName,
+      slug,
       subCategories: Array.isArray(subCategories)
         ? subCategories.map((s) => ({
             subCategoryId: s.subCategoryId
               ? mongoose.Types.ObjectId(s.subCategoryId)
               : undefined,
-            subCategoryName: s.subCategoryName || "",
+            subCategoryName: s.subCategoryName || s.name || "",
+            slug: s.slug || s.subCategorySlug || "",
           }))
         : [],
     };
@@ -385,9 +388,13 @@ class SystemService {
       throw error;
     }
 
-    const cat = sys.categories.find(
-      (c) => c.categoryId && c.categoryId.toString() === categoryId.toString()
-    );
+    // Find by categoryId (ref) OR by subdocument _id
+    const cat = sys.categories.find((c) => {
+      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
+        return true;
+      if (c._id && c._id.toString() === categoryId.toString()) return true;
+      return false;
+    });
     if (!cat) {
       const error = new Error("Category not found");
       error.statusCode = 404;
@@ -396,12 +403,14 @@ class SystemService {
 
     if (updateData.categoryName !== undefined)
       cat.categoryName = updateData.categoryName;
+    if (updateData.slug !== undefined) cat.slug = updateData.slug;
     if (Array.isArray(updateData.subCategories)) {
       cat.subCategories = updateData.subCategories.map((s) => ({
         subCategoryId: s.subCategoryId
           ? mongoose.Types.ObjectId(s.subCategoryId)
           : undefined,
-        subCategoryName: s.subCategoryName || "",
+        subCategoryName: s.subCategoryName || s.name || "",
+        slug: s.slug || s.subCategorySlug || "",
       }));
     }
 
@@ -420,9 +429,12 @@ class SystemService {
     if (!sys) return null;
 
     // find the category first
-    const cat = sys.categories.find(
-      (c) => c.categoryId && c.categoryId.toString() === categoryId.toString()
-    );
+    const cat = sys.categories.find((c) => {
+      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
+        return true;
+      if (c._id && c._id.toString() === categoryId.toString()) return true;
+      return false;
+    });
     if (!cat) {
       const error = new Error("Category not found");
       error.statusCode = 404;

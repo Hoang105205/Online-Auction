@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   HiSearch,
   HiPlus,
@@ -9,26 +9,20 @@ import {
   HiChevronRight,
 } from "react-icons/hi";
 
-const MOCK_CATEGORIES = [
-  { id: "#ESF-2025-8742", name: "Đồ ăn", count: 100, children: [] },
-  { id: "#ESF-2025-6391", name: "Gia dụng", count: 100, children: [] },
-  { id: "#ESF-2025-4129", name: "Công nghệ", count: 1000, children: [] },
-  { id: "#ESF-2025-2875", name: "Thời trang", count: 200, children: [] },
-  { id: "#ESF-2025-1493", name: "Quần áo", count: 50, children: [] },
-  { id: "#ESF-2025-1494", name: "Thú cưng", count: 100, children: [] },
-  { id: "#ESF-2025-4421", name: "Sách", count: 320, children: [] },
-  { id: "#ESF-2025-5522", name: "Làm đẹp", count: 80, children: [] },
-  { id: "#ESF-2025-6623", name: "Đồ chơi", count: 70, children: [] },
-  { id: "#ESF-2025-7724", name: "Thể thao", count: 45, children: [] },
-  { id: "#ESF-2025-8825", name: "Ô tô & Xe máy", count: 12, children: [] },
-  { id: "#ESF-2025-9926", name: "Điện tử", count: 560, children: [] },
-];
+import { toast } from "react-toastify";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import {
+  getCategories,
+  addCategory,
+  updateCategory,
+  removeCategory as apiRemoveCategory,
+} from "../../api/systemService";
 
 export default function CategoriesPage() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [page, setPage] = useState(1);
-  const [categories, setCategories] = useState(MOCK_CATEGORIES);
+  const [categories, setCategories] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -39,7 +33,55 @@ export default function CategoriesPage() {
   const [editCount, setEditCount] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const pageSize = 6;
+
+  const axiosInstance = useAxiosPrivate();
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getCategories(axiosInstance);
+        if (!mounted) return;
+        let items = [];
+        if (Array.isArray(res)) items = res;
+        else if (res && Array.isArray(res.data)) items = res.data;
+        else if (res && Array.isArray(res.categories)) items = res.categories;
+
+        // normalize server categories to UI shape
+        const norm = (items || []).map((c) => ({
+          id: c._id || c.categoryId || String(Math.random()),
+          name: c.categoryName || c.categoryName || "",
+          slug: c.slug || "",
+          children: Array.isArray(c.subCategories)
+            ? c.subCategories.map((s) => ({
+                id: s._id || s.subCategoryId || String(Math.random()),
+                name: s.subCategoryName || s.name || "",
+                slug: s.slug || "",
+              }))
+            : [],
+          _raw: c,
+        }));
+        setCategories(norm);
+      } catch (err) {
+        console.error("Failed to load categories", err);
+        toast.error(
+          "Không thể tải danh mục: " +
+            (err.response?.data?.message || err.message)
+        );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     // only filter top-level categories; children are shown inline
@@ -91,23 +133,107 @@ export default function CategoriesPage() {
     setShowAddForm(false);
   }
 
+  function slugify(text) {
+    return String(text)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/Đ/g, "D")
+      .replace(/đ/g, "d")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+  }
+
+  function findParentIdOf(childId) {
+    for (const c of categories) {
+      if (c.id === childId) return c.id;
+      if (c.children && c.children.some((ch) => ch.id === childId)) return c.id;
+    }
+    return null;
+  }
+
   function submitEdit() {
     if (!editingId) return;
-    function updateRec(list) {
-      return list.map((c) => {
-        if (c.id === editingId)
-          return {
-            ...c,
-            name: editName.trim(),
-            count: parseInt(String(editCount) || "0", 10) || 0,
+    (async () => {
+      setSubmitting(true);
+      try {
+        // Determine if editing a top-level category or a subcategory
+        const parentId = findParentIdOf(editingId);
+        if (!parentId) throw new Error("Parent not found");
+
+        if (parentId === editingId) {
+          // editing a top-level category
+          const payload = {
+            categoryName: editName.trim(),
+            slug: slugify(editName.trim()),
           };
-        return { ...c, children: updateRec(c.children || []) };
-      });
-    }
-    setCategories((prev) => updateRec(prev));
-    setEditingId("");
-    setEditName("");
-    setEditCount(0);
+          await updateCategory(
+            axiosInstance,
+            categories.find((c) => c.id === parentId)._raw._id,
+            payload
+          );
+        } else {
+          // editing a child subcategory
+          const parent = categories.find((c) => c.id === parentId);
+          if (!parent) throw new Error("Parent not found");
+          const raw = parent._raw || {};
+          const existing = Array.isArray(raw.subCategories)
+            ? raw.subCategories
+            : [];
+          const updatedSubs = existing.map((s) => {
+            const sid = s._id || s.subCategoryId || String(Math.random());
+            if (sid === editingId) {
+              return {
+                subCategoryId: s.subCategoryId,
+                subCategoryName: editName.trim(),
+                slug: slugify(editName.trim()),
+              };
+            }
+            return {
+              subCategoryId: s.subCategoryId,
+              subCategoryName: s.subCategoryName || s.name || "",
+              slug: s.slug || "",
+            };
+          });
+          await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+            subCategories: updatedSubs,
+          });
+        }
+
+        // refresh list from server
+        const fresh = await getCategories(axiosInstance);
+        const items = Array.isArray(fresh)
+          ? fresh
+          : fresh.data || fresh.categories || [];
+        const norm = (items || []).map((c) => ({
+          id: c._id || c.categoryId || String(Math.random()),
+          name: c.categoryName || "",
+          slug: c.slug || "",
+          children: Array.isArray(c.subCategories)
+            ? c.subCategories.map((s) => ({
+                id: s._id || s.subCategoryId || String(Math.random()),
+                name: s.subCategoryName || s.name || "",
+                slug: s.slug || "",
+              }))
+            : [],
+          _raw: c,
+        }));
+        setCategories(norm);
+        toast.success("Cập nhật danh mục thành công");
+      } catch (err) {
+        console.error("Update category failed", err);
+        toast.error(
+          "Cập nhật thất bại: " + (err.response?.data?.message || err.message)
+        );
+      } finally {
+        setSubmitting(false);
+        setEditingId("");
+        setEditName("");
+        setEditCount(0);
+      }
+    })();
   }
 
   function cancelEdit() {
@@ -125,23 +251,79 @@ export default function CategoriesPage() {
   // Actually perform deletion (called from modal Confirm)
   function performDelete(id) {
     if (!id) return;
-    function removeRec(list) {
-      return list
-        .filter((c) => c.id !== id)
-        .map((c) => ({ ...c, children: removeRec(c.children || []) }));
-    }
-    const next = removeRec(categories);
-    setCategories(next);
-    setShowDeleteModal(false);
-    setDeleteTarget("");
-    // adjust page if needed (only considers top-level count)
-    const filteredAfter = next.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query.toLowerCase()) ||
-        c.id.toLowerCase().includes(query.toLowerCase())
-    );
-    const newTotal = Math.max(1, Math.ceil(filteredAfter.length / pageSize));
-    if (page > newTotal) setPage(newTotal);
+    (async () => {
+      setSubmitting(true);
+      try {
+        // if deleting a subcategory, we must update the parent to remove it
+        const parentId = findParentIdOf(id);
+        if (parentId && parentId !== id) {
+          const parent = categories.find((c) => c.id === parentId);
+          if (!parent || !parent._raw) throw new Error("Parent not found");
+          const raw = parent._raw;
+          const existing = Array.isArray(raw.subCategories)
+            ? raw.subCategories
+            : [];
+          const updatedSubs = existing
+            .map((s) => ({
+              subCategoryId: s.subCategoryId,
+              subCategoryName: s.subCategoryName || s.name || "",
+              slug: s.slug || "",
+              _id: s._id,
+            }))
+            .filter((s) => String(s._id || s.subCategoryId) !== String(id));
+
+          await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+            subCategories: updatedSubs,
+          });
+        } else {
+          // top-level category
+          const cat = categories.find((c) => c.id === id);
+          if (!cat || !cat._raw) throw new Error("Category not found");
+          const raw = cat._raw;
+          await apiRemoveCategory(axiosInstance, raw._id || raw.categoryId);
+        }
+
+        // refresh
+        const fresh = await getCategories(axiosInstance);
+        const items = Array.isArray(fresh)
+          ? fresh
+          : fresh.data || fresh.categories || [];
+        const norm = (items || []).map((c) => ({
+          id: c._id || c.categoryId || String(Math.random()),
+          name: c.categoryName || "",
+          slug: c.slug || "",
+          children: Array.isArray(c.subCategories)
+            ? c.subCategories.map((s) => ({
+                id: s._id || s.subCategoryId || String(Math.random()),
+                name: s.subCategoryName || s.name || "",
+                slug: s.slug || "",
+              }))
+            : [],
+          _raw: c,
+        }));
+        setCategories(norm);
+        setShowDeleteModal(false);
+        setDeleteTarget("");
+        const filteredAfter = norm.filter(
+          (c) =>
+            c.name.toLowerCase().includes(query.toLowerCase()) ||
+            c.id.toLowerCase().includes(query.toLowerCase())
+        );
+        const newTotal = Math.max(
+          1,
+          Math.ceil(filteredAfter.length / pageSize)
+        );
+        if (page > newTotal) setPage(newTotal);
+        toast.success("Xóa danh mục thành công");
+      } catch (err) {
+        console.error("Remove category failed", err);
+        toast.error(
+          "Xóa thất bại: " + (err.response?.data?.message || err.message)
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   }
 
   function toggleRow(id) {
@@ -176,28 +358,70 @@ export default function CategoriesPage() {
     });
   }
 
-  function handleAddFormSubmit(e) {
+  async function handleAddFormSubmit(e) {
     e.preventDefault();
-    if (!newName.trim()) return alert("Vui lòng nhập tên danh mục");
-    const id = `#ESF-2025-${Math.floor(Math.random() * 9000 + 1000)}`;
-    const item = {
-      id,
-      name: newName.trim(),
-      count: parseInt(String(newCount) || "0", 10) || 0,
-      children: [],
-    };
-    let next;
-    if (newParent) {
-      next = addChildToParent(categories, newParent, item);
-    } else {
-      next = [item, ...categories];
+    if (!newName.trim()) return toast.error("Vui lòng nhập tên danh mục");
+    setSubmitting(true);
+    try {
+      const name = newName.trim();
+      const slug = slugify(name);
+
+      if (!newParent) {
+        // create top-level category
+        await addCategory(axiosInstance, { categoryName: name, slug });
+      } else {
+        // add as subcategory to parent: fetch parent's raw, append to its subCategories
+        const parent = categories.find((c) => c.id === newParent);
+        if (!parent || !parent._raw) throw new Error("Parent not found");
+        const raw = parent._raw;
+        const existing = Array.isArray(raw.subCategories)
+          ? raw.subCategories
+          : [];
+        const newSub = { subCategoryName: name, slug };
+        const updatedSubs = existing.map((s) => ({
+          subCategoryId: s.subCategoryId,
+          subCategoryName: s.subCategoryName || s.name || "",
+          slug: s.slug || "",
+        }));
+        updatedSubs.push(newSub);
+        await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+          subCategories: updatedSubs,
+        });
+      }
+
+      // refresh list
+      const fresh = await getCategories(axiosInstance);
+      const items = Array.isArray(fresh)
+        ? fresh
+        : fresh.data || fresh.categories || [];
+      const norm = (items || []).map((c) => ({
+        id: c._id || c.categoryId || String(Math.random()),
+        name: c.categoryName || "",
+        slug: c.slug || "",
+        children: Array.isArray(c.subCategories)
+          ? c.subCategories.map((s) => ({
+              id: s._id || s.subCategoryId || String(Math.random()),
+              name: s.subCategoryName || s.name || "",
+              slug: s.slug || "",
+            }))
+          : [],
+        _raw: c,
+      }));
+      setCategories(norm);
+      setNewName("");
+      setNewCount(0);
+      setNewParent("");
+      setShowAddForm(false);
+      setPage(1);
+      toast.success("Thêm danh mục thành công");
+    } catch (err) {
+      console.error("Add category failed", err);
+      toast.error(
+        "Thêm thất bại: " + (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setSubmitting(false);
     }
-    setCategories(next);
-    setNewName("");
-    setNewCount(0);
-    setNewParent("");
-    setShowAddForm(false);
-    setPage(1);
   }
 
   return (
