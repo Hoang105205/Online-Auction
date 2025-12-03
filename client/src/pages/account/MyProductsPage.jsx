@@ -9,6 +9,7 @@ import {
 } from "react-icons/hi";
 import ProductCard from "../../components/ProductCard";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import useAuth from "../../hooks/useAuth";
 import { getMyProducts } from "../../api/userService";
 import { Spinner } from "flowbite-react";
 
@@ -23,8 +24,13 @@ export default function MyProductsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Mock user seller status - replace with actual user data from context/API
-  const isSeller = true; // TODO: replace with real seller role from context
+  const { auth } = useAuth();
+  const [isSeller, setIsSeller] = useState(false);
+
+  // Check if user has 'Seller' role
+  useEffect(() => {
+    setIsSeller(auth?.roles?.includes(1984) || false);
+  }, [auth]);
 
   useEffect(() => {
     let isMounted = true;
