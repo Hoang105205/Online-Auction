@@ -194,6 +194,15 @@ export const removeProduct = async (axiosInstance, productId) => {
   }
 };
 
+export const getCategoryBySlug = async (axiosInstance, slug) => {
+  try {
+    const res = await axiosInstance.get(`/app_settings/categories/${slug}`);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default {
   getSystemConfig,
   updateSystemConfig,
@@ -209,4 +218,5 @@ export default {
   removeCategory,
   listUsers,
   listProducts,
+  getCategoryBySlug,
 };
