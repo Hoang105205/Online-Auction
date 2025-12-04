@@ -292,6 +292,37 @@ class ProductController {
         .json({ error: error.message || "Error getting products" });
     }
   }
+
+  // GET /products/:category/:subcategory - Get products by category / and subcategory
+  static async getProductsByCategory(req, res) {
+    try {
+      console.log(
+        "[ProductController.getProductsByCategory] req.params:",
+        req.params,
+        "req.query:",
+        req.query
+      );
+      const { category, subcategory } = req.params;
+      const limit = parseInt(req.query.limit) || 0;
+
+      const products = await ProductService.getProductsByCategory(
+        category,
+        subcategory,
+        limit
+      );
+
+      return res.status(200).json({
+        success: true,
+        count: products.length,
+        products,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Unexpected error",
+      });
+    }
+  }
 }
 
 module.exports = ProductController;

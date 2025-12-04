@@ -78,4 +78,13 @@ router.post(
 // GET /products - Get first 5 products
 router.get("/", ProductController.getFirstProducts);
 
+// GET /products/category/:category/:subcategory - Get products by subcategory
+router.get(
+  "/category/:category/:subcategory",
+  ProductController.getProductsByCategory
+);
+
+// GET /products/category/:category - Get products by category
+router.get("/category/:category", ProductController.getProductsByCategory);
+
 module.exports = router;
