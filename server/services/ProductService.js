@@ -358,6 +358,34 @@ class ProductService {
     }
   }
 
+  static async getProductsByCategory(category, subcategory, limit = 0) {
+    try {
+      const filter = { "detail.category": category };
+      if (subcategory) filter["detail.subCategory"] = subcategory;
+
+      const products = await Product.find(filter)
+        .limit(limit)
+        .populate("auction.highestBidderId", "fullName")
+        .exec();
+
+      const formatted = products.map((p) => ({
+        id: p._id,
+        name: p.detail.name,
+        image: p.detail.images?.[0] || null,
+        currentPrice: p.auction.currentPrice,
+        buyNowPrice: p.auction.buyNowPrice,
+        highestBidder: p.auction.highestBidderId?.fullName || null,
+        postedDate: p.auction.startTime,
+        endDate: p.auction.endTime,
+        bidCount: p.auctionHistory.numberOfBids,
+      }));
+
+      return formatted;
+    } catch (err) {
+      throw new Error("ProductService Error: " + err.message);
+    }
+  }
+
   static async;
 }
 
