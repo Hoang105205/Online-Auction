@@ -245,6 +245,17 @@ const removeProduct = async (req, res) => {
   }
 };
 
+// =====Huy=======
+const getCategoryBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const category = await SystemService.getCategoryBySlug(slug);
+    return res.json(category);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 module.exports = {
   getSystemConfig,
   updateSystemConfig,
@@ -262,4 +273,5 @@ module.exports = {
   listUsers,
   listProducts,
   removeProduct,
+  getCategoryBySlug,
 };
