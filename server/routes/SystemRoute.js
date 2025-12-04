@@ -6,6 +6,9 @@ const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
 const ROLES_LIST = require("../config/roles_list");
 
+// Get category based on slugify of name
+router.get("/categories/:slug", SystemController.getCategoryBySlug);
+
 // Admin-only: view and modify system config
 router.get(
   "/",
@@ -70,12 +73,10 @@ router.delete(
 // ===== Hoang =====
 
 // Categories (Admin)
-router.get(
-  "/categories",
-  verifyJWT,
-  verifyRoles(ROLES_LIST.Admin),
-  SystemController.getCategories
-);
+
+// GET /system/categories - Get product description by ID
+router.get("/categories", SystemController.getCategories);
+
 router.post(
   "/categories",
   verifyJWT,
