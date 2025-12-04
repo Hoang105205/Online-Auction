@@ -1,4 +1,5 @@
 import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
+import ProductImage from "../ProductImage";
 import { Link } from "react-router-dom";
 import { Button } from "flowbite-react";
 
@@ -57,11 +58,9 @@ const ProductCardC = ({ product, isWon = false }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
         {/* Image */}
         <div className="relative aspect-[8/7] overflow-hidden bg-gray-100">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <ProductImage url={product.image} />
+          </div>
 
           {/* Time Remaining - Only show if not won */}
           {!isWon && (
