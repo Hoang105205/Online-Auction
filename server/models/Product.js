@@ -125,8 +125,8 @@ const productSchema = new Schema(
       },
       status: {
         type: String,
-        enum: ["pending", "active", "ended", "cancelled"],
-        default: "pending",
+        enum: ["active", "pending", "ended", "cancelled"], // active: ongoing auction; pending: end auction but still in cash process; ended: auction ended and cleared; cancelled: auction cancelled by seller
+        default: "active",
       },
       bidders: {
         type: Number,

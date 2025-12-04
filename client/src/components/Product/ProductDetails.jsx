@@ -18,6 +18,8 @@ import {
   getProductDescription,
   getAuctionHistory,
   getProductQA,
+  getProductPublicQA,
+  getProductPrivateQA,
 } from "../../api/productService";
 
 const ProductDetails = () => {
@@ -105,6 +107,7 @@ const ProductDetails = () => {
   const [productDescData, setProductDescData] = useState(null);
   const [productAuctHisData, setProductAuctHisData] = useState(null);
   const [productQAData, setProductQAData] = useState(null);
+  const [productPublicQAData, setProductPublicQAData] = useState(null);
 
   const temp = ["1", "2", "3", "4", "5"];
 
@@ -126,11 +129,13 @@ const ProductDetails = () => {
         const auctionData = await getProductAuction(productId);
         const descData = await getProductDescription(productId);
         const qaData = await getProductQA(productId);
+        const publicQAData = await getProductPublicQA(productId);
 
         setProductInfoData(basicBata);
         setProductAuctionData(auctionData);
         setProductDescData(descData);
         setProductQAData(qaData);
+        setProductPublicQAData(publicQAData);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -381,16 +386,18 @@ const ProductDetails = () => {
                 </div>
 
                 {/* Buy Now */}
-                <div className="mb-4 pb-4">
-                  <div className="flex items-center gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <div className="text-sm lg:text-base text-gray-600">
-                      Mua ngay với giá:
-                    </div>
-                    <div className="text-2xl lg:text-3xl font-bold text-green-500">
-                      {formatPrice(productAuctionData.auction.buyNowPrice)}đ
+                {productAuctionData.auction.buyNowPrice && (
+                  <div className="mb-4 pb-4">
+                    <div className="flex items-center gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                      <div className="text-sm lg:text-base text-gray-600">
+                        Mua ngay với giá:
+                      </div>
+                      <div className="text-2xl lg:text-3xl font-bold text-green-500">
+                        {formatPrice(productAuctionData.auction.buyNowPrice)}đ
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Countdown */}
                 <div className="flex items-center gap-2">
@@ -468,7 +475,7 @@ const ProductDetails = () => {
               {activeTab === "qa" && (
                 <ProductDetailsANA
                   productId={productId}
-                  qaData={productQAData}
+                  qaData={productPublicQAData}
                   sellerId={productInfoData.detail.sellerId}
                   authUser={auth}
                 />
