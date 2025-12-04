@@ -28,10 +28,10 @@ export default function CategoriesPage() {
   const [newName, setNewName] = useState("");
   const [newCount, setNewCount] = useState(0);
   const [newParent, setNewParent] = useState("");
-  const [editingId, setEditingId] = useState("");
+  const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editCount, setEditCount] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -56,7 +56,7 @@ export default function CategoriesPage() {
 
         // normalize server categories to UI shape
         const norm = (items || []).map((c) => ({
-          // prefer the server-provided categoryId; fall back to MongoDB _id
+          // prefer server-provided categoryId, fall back to _id if present
           id: String(c.categoryId || c._id || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
@@ -189,17 +189,15 @@ export default function CategoriesPage() {
             const sid = String(s.subCategoryId || s._id || "");
             if (sid === editingId) {
               return {
-                subCategoryId: s.subCategoryId,
+                subCategoryId: s.subCategoryId || s._id,
                 subCategoryName: editName.trim(),
                 slug: slugify(editName.trim()),
-                _id: s._id,
               };
             }
             return {
-              subCategoryId: s.subCategoryId,
+              subCategoryId: s.subCategoryId || s._id,
               subCategoryName: s.subCategoryName || s.name || "",
               slug: s.slug || "",
-              _id: s._id,
             };
           });
           await updateCategory(axiosInstance, raw.categoryId || raw._id, {
@@ -239,7 +237,7 @@ export default function CategoriesPage() {
         );
       } finally {
         setSubmitting(false);
-        setEditingId("");
+        setEditingId(null);
         setEditName("");
         setEditCount(0);
       }
@@ -247,23 +245,26 @@ export default function CategoriesPage() {
   }
 
   function cancelEdit() {
-    setEditingId("");
+    setEditingId(null);
     setEditName("");
     setEditCount(0);
   }
 
   function handleDeleteClick(id) {
-    setDeleteTarget(id);
+    // normalize id to string to avoid falsy/undefined issues
+    setDeleteTarget(id ? String(id) : null);
     setShowDeleteModal(true);
   }
 
   function performDelete(id) {
-    if (!id) return;
+    // allow calling without id (use current state) to avoid stale/closure issues
+    const targetId = id || deleteTarget;
+    if (!targetId) return;
     (async () => {
       setSubmitting(true);
       try {
-        const parentId = findParentIdOf(id);
-        if (parentId && parentId !== id) {
+        const parentId = findParentIdOf(targetId);
+        if (parentId && parentId !== targetId) {
           const parent = categories.find((c) => c.id === parentId);
           if (!parent || !parent._raw) throw new Error("Parent not found");
           const raw = parent._raw;
@@ -272,19 +273,20 @@ export default function CategoriesPage() {
             : [];
           const updatedSubs = existing
             .map((s) => ({
-              subCategoryId: s.subCategoryId,
+              subCategoryId: s.subCategoryId || s._id,
               subCategoryName: s.subCategoryName || s.name || "",
               slug: s.slug || "",
-              _id: s._id,
             }))
-            .filter((s) => String(s.subCategoryId || s._id) !== String(id));
+            .filter(
+              (s) => String(s.subCategoryId || s._id || "") !== String(targetId)
+            );
 
           await updateCategory(axiosInstance, raw.categoryId || raw._id, {
             subCategories: updatedSubs,
           });
         } else {
           // top-level category
-          const cat = categories.find((c) => c.id === id);
+          const cat = categories.find((c) => c.id === targetId);
           if (!cat || !cat._raw) throw new Error("Category not found");
           const raw = cat._raw;
           await apiRemoveCategory(axiosInstance, raw.categoryId || raw._id);
@@ -316,7 +318,7 @@ export default function CategoriesPage() {
         }));
         setCategories(norm);
         setShowDeleteModal(false);
-        setDeleteTarget("");
+        setDeleteTarget(null);
         const filteredAfter = norm.filter(
           (c) =>
             c.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -392,7 +394,7 @@ export default function CategoriesPage() {
           : [];
         const newSub = { subCategoryName: name, slug };
         const updatedSubs = existing.map((s) => ({
-          subCategoryId: s.subCategoryId,
+          subCategoryId: s.subCategoryId || s._id,
           subCategoryName: s.subCategoryName || s.name || "",
           slug: s.slug || "",
         }));
@@ -760,9 +762,12 @@ export default function CategoriesPage() {
                 </button>
                 <button
                   onClick={() => performDelete(deleteTarget)}
-                  className="px-4 py-2 bg-red-600 text-white rounded"
+                  className={`px-4 py-2 bg-red-600 text-white rounded ${
+                    submitting ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
+                  disabled={submitting}
                 >
-                  Xóa
+                  {submitting ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
             </div>

@@ -349,14 +349,19 @@ class SystemService {
     subCategories = [],
   } = {}) {
     const cat = {
-      categoryId: categoryId ? mongoose.Types.ObjectId(categoryId) : undefined,
+      categoryId:
+        categoryId && mongoose.Types.ObjectId.isValid(categoryId)
+          ? new mongoose.Types.ObjectId(categoryId)
+          : undefined,
       categoryName,
       slug,
       subCategories: Array.isArray(subCategories)
         ? subCategories.map((s) => ({
-            subCategoryId: s.subCategoryId
-              ? mongoose.Types.ObjectId(s.subCategoryId)
-              : undefined,
+            subCategoryId:
+              s.subCategoryId &&
+              mongoose.Types.ObjectId.isValid(s.subCategoryId)
+                ? new mongoose.Types.ObjectId(s.subCategoryId)
+                : undefined,
             subCategoryName: s.subCategoryName || s.name || "",
             slug: s.slug || s.subCategorySlug || "",
           }))
@@ -406,9 +411,10 @@ class SystemService {
     if (updateData.slug !== undefined) cat.slug = updateData.slug;
     if (Array.isArray(updateData.subCategories)) {
       cat.subCategories = updateData.subCategories.map((s) => ({
-        subCategoryId: s.subCategoryId
-          ? mongoose.Types.ObjectId(s.subCategoryId)
-          : undefined,
+        subCategoryId:
+          s.subCategoryId && mongoose.Types.ObjectId.isValid(s.subCategoryId)
+            ? new mongoose.Types.ObjectId(s.subCategoryId)
+            : undefined,
         subCategoryName: s.subCategoryName || s.name || "",
         slug: s.slug || s.subCategorySlug || "",
       }));
@@ -560,15 +566,6 @@ class SystemService {
 
     await Product.deleteOne({ _id: productId }).exec();
     return prod;
-  }
-
-  static async getCategoryBySlug(slug) {
-    const sys = await SystemSetting.findOne(
-      { "categories.slug": slug },
-      { "categories.$": 1 }
-    ).exec();
-
-    return sys ? sys.categories[0] : null;
   }
 }
 
