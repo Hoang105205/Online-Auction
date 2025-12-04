@@ -157,6 +157,66 @@ class ProductService {
     }
   }
 
+  // Get product public Q&A
+  static async getProductPublicQA(productId) {
+    try {
+      const product = await Product.findById(productId)
+        .populate("chat.sendId", "fullName")
+        .exec();
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+      const publicChats = product.chat.filter((chat) => chat.type === "public");
+
+      return publicChats;
+    } catch (error) {
+      throw new Error("Error getting product Q&A: " + error.message);
+    }
+  }
+
+  // Get product private Q&A
+  static async getProductPrivateQA(productId, userId) {
+    try {
+      const product = await Product.findById(productId)
+        .populate("chat.sendId", "fullName")
+        .exec();
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      // Check if auction has ended bidding (aka: pending, ended, cancelled)
+      const endAuction = product.auction.status !== "active";
+
+      if (!endAuction) {
+        throw new Error(
+          "Auction is still active. Private Q&A not available yet."
+        );
+      }
+
+      const isHighestBidder =
+        product.auction.highestBidderId &&
+        product.auction.highestBidderId.toString() === userId;
+
+      const isSeller = product.detail.sellerId.toString() === userId;
+
+      if (!isHighestBidder && !isSeller) {
+        throw new Error(
+          "Unauthorized: Only the highest bidder or seller can access private Q&A"
+        );
+      }
+
+      const privateChats = product.chat.filter(
+        (chat) => chat.type === "private"
+      );
+
+      return privateChats;
+    } catch (error) {
+      throw new Error("Error getting product Q&A: " + error.message);
+    }
+  }
+
   // get product auction history
   static async getAuctionHistory(productId) {
     try {

@@ -167,6 +167,45 @@ class ProductController {
     }
   }
 
+  // GET /products/public-qa/:id - Get product public Q&A by ID
+  static async getProductPublicQA(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({ error: "Product ID is required" });
+      }
+
+      const qa = await ProductService.getProductPublicQA(id);
+
+      return res.status(200).json(qa);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error getting product Q&A" });
+    }
+  }
+
+  // GET /products/private-qa/:id - Get product private Q&A by ID
+  static async getProductPrivateQA(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user;
+
+      if (!id) {
+        return res.status(400).json({ error: "Product ID is required" });
+      }
+
+      const qa = await ProductService.getProductPrivateQA(id, userId);
+
+      return res.status(200).json(qa);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error getting product private Q&A" });
+    }
+  }
+
   // POST /products/qa/:id - Add a new Q entry for a product by ID
   static async addQuestion(req, res) {
     try {

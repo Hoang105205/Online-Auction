@@ -54,6 +54,28 @@ export const getProductQA = async (productId) => {
   }
 };
 
+// Ham xu ly logic lay public q&a cua san pham
+export const getProductPublicQA = async (productId) => {
+  try {
+    const response = await axiosPublic.get(`/products/public-qa/${productId}`);
+    return response.data; // Tra ve danh sach public Q&A
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic lay private q&a cua san pham
+export const getProductPrivateQA = async (productId, axiosInstance) => {
+  try {
+    const response = await axiosInstance.get(
+      `/products/private-qa/${productId}`
+    );
+    return response.data; // Tra ve danh sach private Q&A
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Ham xu ly logic lay san pham lien quan
 export const getRelatedProducts = async (productId) => {
   try {

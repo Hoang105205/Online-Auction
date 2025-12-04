@@ -37,6 +37,17 @@ router.get("/auction/:id", ProductController.getProductAuction); // public
 // GET /products/qa/:id - Get product Q&A by ID
 router.get("/qa/:id", ProductController.getProductQA); // public
 
+// GET /products/public-qa/:id - Get product public Q&A by ID
+router.get("/public-qa/:id", ProductController.getProductPublicQA); // public
+
+// GET /products/private-qa/:id - Get product private Q&A by ID
+router.get(
+  "/private-qa/:id",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
+  ProductController.getProductPrivateQA
+); // protected (highest bidder or seller only)
+
 // POST /products/qa/:id - Add a new Q entry for a product by ID
 router.post(
   "/qa/:id",
