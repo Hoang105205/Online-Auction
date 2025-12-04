@@ -49,17 +49,20 @@ export default function CategoriesPage() {
         if (!mounted) return;
         let items = [];
         if (Array.isArray(res)) items = res;
+        else if (res && res.data && Array.isArray(res.data.categories))
+          items = res.data.categories;
         else if (res && Array.isArray(res.data)) items = res.data;
         else if (res && Array.isArray(res.categories)) items = res.categories;
 
         // normalize server categories to UI shape
         const norm = (items || []).map((c) => ({
-          id: c._id || c.categoryId || String(Math.random()),
-          name: c.categoryName || c.categoryName || "",
+          // prefer the server-provided categoryId; fall back to MongoDB _id
+          id: String(c.categoryId || c._id || ""),
+          name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: s._id || s.subCategoryId || String(Math.random()),
+                id: String(s.subCategoryId || s._id || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -169,13 +172,13 @@ export default function CategoriesPage() {
             categoryName: editName.trim(),
             slug: slugify(editName.trim()),
           };
+          const raw = categories.find((c) => c.id === parentId)?._raw || {};
           await updateCategory(
             axiosInstance,
-            categories.find((c) => c.id === parentId)._raw._id,
+            raw.categoryId || raw._id,
             payload
           );
         } else {
-          // editing a child subcategory
           const parent = categories.find((c) => c.id === parentId);
           if (!parent) throw new Error("Parent not found");
           const raw = parent._raw || {};
@@ -183,37 +186,44 @@ export default function CategoriesPage() {
             ? raw.subCategories
             : [];
           const updatedSubs = existing.map((s) => {
-            const sid = s._id || s.subCategoryId || String(Math.random());
+            const sid = String(s.subCategoryId || s._id || "");
             if (sid === editingId) {
               return {
                 subCategoryId: s.subCategoryId,
                 subCategoryName: editName.trim(),
                 slug: slugify(editName.trim()),
+                _id: s._id,
               };
             }
             return {
               subCategoryId: s.subCategoryId,
               subCategoryName: s.subCategoryName || s.name || "",
               slug: s.slug || "",
+              _id: s._id,
             };
           });
-          await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+          await updateCategory(axiosInstance, raw.categoryId || raw._id, {
             subCategories: updatedSubs,
           });
         }
 
         // refresh list from server
         const fresh = await getCategories(axiosInstance);
-        const items = Array.isArray(fresh)
-          ? fresh
-          : fresh.data || fresh.categories || [];
+        let items = [];
+        if (Array.isArray(fresh)) items = fresh;
+        else if (fresh && fresh.data && Array.isArray(fresh.data.categories))
+          items = fresh.data.categories;
+        else if (fresh && Array.isArray(fresh.data)) items = fresh.data;
+        else if (fresh && Array.isArray(fresh.categories))
+          items = fresh.categories;
+        else items = [];
         const norm = (items || []).map((c) => ({
-          id: c._id || c.categoryId || String(Math.random()),
+          id: String(c.categoryId || c._id || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: s._id || s.subCategoryId || String(Math.random()),
+                id: String(s.subCategoryId || s._id || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -242,19 +252,16 @@ export default function CategoriesPage() {
     setEditCount(0);
   }
 
-  // Open delete confirmation modal (no immediate deletion)
   function handleDeleteClick(id) {
     setDeleteTarget(id);
     setShowDeleteModal(true);
   }
 
-  // Actually perform deletion (called from modal Confirm)
   function performDelete(id) {
     if (!id) return;
     (async () => {
       setSubmitting(true);
       try {
-        // if deleting a subcategory, we must update the parent to remove it
         const parentId = findParentIdOf(id);
         if (parentId && parentId !== id) {
           const parent = categories.find((c) => c.id === parentId);
@@ -270,9 +277,9 @@ export default function CategoriesPage() {
               slug: s.slug || "",
               _id: s._id,
             }))
-            .filter((s) => String(s._id || s.subCategoryId) !== String(id));
+            .filter((s) => String(s.subCategoryId || s._id) !== String(id));
 
-          await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+          await updateCategory(axiosInstance, raw.categoryId || raw._id, {
             subCategories: updatedSubs,
           });
         } else {
@@ -280,21 +287,27 @@ export default function CategoriesPage() {
           const cat = categories.find((c) => c.id === id);
           if (!cat || !cat._raw) throw new Error("Category not found");
           const raw = cat._raw;
-          await apiRemoveCategory(axiosInstance, raw._id || raw.categoryId);
+          await apiRemoveCategory(axiosInstance, raw.categoryId || raw._id);
         }
 
         // refresh
         const fresh = await getCategories(axiosInstance);
-        const items = Array.isArray(fresh)
-          ? fresh
-          : fresh.data || fresh.categories || [];
+        let items = [];
+        if (Array.isArray(fresh)) items = fresh;
+        else if (fresh && fresh.data && Array.isArray(fresh.data.categories))
+          items = fresh.data.categories;
+        else if (fresh && Array.isArray(fresh.data)) items = fresh.data;
+        else if (fresh && Array.isArray(fresh.categories))
+          items = fresh.categories;
+        else items = [];
+
         const norm = (items || []).map((c) => ({
-          id: c._id || c.categoryId || String(Math.random()),
+          id: String(c.categoryId || c._id || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: s._id || s.subCategoryId || String(Math.random()),
+                id: String(s.subCategoryId || s._id || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -384,23 +397,28 @@ export default function CategoriesPage() {
           slug: s.slug || "",
         }));
         updatedSubs.push(newSub);
-        await updateCategory(axiosInstance, raw._id || raw.categoryId, {
+        await updateCategory(axiosInstance, raw.categoryId || raw._id, {
           subCategories: updatedSubs,
         });
       }
 
       // refresh list
       const fresh = await getCategories(axiosInstance);
-      const items = Array.isArray(fresh)
-        ? fresh
-        : fresh.data || fresh.categories || [];
+      let items = [];
+      if (Array.isArray(fresh)) items = fresh;
+      else if (fresh && fresh.data && Array.isArray(fresh.data.categories))
+        items = fresh.data.categories;
+      else if (fresh && Array.isArray(fresh.data)) items = fresh.data;
+      else if (fresh && Array.isArray(fresh.categories))
+        items = fresh.categories;
+      else items = [];
       const norm = (items || []).map((c) => ({
-        id: c._id || c.categoryId || String(Math.random()),
+        id: String(c.categoryId || c._id || ""),
         name: c.categoryName || "",
         slug: c.slug || "",
         children: Array.isArray(c.subCategories)
           ? c.subCategories.map((s) => ({
-              id: s._id || s.subCategoryId || String(Math.random()),
+              id: String(s.subCategoryId || s._id || ""),
               name: s.subCategoryName || s.name || "",
               slug: s.slug || "",
             }))
