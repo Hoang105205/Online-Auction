@@ -137,3 +137,21 @@ export const getFirstProducts = async (limit = 5) => {
     throw error;
   }
 };
+
+export const getProductsByCategory = async (
+  category,
+  subcategory = null,
+  axiosInstance
+) => {
+  try {
+    console.log("API Call - getProductsByCategory:", category, subcategory);
+    const response = await axiosInstance.get(
+      subcategory
+        ? `/products/category/${category}/${subcategory}`
+        : `/products/category/${category}`
+    );
+    return response.data; // trả về danh sách products
+  } catch (error) {
+    throw error;
+  }
+};
