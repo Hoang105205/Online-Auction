@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "react-toastify";
 import { Editor } from "@tinymce/tinymce-react";
 import { Button, Label, TextInput, Textarea, Checkbox } from "flowbite-react";
 import { HiArrowLeft, HiX, HiPlus, HiSearch, HiCalendar } from "react-icons/hi";
 import { addProduct } from "../../api/productService";
+import { getCategories } from "../../api/systemService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 // Zod validation schema
@@ -30,9 +32,15 @@ const productSchema = z
     autoExtend: z.boolean(),
     category: z
       .object({
-        id: z.number(),
-        name: z.string(),
-        subcategories: z.array(z.any()),
+        categoryId: z.string(),
+        categoryName: z.string(),
+        slug: z.string().optional(),
+        subCategories: z.array(
+          z.object({
+            subCategoryId: z.string(),
+            subCategoryName: z.string(),
+          })
+        ),
       })
       .nullable()
       .refine((val) => val !== null, {
@@ -40,8 +48,8 @@ const productSchema = z
       }),
     subcategory: z
       .object({
-        id: z.number(),
-        name: z.string(),
+        subCategoryId: z.string(),
+        subCategoryName: z.string(),
       })
       .nullable()
       .refine((val) => val !== null, {
@@ -88,50 +96,6 @@ const productSchema = z
     }
   );
 
-// Mock categories data
-const MOCK_CATEGORIES = [
-  {
-    id: 1,
-    name: "Điện tử",
-    subcategories: [
-      { id: 11, name: "Điện thoại" },
-      { id: 12, name: "Laptop" },
-      { id: 13, name: "Máy tính bảng" },
-      { id: 14, name: "Phụ kiện" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Thời trang",
-    subcategories: [
-      { id: 21, name: "Quần áo nam" },
-      { id: 22, name: "Quần áo nữ" },
-      { id: 23, name: "Giày dép" },
-      { id: 24, name: "Túi xách" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Đồ gia dụng",
-    subcategories: [
-      { id: 31, name: "Nội thất" },
-      { id: 32, name: "Đồ dùng nhà bếp" },
-      { id: 33, name: "Trang trí" },
-      { id: 34, name: "Đồ điện" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Xe cộ",
-    subcategories: [
-      { id: 41, name: "Ô tô" },
-      { id: 42, name: "Xe máy" },
-      { id: 43, name: "Xe đạp" },
-      { id: 44, name: "Phụ tùng" },
-    ],
-  },
-];
-
 export default function CreateProductPage() {
   const navigate = useNavigate();
   const [isDirty, setIsDirty] = useState(false);
@@ -144,6 +108,20 @@ export default function CreateProductPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const axiosPrivate = useAxiosPrivate();
   const editorRef = useRef(null);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories(axiosPrivate); // gọi API client
+        setCategories(data);
+      } catch (error) {
+        console.error("Lỗi khi lấy categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // call useForm hook
   const {
@@ -184,7 +162,7 @@ export default function CreateProductPage() {
 
   const handleBack = () => {
     if (uploading) {
-      alert(
+      toast.warning(
         "Đang tải lên ảnh. Vui lòng đợi quá trình tải lên hoàn tất trước khi rời khỏi trang."
       );
       return;
@@ -227,50 +205,12 @@ export default function CreateProductPage() {
   const onSubmit = async (data) => {
     // Validate images
     if (selectedImages.length < 3) {
-      alert("Vui lòng tải lên ít nhất 3 ảnh");
+      toast.error("Vui lòng tải lên ít nhất 3 ảnh");
       return;
     }
 
     try {
       setUploading(true);
-
-      // Prepare product payload (convert numeric strings to numbers)
-      const payload = {
-        detail: {
-          sellerID: "",
-          name: data.productName,
-          category: data.category?.id ?? null,
-          subCategory: data.subcategory?.id ?? null,
-          description: data.description,
-          images: [],
-          followers: 0,
-        },
-        auction: {
-          startPrice: Number(data.startingPrice),
-          stepPrice: Number(data.step),
-          buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
-          autoExtend: data.autoExtend,
-          status: "pending",
-          bidders: 0,
-        },
-        auctionHistory: {
-          numberOfBids: 0,
-          historyList: [],
-        },
-        chat: [],
-      };
-
-      //   name: data.productName,
-      //   startingPrice: Number(data.startingPrice),
-      //   step: Number(data.step),
-      //   hasBuyNowPrice: data.hasBuyNowPrice,
-      //   buyNowPrice: data.hasBuyNowPrice ? Number(data.buyNowPrice) : null,
-      //   autoExtend: data.autoExtend,
-      //   category: data.category?.id ?? null,
-      //   subcategory: data.subcategory?.id ?? null,
-      //   endDate: data.endDate,
-      //   description: data.description,
-      // };
 
       // Build FormData: include product info and all images so server can create product
       const productPayload = {
@@ -280,8 +220,14 @@ export default function CreateProductPage() {
         hasBuyNowPrice: data.hasBuyNowPrice,
         buyNowPrice: data.buyNowPrice,
         autoExtend: data.autoExtend,
-        category: data.category,
-        subcategory: data.subcategory,
+        category:
+          data.category?.categoryName ||
+          data.category?.categoryId ||
+          data.category,
+        subcategory:
+          data.subcategory?.subCategoryName ||
+          data.subcategory?.subCategoryId ||
+          data.subcategory,
         endDate: data.endDate,
         description: data.description,
       };
@@ -295,6 +241,7 @@ export default function CreateProductPage() {
       let isDone = false;
       const interval = setInterval(() => {
         if (isDone) {
+          clearInterval(interval);
           setUploadProgress(100);
           return;
         }
@@ -303,20 +250,33 @@ export default function CreateProductPage() {
         setUploadProgress(Math.round(progress));
       }, 150);
 
-      const res = await addProduct(fd, axiosPrivate);
+      try {
+        const res = await addProduct(fd, axiosPrivate);
 
-      isDone = true;
-      clearInterval(interval);
-      setUploadProgress(100);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+        isDone = true;
+        clearInterval(interval);
+        setUploadProgress(100);
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-      setTimeout(() => {
-        alert("Sản phẩm đã được tạo và ảnh đã được tải lên thành công!");
-        navigate("/account/my-products");
-      }, 0);
+        toast.success(
+          "Sản phẩm đã được tạo và ảnh đã được tải lên thành công!"
+        );
+        setTimeout(() => {
+          navigate("/account/my-products");
+        }, 100);
+      } catch (uploadError) {
+        console.error(uploadError);
+        isDone = true;
+        clearInterval(interval);
+        toast.error(
+          "Có lỗi xảy ra khi tạo sản phẩm hoặc tải ảnh. Vui lòng thử lại."
+        );
+      }
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra khi tạo sản phẩm hoặc tải ảnh. Vui lòng thử lại.");
+      toast.error(
+        "Có lỗi xảy ra khi tạo sản phẩm hoặc tải ảnh. Vui lòng thử lại."
+      );
     } finally {
       setUploading(false);
     }
@@ -336,13 +296,15 @@ export default function CreateProductPage() {
     setSelectedImages(selectedImages.filter((img) => img.id !== id));
   };
 
-  const filteredCategories = MOCK_CATEGORIES.filter((cat) =>
-    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  const filteredCategories = categories.filter((cat) =>
+    cat.categoryName.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
   const filteredSubcategories = selectedCategory
-    ? selectedCategory.subcategories.filter((sub) =>
-        sub.name.toLowerCase().includes(subcategorySearch.toLowerCase())
+    ? selectedCategory.subCategories.filter((sub) =>
+        sub.subCategoryName
+          .toLowerCase()
+          .includes(subcategorySearch.toLowerCase())
       )
     : [];
 
@@ -355,21 +317,18 @@ export default function CreateProductPage() {
               className="mx-auto mb-4 h-10 w-10 text-gray-700 animate-spin"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
-              viewBox="0 0 24 24"
-            >
+              viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
                 cy="12"
                 r="10"
                 stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
+                strokeWidth="4"></circle>
               <path
                 className="opacity-75"
                 fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              ></path>
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
             </svg>
             <div className="mb-2 font-medium text-gray-800">
               Đang đăng tải thông tin sản phẩm…
@@ -400,8 +359,7 @@ export default function CreateProductPage() {
           className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
             uploading ? "opacity-50 cursor-not-allowed" : ""
           }`}
-          aria-label="Quay lại"
-        >
+          aria-label="Quay lại">
           <HiArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
         <h2 className="text-2xl font-bold text-gray-900">Đăng sản phẩm</h2>
@@ -482,8 +440,7 @@ export default function CreateProductPage() {
           <div>
             <Label
               htmlFor="hasBuyNowPrice"
-              className="flex items-center gap-3 mb-2 cursor-pointer select-none"
-            >
+              className="flex items-center gap-3 mb-2 cursor-pointer select-none">
               <Controller
                 name="hasBuyNowPrice"
                 control={control}
@@ -536,8 +493,7 @@ export default function CreateProductPage() {
           <div>
             <Label
               htmlFor="autoExtend"
-              className="flex items-start gap-3 cursor-pointer select-none"
-            >
+              className="flex items-start gap-3 cursor-pointer select-none">
               <Controller
                 name="autoExtend"
                 control={control}
@@ -569,10 +525,11 @@ export default function CreateProductPage() {
                   setShowCategoryDropdown(!showCategoryDropdown);
                   setShowSubcategoryDropdown(false);
                 }}
-                className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-              >
+                className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                 <span className={selectedCategory ? "" : "text-gray-500"}>
-                  {selectedCategory ? selectedCategory.name : "Chọn danh mục"}
+                  {selectedCategory
+                    ? selectedCategory.categoryName
+                    : "Chọn danh mục"}
                 </span>
                 <HiSearch className="text-gray-400" />
               </button>
@@ -590,7 +547,7 @@ export default function CreateProductPage() {
                   <div className="p-2">
                     {filteredCategories.map((cat) => (
                       <button
-                        key={cat.id}
+                        key={cat.categoryId}
                         type="button"
                         onClick={() => {
                           setValue("category", cat);
@@ -598,9 +555,8 @@ export default function CreateProductPage() {
                           setShowCategoryDropdown(false);
                           setCategorySearch("");
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
-                      >
-                        {cat.name}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
+                        {cat.categoryName}
                       </button>
                     ))}
                   </div>
@@ -625,11 +581,10 @@ export default function CreateProductPage() {
                     setShowSubcategoryDropdown(!showSubcategoryDropdown);
                     setShowCategoryDropdown(false);
                   }}
-                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
+                  className="w-full px-4 py-2.5 text-left border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                   <span className={watch("subcategory") ? "" : "text-gray-500"}>
                     {watch("subcategory")
-                      ? watch("subcategory").name
+                      ? watch("subcategory").subCategoryName
                       : "Chọn danh mục con"}
                   </span>
                   <HiSearch className="text-gray-400" />
@@ -648,16 +603,15 @@ export default function CreateProductPage() {
                     <div className="p-2">
                       {filteredSubcategories.map((sub) => (
                         <button
-                          key={sub.id}
+                          key={sub.subCategoryId}
                           type="button"
                           onClick={() => {
                             setValue("subcategory", sub);
                             setShowSubcategoryDropdown(false);
                             setSubcategorySearch("");
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
-                        >
-                          {sub.name}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
+                          {sub.subCategoryName}
                         </button>
                       ))}
                     </div>
@@ -761,8 +715,7 @@ export default function CreateProductPage() {
               {selectedImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group"
-                >
+                  className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group">
                   <img
                     src={img.url}
                     alt="Preview"
@@ -771,8 +724,7 @@ export default function CreateProductPage() {
                   <button
                     type="button"
                     onClick={() => removeImage(img.id)}
-                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
+                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <HiX className="w-4 h-4" />
                   </button>
                 </div>
@@ -793,8 +745,7 @@ export default function CreateProductPage() {
             color="gray"
             size="lg"
             onClick={handleBack}
-            disabled={uploading}
-          >
+            disabled={uploading}>
             Hủy
           </Button>
           <Button
@@ -803,8 +754,7 @@ export default function CreateProductPage() {
             className={`bg-green-500 hover:bg-green-600 ${
               uploading ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            size="lg"
-          >
+            size="lg">
             {uploading ? "Đang tải..." : "Tạo mới"}
           </Button>
         </div>
