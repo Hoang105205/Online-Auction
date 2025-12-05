@@ -393,56 +393,231 @@ class ProductService {
     }
   }
 
-  static async getFirstProducts(limit = 5) {
+  static async getFirstProducts({
+    page = 1,
+    limit = 5,
+    sortBy = "",
+    search = "",
+  }) {
     try {
-      const products = await Product.find()
-        .limit(limit)
-        .populate("detail.sellerId", "fullName feedBackAsSeller")
-        .populate("auction.highestBidderId", "fullName") // lấy tên highest bidder
-        .exec();
+      let products;
+      let totalItems;
 
-      return products.map((product) => ({
-        id: product._id,
-        name: product.detail.name,
-        image: product.detail.images?.[0] || null, // lấy ảnh đầu tiên
-        currentPrice:
-          product.auction.currentPrice || product.auction.startPrice || 0,
-        buyNowPrice: product.auction.buyNowPrice || null,
-        highestBidder: product.auction.highestBidderId?.fullName || null,
-        postedDate: product.createdAt?.toISOString().split("T")[0] || null,
-        endDate: product.auction.endTime?.toISOString().split("T")[0] || null,
-        bidCount: product.auctionHistory.numberOfBids || 0,
-      }));
+      if (search && search.trim()) {
+        // Use aggregation pipeline with $search for text search
+        const pipeline = [
+          {
+            $search: {
+              index: "product_name",
+              text: {
+                query: search,
+                path: "detail.name",
+              },
+            },
+          },
+        ];
+
+        // Add sorting stage
+        let sortStage = { $sort: { createdAt: -1 } };
+        if (sortBy === "endTime") {
+          sortStage = { $sort: { "auction.endTime": -1 } };
+        } else if (sortBy === "priceAsc") {
+          sortStage = { $sort: { "auction.currentPrice": 1 } };
+        }
+        pipeline.push(sortStage);
+
+        // Count total before pagination
+        const countPipeline = [...pipeline, { $count: "total" }];
+        const countResult = await Product.aggregate(countPipeline).exec();
+        totalItems = countResult[0]?.total || 0;
+
+        // Add pagination
+        pipeline.push({ $skip: (page - 1) * limit });
+        pipeline.push({ $limit: limit });
+
+        // Lookup to get full documents with populated fields
+        pipeline.push({
+          $lookup: {
+            from: "users",
+            localField: "detail.sellerId",
+            foreignField: "_id",
+            as: "sellerInfo",
+          },
+        });
+        pipeline.push({
+          $lookup: {
+            from: "users",
+            localField: "auction.highestBidderId",
+            foreignField: "_id",
+            as: "bidderInfo",
+          },
+        });
+
+        products = await Product.aggregate(pipeline).exec();
+      } else {
+        // No search - use regular find
+        totalItems = await Product.countDocuments().exec();
+
+        let sortOption = { createdAt: -1 };
+        if (sortBy === "endTime") {
+          sortOption = { "auction.endTime": -1 };
+        } else if (sortBy === "priceAsc") {
+          sortOption = { "auction.currentPrice": 1 };
+        }
+
+        products = await Product.find()
+          .populate("detail.sellerId", "fullName feedBackAsSeller")
+          .populate("auction.highestBidderId", "fullName")
+          .sort(sortOption)
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .exec();
+      }
+
+      const formatted = products.map((p) => {
+        // Handle both aggregate (array fields) and populate (object fields)
+        const sellerInfo = p.sellerInfo?.[0] || p.detail?.sellerId;
+        const bidderInfo = p.bidderInfo?.[0] || p.auction?.highestBidderId;
+
+        return {
+          id: p._id,
+          name: p.detail.name,
+          image: p.detail.images?.[0] || null,
+          currentPrice: p.auction.currentPrice || p.auction.startPrice || 0,
+          buyNowPrice: p.auction.buyNowPrice || null,
+          highestBidder: bidderInfo?.fullName || null,
+          postedDate: p.createdAt || null,
+          endDate: p.auction.endTime || null,
+          bidCount: p.auctionHistory.numberOfBids || 0,
+        };
+      });
+
+      return {
+        products: formatted,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems: totalItems,
+          limit: parseInt(limit),
+        },
+      };
     } catch (error) {
       throw new Error("Error getting products: " + error.message);
     }
   }
 
-  static async getProductsByCategory(category, subcategory, limit = 0) {
+  static async getProductsByCategory({
+    category,
+    subcategory,
+    page = 1,
+    limit = 0,
+    sortBy = "",
+    search = "",
+  }) {
     try {
-      const filter = { "detail.category": category };
-      if (subcategory) filter["detail.subCategory"] = subcategory;
+      let products;
+      let totalItems;
 
-      const products = await Product.find(filter)
-        .limit(limit)
-        .populate("auction.highestBidderId", "fullName")
-        .exec();
+      if (search && search.trim()) {
+        // Use aggregation pipeline with $search for text search
+        const pipeline = [
+          {
+            $search: {
+              index: "product_name",
+              text: {
+                query: search,
+                path: "detail.name",
+              },
+            },
+          },
+          // Add category filter after search
+          {
+            $match: {
+              "detail.category": category,
+              ...(subcategory && { "detail.subCategory": subcategory }),
+            },
+          },
+        ];
 
-      const formatted = products.map((p) => ({
-        id: p._id,
-        name: p.detail.name,
-        image: p.detail.images?.[0] || null,
-        currentPrice: p.auction.currentPrice,
-        buyNowPrice: p.auction.buyNowPrice,
-        highestBidder: p.auction.highestBidderId?.fullName || null,
-        postedDate: p.auction.startTime,
-        endDate: p.auction.endTime,
-        bidCount: p.auctionHistory.numberOfBids,
-      }));
+        // Add sorting stage
+        let sortStage = { $sort: { createdAt: -1 } };
+        if (sortBy === "endTime") {
+          sortStage = { $sort: { "auction.endTime": -1 } };
+        } else if (sortBy === "priceAsc") {
+          sortStage = { $sort: { "auction.currentPrice": 1 } };
+        }
+        pipeline.push(sortStage);
 
-      return formatted;
+        // Count total before pagination
+        const countPipeline = [...pipeline, { $count: "total" }];
+        const countResult = await Product.aggregate(countPipeline).exec();
+        totalItems = countResult[0]?.total || 0;
+
+        // Add pagination
+        pipeline.push({ $skip: (page - 1) * limit });
+        pipeline.push({ $limit: limit });
+
+        // Lookup to populate highestBidderId
+        pipeline.push({
+          $lookup: {
+            from: "users",
+            localField: "auction.highestBidderId",
+            foreignField: "_id",
+            as: "bidderInfo",
+          },
+        });
+
+        products = await Product.aggregate(pipeline).exec();
+      } else {
+        // No search - use regular find with filter
+        const filter = { "detail.category": category };
+        if (subcategory) filter["detail.subCategory"] = subcategory;
+
+        totalItems = await Product.countDocuments(filter).exec();
+
+        let sortOption = { createdAt: -1 };
+        if (sortBy === "endTime") {
+          sortOption = { "auction.endTime": -1 };
+        } else if (sortBy === "priceAsc") {
+          sortOption = { "auction.currentPrice": 1 };
+        }
+
+        products = await Product.find(filter)
+          .populate("auction.highestBidderId", "fullName")
+          .sort(sortOption)
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .exec();
+      }
+
+      const formatted = products.map((p) => {
+        // Handle both aggregate (array fields) and populate (object fields)
+        const bidderInfo = p.bidderInfo?.[0] || p.auction?.highestBidderId;
+
+        return {
+          id: p._id,
+          name: p.detail.name,
+          image: p.detail.images?.[0] || null,
+          currentPrice: p.auction.currentPrice,
+          buyNowPrice: p.auction.buyNowPrice,
+          highestBidder: bidderInfo?.fullName || null,
+          postedDate: p.auction.startTime || null,
+          endDate: p.auction.endTime || null,
+          bidCount: p.auctionHistory.numberOfBids,
+        };
+      });
+
+      return {
+        products: formatted,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems: totalItems,
+          limit: parseInt(limit),
+        },
+      };
     } catch (err) {
-      throw new Error("ProductService Error: " + err.message);
+      throw new Error("Error getting products: " + err.message);
     }
   }
 

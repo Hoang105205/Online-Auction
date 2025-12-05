@@ -319,11 +319,20 @@ class ProductController {
     }
   }
 
-  // GET /products - Get first 5 products
+  // GET /products - Get first <limit> products
   static async getFirstProducts(req, res) {
     try {
-      const limit = parseInt(req.query.limit) || 5;
-      const products = await ProductService.getFirstProducts(limit);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 0;
+      const sortBy = req.query.sortBy || "";
+      const search = req.query.search || "";
+
+      const products = await ProductService.getFirstProducts({
+        page,
+        limit,
+        sortBy,
+        search,
+      });
       return res.status(200).json(products);
     } catch (error) {
       return res
@@ -335,26 +344,22 @@ class ProductController {
   // GET /products/:category/:subcategory - Get products by category / and subcategory
   static async getProductsByCategory(req, res) {
     try {
-      console.log(
-        "[ProductController.getProductsByCategory] req.params:",
-        req.params,
-        "req.query:",
-        req.query
-      );
       const { category, subcategory } = req.params;
+      const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 0;
+      const sortBy = req.query.sortBy || "";
+      const search = req.query.search || "";
 
-      const products = await ProductService.getProductsByCategory(
+      const products = await ProductService.getProductsByCategory({
         category,
         subcategory,
-        limit
-      );
-
-      return res.status(200).json({
-        success: true,
-        count: products.length,
-        products,
+        page,
+        limit,
+        sortBy,
+        search,
       });
+
+      return res.status(200).json(products);
     } catch (err) {
       return res.status(500).json({
         success: false,
