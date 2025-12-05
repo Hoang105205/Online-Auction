@@ -4,17 +4,22 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
 import ProductCardC from "./ProductCardC";
 import { HiHeart } from "react-icons/hi";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import "swiper/css";
 import "swiper/css/pagination";
 
 export default function ProductCarousel() {
   const [products, setProducts] = useState([]);
+  const axiosPrivate = useAxiosPrivate();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await getFirstProducts(5); // gọi API client
-        setProducts(data); // gán dữ liệu vào state
+        const data = await getFirstProducts(
+          { page: 1, limit: 5 },
+          axiosPrivate
+        ); // gọi API client
+        setProducts(data.products); // gán dữ liệu vào state
       } catch (error) {
         console.error("Lỗi khi lấy products:", error);
       }
