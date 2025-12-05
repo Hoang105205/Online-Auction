@@ -27,12 +27,22 @@ export default function ProductCarousel() {
 
     fetchProducts();
   }, []);
+
+  // Don't render Swiper until products are loaded
+  if (products.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <Swiper
       modules={[Pagination, Autoplay]}
       slidesPerView={1}
       spaceBetween={20}
-      loop={true}
+      loop={products.length > 1} // Only enable loop if we have more than 1 slide
       autoplay={{
         delay: 3000,
         disableOnInteraction: false,

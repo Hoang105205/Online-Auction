@@ -73,7 +73,6 @@ const HomeContent = () => {
           { page: 1, limit: 5 },
           axiosPrivate
         );
-        console.log(data);
         setProducts(data.products);
       } catch (error) {
         console.error("Lỗi khi lấy products:", error);
