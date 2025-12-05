@@ -10,7 +10,7 @@ import ProductCardP from "../Product/ProductCardP";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import Category from "./Category";
 
-export default function CategoryProduct() {
+export default function CategoryProduct({ searchLandingPage = "" }) {
   const { breadcrumb } = useParams();
 
   const params = useParams();
@@ -27,7 +27,7 @@ export default function CategoryProduct() {
   const [totalItems, setTotalItems] = useState(0);
 
   // UI state: search + simple filters
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchLandingPage);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSidebar, setActiveSidebar] = useState("filter"); // "filter" | "category"
@@ -40,7 +40,6 @@ export default function CategoryProduct() {
   const slugPath = params["*"] || breadcrumb;
 
   useEffect(() => {
-    console.log(appliedSearch);
     const fetchCategoryAndProducts = async () => {
       try {
         setLoading(true);
@@ -50,7 +49,7 @@ export default function CategoryProduct() {
           // No category specified - show all products
           const crumbs = [
             { name: "Trang chủ", to: "/" },
-            { name: "Danh mục", to: "/category" },
+            { name: "Sản phẩm", to: "/category" },
           ];
           setBreadcrumbs(crumbs);
           setCategory(null);
@@ -96,7 +95,7 @@ export default function CategoryProduct() {
 
           const crumbs = [
             { name: "Trang chủ", to: "/" },
-            { name: "Danh mục", to: "/category" },
+            { name: "Sản phẩm", to: "/category" },
             { name: cat.categoryName, to: `/category/${cat.slug}` },
           ];
 
@@ -176,13 +175,6 @@ export default function CategoryProduct() {
     [currentPage, totalPages]
   );
 
-  const formatThousand = (val) => {
-    if (val === undefined || val === null || val === "") return "";
-    const digitsOnly = String(val).replace(/\D/g, "");
-    if (!digitsOnly) return "";
-    return Number(digitsOnly).toLocaleString("vi-VN");
-  };
-
   const [categories, setCategories] = useState([]);
   useEffect(() => {
     const fetchCategories = async () => {
@@ -223,7 +215,7 @@ export default function CategoryProduct() {
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full w-[320px] md:w-[260px] p-6 bg-white border-r z-50 transform transition-transform duration-300 
+        className={`fixed top-0 left-0 h-full w-[280px] md:w-[260px] p-6 bg-white border-r z-50 transform transition-transform duration-300 
         ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}>
@@ -250,15 +242,13 @@ export default function CategoryProduct() {
         </div>
         {activeSidebar === "filter" && (
           <div className="mt-3">
-            <div className="flex items-center justify-between mb-4">
+            <div className="md:hidden flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Bộ lọc</h3>
-              {sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="text-md font-semibold px-2 py-1">
-                  Đóng
-                </button>
-              )}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-md font-semibold px-2 py-1">
+                Đóng
+              </button>
             </div>
             <div className="mb-4">
               <label className="block text-sm mb-2 font-medium">
@@ -294,7 +284,15 @@ export default function CategoryProduct() {
         )}
         {activeSidebar === "category" && (
           <div className="mt-3">
-            <div className="w-full mx-auto p-2">
+            <div className="md:hidden flex items-center justify-between mb-5">
+              <h3 className="text-lg font-semibold">Danh mục</h3>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-md font-semibold px-2 py-1">
+                Đóng
+              </button>
+            </div>
+            <div className="w-full mx-auto my-2">
               {categories &&
                 categories.map((category) => (
                   <Category
@@ -315,12 +313,27 @@ export default function CategoryProduct() {
 
       <main className="flex-1 p-6">
         {/* Mobile: show filter toggle */}
-        <div className="mb-4 flex items-center justify-between md:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="px-3 py-2 font-semibold border rounded">
-            Bộ lọc
-          </button>
+        <div className="flex md:hidden">
+          <div className="mb-4 flex items-center justify-between md:hidden">
+            <button
+              onClick={() => {
+                setSidebarOpen(true);
+                setActiveSidebar("filter");
+              }}
+              className="px-3 py-2 font-semibold border rounded">
+              Bộ lọc
+            </button>
+          </div>
+          <div className="mb-4 ml-4 flex items-center justify-between md:hidden">
+            <button
+              onClick={() => {
+                setSidebarOpen(true);
+                setActiveSidebar("category");
+              }}
+              className="px-3 py-2 font-semibold border rounded">
+              Danh mục
+            </button>
+          </div>
         </div>
 
         <nav className="mb-4 flex items-center gap-3">
