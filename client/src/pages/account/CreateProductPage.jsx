@@ -8,7 +8,7 @@ import { Editor } from "@tinymce/tinymce-react";
 import { Button, Label, TextInput, Textarea, Checkbox } from "flowbite-react";
 import { HiArrowLeft, HiX, HiPlus, HiSearch, HiCalendar } from "react-icons/hi";
 import { addProduct } from "../../api/productService";
-import { getCategories } from "../../api/systemService";
+import { getCategories, getTimeConfigs } from "../../api/systemService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 // Zod validation schema
@@ -109,19 +109,22 @@ export default function CreateProductPage() {
   const axiosPrivate = useAxiosPrivate();
   const editorRef = useRef(null);
   const [categories, setCategories] = useState([]);
+  const [timeConfigs, setTimeConfigs] = useState(null);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesTimeConfig = async () => {
       try {
         const data = await getCategories(axiosPrivate); // gọi API client
         setCategories(data);
+        const data_config = await getTimeConfigs(axiosPrivate);
+        setTimeConfigs(data_config);
       } catch (error) {
         console.error("Lỗi khi lấy categories:", error);
       }
     };
 
-    fetchCategories();
-  }, []);
+    fetchCategoriesTimeConfig();
+  }, [axiosPrivate]);
 
   // call useForm hook
   const {
@@ -510,8 +513,10 @@ export default function CreateProductPage() {
               </span>
             </Label>
             <p className="text-xs text-gray-500 mt-1 pl-7">
-              Nếu có bất kỳ lượt đặt giá nào trong 5 phút cuối, hệ thống sẽ tự
-              động gia hạn thêm 5 phút để đảm bảo công bằng.
+              Nếu có bất kỳ lượt đặt giá nào trong{" "}
+              {timeConfigs?.autoExtendBefore || "NaN"} phút cuối, hệ thống sẽ tự
+              động gia hạn thêm {timeConfigs?.autoExtendDuration || "NaN"} phút
+              để đảm bảo công bằng.
             </p>
           </div>
 
