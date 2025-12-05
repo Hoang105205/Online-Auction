@@ -61,6 +61,13 @@ class SystemService {
     return sys;
   }
 
+  static async getTimeConfigs() {
+    let sys = await SystemSetting.findOne()
+      .select("autoExtendBefore autoExtendDuration latestProductTimeConfig")
+      .exec();
+    return sys;
+  }
+
   static async updateConfig(updateData) {
     const sys = await SystemSetting.findOneAndUpdate(
       {},

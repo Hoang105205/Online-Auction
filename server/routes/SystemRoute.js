@@ -16,6 +16,10 @@ router.get(
   verifyRoles(ROLES_LIST.Admin),
   SystemController.getSystemConfig
 );
+
+// Get time configs (public)
+router.get("/time-configs", SystemController.getTimeConfigs);
+
 router.put(
   "/",
   verifyJWT,
