@@ -151,9 +151,14 @@ export const addProduct = async (product, axiosInstance) => {
   }
 };
 
-export const getFirstProducts = async (limit = 5) => {
+export const getFirstProducts = async (
+  { page = 1, limit = 5, sortBy = "", search = "" },
+  axiosInstance
+) => {
   try {
-    const response = await axiosPublic.get(`/products?limit=${limit}`);
+    const response = await axiosInstance.get(
+      `/products?page=${page}&limit=${limit}&sortBy=${sortBy}&search=${search}`
+    );
     return response.data; // trả về danh sách products
   } catch (error) {
     throw error;
@@ -161,16 +166,21 @@ export const getFirstProducts = async (limit = 5) => {
 };
 
 export const getProductsByCategory = async (
-  category,
-  subcategory = null,
+  {
+    category,
+    subcategory = null,
+    page = 1,
+    limit = 8,
+    sortBy = "",
+    search = "",
+  },
   axiosInstance
 ) => {
   try {
-    console.log("API Call - getProductsByCategory:", category, subcategory);
     const response = await axiosInstance.get(
       subcategory
-        ? `/products/category/${category}/${subcategory}`
-        : `/products/category/${category}`
+        ? `/products/category/${category}/${subcategory}?limit=${limit}&page=${page}&sortBy=${sortBy}&search=${search}`
+        : `/products/category/${category}?limit=${limit}&page=${page}&sortBy=${sortBy}&search=${search}`
     );
     return response.data; // trả về danh sách products
   } catch (error) {

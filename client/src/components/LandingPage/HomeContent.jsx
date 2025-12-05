@@ -3,6 +3,7 @@ import ProductCarousel from "./ProductCarousel";
 import ProductCardP from "../Product/ProductCardP";
 import { useState, useEffect } from "react";
 import { getFirstProducts } from "../../api/productService";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 // const products = [
 //   {
 //     id: 1,
@@ -63,12 +64,17 @@ import { getFirstProducts } from "../../api/productService";
 
 const HomeContent = () => {
   const [products, setProducts] = useState([]);
+  const axiosPrivate = useAxiosPrivate();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await getFirstProducts(5); // gọi API client
-        setProducts(data); // gán dữ liệu vào state
+        const data = await getFirstProducts(
+          { page: 1, limit: 5 },
+          axiosPrivate
+        );
+        console.log(data);
+        setProducts(data.products);
       } catch (error) {
         console.error("Lỗi khi lấy products:", error);
       }

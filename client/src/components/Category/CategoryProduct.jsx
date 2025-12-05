@@ -1,9 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
+import { getCategoryBySlug, getCategories } from "../../api/systemService";
+import {
+  getProductsByCategory,
+  getFirstProducts,
+} from "../../api/productService";
+
 import ProductCardP from "../Product/ProductCardP";
-import { getCategoryBySlug } from "../../api/systemService";
-import { getProductsByCategory } from "../../api/productService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import Category from "./Category";
 
 export default function CategoryProduct() {
   const { breadcrumb } = useParams();
@@ -17,74 +22,123 @@ export default function CategoryProduct() {
   const [error, setError] = useState(null);
   const axiosPrivate = useAxiosPrivate();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // UI state: search + simple filters
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSidebar, setActiveSidebar] = useState("filter"); // "filter" | "category"
+  const [sortBy, setSortBy] = useState(""); // "" | "endTime" | "priceAsc"
+  // Applied filters (only used when user clicks "Áp dụng")
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [appliedSortBy, setAppliedSortBy] = useState("");
+
   // params['*'] chứa toàn bộ phần sau /category/
   const slugPath = params["*"] || breadcrumb;
 
   useEffect(() => {
+    console.log(appliedSearch);
     const fetchCategoryAndProducts = async () => {
-      if (!slugPath) return;
-
       try {
         setLoading(true);
         setError(null);
 
-        const parts = slugPath.split("/");
-        const mainSlug = parts[0];
-        if (!mainSlug) return;
+        if (!slugPath) {
+          // No category specified - show all products
+          const crumbs = [
+            { name: "Trang chủ", to: "/" },
+            { name: "Danh mục", to: "/category" },
+          ];
+          setBreadcrumbs(crumbs);
+          setCategory(null);
+          setSubIndex(-1);
 
-        const cat = await getCategoryBySlug(axiosPrivate, mainSlug);
-        setCategory(cat);
+          // Fetch all products with no limit
+          const result = await getFirstProducts(
+            {
+              page: currentPage,
+              limit: 8,
+              sortBy: appliedSortBy,
+              search: appliedSearch,
+            },
+            axiosPrivate
+          );
 
-        const subSlug = parts[1];
-        let index = -1;
-        if (subSlug && cat?.subCategories) {
-          index = cat.subCategories.findIndex((sc) => sc.slug === subSlug);
-          setSubIndex(index);
+          // Ensure products is always an array
+          if (Array.isArray(result)) {
+            setProducts(result);
+          } else if (result && Array.isArray(result.data)) {
+            setProducts(result.data);
+          } else if (result && Array.isArray(result.products)) {
+            setProducts(result.products);
+          } else {
+            setProducts([]);
+          }
+          setTotalPages(result.pagination?.totalPages || 0);
+          setTotalItems(result.pagination?.totalItems || products.length);
         } else {
-          setSubIndex(-1); // Khong co subcategory
-        }
+          const parts = slugPath.split("/");
+          const mainSlug = parts[0];
+          const cat = await getCategoryBySlug(axiosPrivate, mainSlug);
+          setCategory(cat);
 
-        const crumbs = [
-          { name: "Trang chủ", to: "/" },
-          { name: cat.categoryName, to: `/category/${cat.slug}` },
-        ];
+          const subSlug = parts[1];
+          let index = -1;
+          if (subSlug && cat?.subCategories) {
+            index = cat.subCategories.findIndex((sc) => sc.slug === subSlug);
+            setSubIndex(index);
+          } else {
+            setSubIndex(-1); // Khong co subcategory
+          }
 
-        if (index >= 0) {
-          const sub = cat.subCategories[index];
-          crumbs.push({
-            name: sub.subCategoryName,
-            to: `/category/${cat.slug}/${sub.slug}`,
-          });
-        }
+          const crumbs = [
+            { name: "Trang chủ", to: "/" },
+            { name: "Danh mục", to: "/category" },
+            { name: cat.categoryName, to: `/category/${cat.slug}` },
+          ];
 
-        setBreadcrumbs(crumbs);
+          if (index >= 0) {
+            const sub = cat.subCategories[index];
+            crumbs.push({
+              name: sub.subCategoryName,
+              to: `/category/${cat.slug}/${sub.slug}`,
+            });
+          }
 
-        // Fetch products by category or subcategory
-        const categoryName = cat.categoryName;
-        const subcategoryName =
-          index >= 0 ? cat.subCategories[index].subCategoryName : null;
+          setBreadcrumbs(crumbs);
 
-        console.log(
-          "Fetching products for category:",
-          categoryName,
-          "subcategory:",
-          subcategoryName
-        );
+          // Fetch products by category or subcategory
+          const categoryName = cat.categoryName;
+          const subcategoryName =
+            index >= 0 ? cat.subCategories[index].subCategoryName : null;
 
-        const productsData = await getProductsByCategory(
-          categoryName,
-          subcategoryName,
-          axiosPrivate
-        );
-        // Ensure products is always an array
-        if (Array.isArray(productsData)) {
-          setProducts(productsData);
-        } else if (productsData && Array.isArray(productsData.data)) {
-          setProducts(productsData.data);
-        } else if (productsData && Array.isArray(productsData.products)) {
-          setProducts(productsData.products);
-        } else {
-          setProducts([]);
+          const result = await getProductsByCategory(
+            {
+              category: categoryName,
+              subcategory: subcategoryName,
+              page: currentPage,
+              limit: 8,
+              sortBy: appliedSortBy,
+              search: appliedSearch,
+            },
+            axiosPrivate
+          );
+
+          // Ensure products is always an array
+          if (Array.isArray(result)) {
+            setProducts(result);
+          } else if (result && Array.isArray(result.data)) {
+            setProducts(result.data);
+          } else if (result && Array.isArray(result.products)) {
+            setProducts(result.products);
+          } else {
+            setProducts([]);
+          }
+          setTotalPages(result.pagination?.totalPages || 0);
+          setTotalItems(result.pagination?.totalItems || products.length);
         }
       } catch (err) {
         console.error("Error fetching category or products:", err);
@@ -96,56 +150,66 @@ export default function CategoryProduct() {
     };
 
     fetchCategoryAndProducts();
-  }, [slugPath]);
+  }, [axiosPrivate, slugPath, currentPage, appliedSortBy, appliedSearch]);
 
-  // UI state: search + simple filters
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [hasBuyNow, setHasBuyNow] = useState(false);
-  // Applied filters (only used when user clicks "Áp dụng")
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [appliedMin, setAppliedMin] = useState("");
-  const [appliedMax, setAppliedMax] = useState("");
-  const [appliedHasBuyNow, setAppliedHasBuyNow] = useState(false);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  // Debounce search input (300ms)
+  // Build pagination list with ellipsis when pages are many
+  const buildPageList = (current, total) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    const left = Math.max(2, current - 1);
+    const right = Math.min(total - 1, current + 1);
+    if (left > 2) pages.push("...");
+    for (let p = left; p <= right; p++) pages.push(p);
+    if (right < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  };
+
+  const pageList = useMemo(
+    () => buildPageList(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
+
+  const formatThousand = (val) => {
+    if (val === undefined || val === null || val === "") return "";
+    const digitsOnly = String(val).replace(/\D/g, "");
+    if (!digitsOnly) return "";
+    return Number(digitsOnly).toLocaleString("vi-VN");
+  };
+
+  const [categories, setCategories] = useState([]);
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(id);
-  }, [search]);
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories(axiosPrivate);
+        setCategories(data);
+      } catch (error) {
+        console.error("Lỗi khi lấy categories:", error);
+      }
+    };
 
-  // Products are now fetched from API in useEffect
+    fetchCategories();
+  }, []);
 
-  // Apply search and simple filters to products (client-side) — memoized
-  const filteredProducts = useMemo(() => {
-    const s = (appliedSearch || "").toLowerCase();
-    const min = appliedMin === "" ? null : Number(appliedMin);
-    const max = appliedMax === "" ? null : Number(appliedMax);
-    return products.filter((p) => {
-      const productName = p.detail?.name || p.name || "";
-      const matchesSearch = !s || productName.toLowerCase().includes(s);
-      const price = Number(p.auction?.currentPrice || p.currentPrice || 0);
-      const minOk = min === null || price >= min;
-      const maxOk = max === null || price <= max;
-      const buyNowPrice = p.auction?.buyNowPrice || p.buyNowPrice;
-      const buyNowOk = !appliedHasBuyNow || buyNowPrice != null;
-      return matchesSearch && minOk && maxOk && buyNowOk;
-    });
-  }, [products, appliedSearch, appliedMin, appliedMax, appliedHasBuyNow]);
+  // Products are now fetched from API with server-side filtering and sorting
+  const filteredProducts = products;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [slugPath, appliedSortBy, appliedSearch]);
 
   function resetFilters() {
     setSearch("");
     setDebouncedSearch("");
-    setMinPrice("");
-    setMaxPrice("");
-    setHasBuyNow(false);
+    setSortBy("");
     setAppliedSearch("");
-    setAppliedMin("");
-    setAppliedMax("");
-    setAppliedHasBuyNow(false);
+    setAppliedSortBy("");
   }
 
   return (
@@ -163,64 +227,90 @@ export default function CategoryProduct() {
         ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Bộ lọc</h3>
-          {sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="text-md font-semibold px-2 py-1">
-              Đóng
-            </button>
-          )}
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1">Giá tối thiểu</label>
-          <input
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            placeholder="VNĐ"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1">Giá tối đa</label>
-          <input
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            placeholder="VNĐ"
-          />
-        </div>
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            id="hasBuyNow"
-            type="checkbox"
-            checked={hasBuyNow}
-            onChange={(e) => setHasBuyNow(e.target.checked)}
-          />
-          <label htmlFor="hasBuyNow" className="text-sm">
-            Chỉ hiển thị có "Mua ngay"
-          </label>
-        </div>
-        <div className="flex gap-2">
+        {/* Desktop: Toggle buttons between Filter and Category */}
+        <div className="hidden md:flex md:flex-nowrap gap-2 pb-4 border-b font-medium">
           <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-gray-200 rounded-md">
-            Khôi phục
+            onClick={() => setActiveSidebar("filter")}
+            className={`flex-1 px-3 py-2 rounded transition-colors whitespace-nowrap ${
+              activeSidebar === "filter"
+                ? "bg-[#19528F] text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}>
+            Bộ lọc
           </button>
           <button
-            onClick={() => {
-              // Apply current pending inputs (use debouncedSearch when available)
-              setAppliedSearch(debouncedSearch || search);
-              setAppliedMin(minPrice);
-              setAppliedMax(maxPrice);
-              setAppliedHasBuyNow(hasBuyNow);
-              setSidebarOpen(false);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md">
-            Áp dụng
+            onClick={() => setActiveSidebar("category")}
+            className={`flex-1 px-3 py-2 rounded transition-colors whitespace-nowrap ${
+              activeSidebar === "category"
+                ? "bg-[#19528F] text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}>
+            Danh mục
           </button>
         </div>
+        {activeSidebar === "filter" && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Bộ lọc</h3>
+              {sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-md font-semibold px-2 py-1">
+                  Đóng
+                </button>
+              )}
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-2 font-medium">
+                Sắp xếp theo
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 border rounded">
+                <option value="">Mặc định</option>
+                <option value="endTime">Thời gian kết thúc giảm dần</option>
+                <option value="priceAsc">Giá tăng dần</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 bg-gray-200 rounded-md">
+                Khôi phục
+              </button>
+              <button
+                onClick={() => {
+                  // Apply current pending inputs (use debouncedSearch when available)
+                  setAppliedSearch(debouncedSearch || search);
+                  setAppliedSortBy(sortBy);
+                  setSidebarOpen(false);
+                }}
+                className="px-4 py-2 bg-[#19528F] text-white rounded-md">
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        )}
+        {activeSidebar === "category" && (
+          <div className="mt-3">
+            <div className="w-full mx-auto p-2">
+              {categories &&
+                categories.map((category) => (
+                  <Category
+                    key={category.categoryId}
+                    category={category}
+                    selectedCategory={
+                      breadcrumbs.length >= 3 ? breadcrumbs[2].name : null
+                    }
+                    selectedsubCategory={
+                      breadcrumbs.length >= 4 ? breadcrumbs[3].name : null
+                    }
+                  />
+                ))}
+            </div>
+          </div>
+        )}
       </aside>
 
       <main className="flex-1 p-6">
@@ -314,14 +404,129 @@ export default function CategoryProduct() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
-              <div
-                key={product._id || product.id}
-                className="max-w-[380px] mx-auto">
-                <ProductCardP product={product} />
+          <div>
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product._id || product.id}
+                  className="max-w-[380px] mx-auto">
+                  <ProductCardP product={product} />
+                </div>
+              ))}
+            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="text-sm text-gray-600 hidden md:block">
+                    Trang {Math.min(currentPage, totalPages)} / {totalPages}
+                  </div>
+
+                  {/* Desktop pagination */}
+                  <div className="hidden md:flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePageChange(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage <= 1}
+                      className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage <= 1
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}>
+                      Trước
+                    </button>
+                    {pageList.map((p, idx) =>
+                      p === "..." ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="px-3 py-2 text-sm text-gray-500">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => handlePageChange(p)}
+                          className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                            currentPage === p
+                              ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                          }`}>
+                          {p}
+                        </button>
+                      )
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePageChange(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage >= totalPages}
+                      className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage >= totalPages
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}>
+                      Sau
+                    </button>
+                  </div>
+
+                  {/* Mobile pagination */}
+                  <div className="flex md:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Trang trước"
+                      onClick={() =>
+                        handlePageChange(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage <= 1}
+                      className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage <= 1
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}>
+                      Trước
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="my-products-page-select"
+                        className="sr-only">
+                        Chọn trang
+                      </label>
+                      <select
+                        id="my-products-page-select"
+                        value={currentPage}
+                        onChange={(e) =>
+                          handlePageChange(Number(e.target.value))
+                        }
+                        className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white">
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            Trang {i + 1}/{totalPages}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Trang sau"
+                      onClick={() =>
+                        handlePageChange(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage >= totalPages}
+                      className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                        currentPage >= totalPages
+                          ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}>
+                      Sau
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </main>
