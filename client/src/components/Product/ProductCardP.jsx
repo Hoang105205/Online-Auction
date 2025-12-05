@@ -7,13 +7,46 @@ import {
 } from "react-icons/hi";
 import { Link } from "react-router-dom";
 import { Button } from "flowbite-react";
+import { useState, useEffect } from "react";
 import ProductImage from "../ProductImage";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { addToWatchList } from "../../api/userService";
+import { getTimeConfigs } from "../../api/systemService";
 import useAuth from "../../hooks/useAuth";
 import { toast } from "react-toastify";
 
 const ProductCardP = ({ product, isWon = false }) => {
+  const axiosPrivate = useAxiosPrivate();
+  const { auth } = useAuth();
+  const [timeConfigs, setTimeConfigs] = useState(null);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+
+  // Fetch time configs
+  useEffect(() => {
+    const fetchTimeConfigs = async () => {
+      try {
+        const data = await getTimeConfigs(axiosPrivate);
+        setTimeConfigs(data);
+      } catch (error) {
+        console.error("Error fetching time configs:", error);
+      }
+    };
+    fetchTimeConfigs();
+  }, [axiosPrivate]);
+
+  // Check if product is new based on latestProductTimeConfig
+  useEffect(() => {
+    if (timeConfigs && product.postedDate) {
+      const postedTime = new Date(product.postedDate).getTime();
+      const currentTime = new Date().getTime();
+      const diffInMinutes = (currentTime - postedTime) / (1000 * 60);
+
+      setIsNewProduct(
+        diffInMinutes <= (timeConfigs.latestProductTimeConfig || 0)
+      );
+    }
+  }, [timeConfigs, product.postedDate]);
+
   // Calculate time remaining
   const getTimeRemaining = (endDate) => {
     const now = new Date();
@@ -63,9 +96,6 @@ const ProductCardP = ({ product, isWon = false }) => {
   const timeRemaining = getTimeRemaining(product.endDate);
   const isEnded = timeRemaining === "Đã kết thúc";
 
-  const axiosPrivate = useAxiosPrivate();
-  const { auth } = useAuth();
-
   const handleAddToWatchlist = async (productId) => {
     if (!auth?.accessToken) {
       toast.error("Vui lòng đăng nhập để thêm vào danh sách theo dõi.");
@@ -74,11 +104,10 @@ const ProductCardP = ({ product, isWon = false }) => {
     try {
       const result = await addToWatchList(axiosPrivate, productId);
       toast.success(result.message);
-    }
-    catch (error) {
+    } catch (error) {
       toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
     }
-  }
+  };
 
   return (
     <div>
@@ -89,9 +118,19 @@ const ProductCardP = ({ product, isWon = false }) => {
         <HiHeart className="w-6 h-6" />
       </button>
       <Link to={`/details/${product.id}`}>
-        <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
+        <div
+          className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group ${
+            isNewProduct
+              ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-200/50 animate-pulse-border"
+              : ""
+          }`}>
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+            {isNewProduct && (
+              <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-base font-bold shadow-lg z-10 animate-bounce">
+                🔥 MỚI
+              </div>
+            )}
             <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
               <ProductImage url={product.image} />
             </div>
@@ -210,3 +249,9 @@ const ProductCardP = ({ product, isWon = false }) => {
 };
 
 export default ProductCardP;
+
+// Add this to your global CSS or Tailwind config
+// @keyframes pulse-border {
+//   0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+//   50% { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0); }
+// }
