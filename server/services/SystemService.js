@@ -567,6 +567,15 @@ class SystemService {
     await Product.deleteOne({ _id: productId }).exec();
     return prod;
   }
+
+  static async getCategoryBySlug(slug) {
+    const sys = await SystemSetting.findOne(
+      { "categories.slug": slug },
+      { "categories.$": 1 }
+    ).exec();
+
+    return sys ? sys.categories[0] : null;
+  }
 }
 
 module.exports = SystemService;
