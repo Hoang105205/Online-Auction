@@ -148,25 +148,6 @@ class ProductController {
     }
   }
 
-  // GET /products/qa/:id - Get product Q&A by ID
-  static async getProductQA(req, res) {
-    try {
-      const { id } = req.params;
-
-      if (!id) {
-        return res.status(400).json({ error: "Product ID is required" });
-      }
-
-      const qa = await ProductService.getProductQA(id);
-
-      return res.status(200).json(qa);
-    } catch (error) {
-      return res
-        .status(500)
-        .json({ error: error.message || "Error getting product Q&A" });
-    }
-  }
-
   // GET /products/public-qa/:id - Get product public Q&A by ID
   static async getProductPublicQA(req, res) {
     try {
@@ -234,6 +215,37 @@ class ProductController {
       return res
         .status(500)
         .json({ error: error.message || "Error adding question" });
+    }
+  }
+
+  // POST /products/private-chat/:id - Add a new private chat message by ID
+  static async addPrivateChat(req, res) {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+      const sendId = req.user;
+
+      if (!id || !message) {
+        return res
+          .status(400)
+          .json({ error: "Product ID, message, and type are required" });
+      }
+
+      const chat = await ProductService.addPrivateChat(
+        id,
+        sendId,
+        message,
+        "private"
+      );
+
+      return res.status(201).json({
+        chat,
+        message: "Private chat message added successfully",
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: error.message || "Error adding private chat message" });
     }
   }
 

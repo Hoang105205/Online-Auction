@@ -4,6 +4,7 @@ import { Star, User, Clock } from "lucide-react";
 import ProductDetailsInformation from "./ProductDetailsInformation";
 import ProductDetailsAuction from "./ProductDetailsAuction";
 import ProductDetailsANA from "./ProductDetailsANA";
+import PrivateChat from "./PrivateChat";
 import ProductImage from "../ProductImage";
 
 import ProductCardP from "../Product/ProductCardP";
@@ -17,9 +18,7 @@ import {
   getProductAuction,
   getProductDescription,
   getAuctionHistory,
-  getProductQA,
   getProductPublicQA,
-  getProductPrivateQA,
 } from "../../api/productService";
 
 const ProductDetails = () => {
@@ -106,7 +105,6 @@ const ProductDetails = () => {
   const [productAuctionData, setProductAuctionData] = useState(null);
   const [productDescData, setProductDescData] = useState(null);
   const [productAuctHisData, setProductAuctHisData] = useState(null);
-  const [productQAData, setProductQAData] = useState(null);
   const [productPublicQAData, setProductPublicQAData] = useState(null);
 
   const temp = ["1", "2", "3", "4", "5"];
@@ -128,13 +126,11 @@ const ProductDetails = () => {
         const basicBata = await getProductBasicDetails(productId);
         const auctionData = await getProductAuction(productId);
         const descData = await getProductDescription(productId);
-        const qaData = await getProductQA(productId);
         const publicQAData = await getProductPublicQA(productId);
 
         setProductInfoData(basicBata);
         setProductAuctionData(auctionData);
         setProductDescData(descData);
-        setProductQAData(qaData);
         setProductPublicQAData(publicQAData);
       } catch (error) {
         setError(error.message);
@@ -236,290 +232,311 @@ const ProductDetails = () => {
         <div className="text-center py-20 text-red-500">Error: {error}</div>
       )}
       {!loading && !error && productInfoData && productAuctionData && (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-            <span>Home</span>
-            <span>›</span>
-            <span>Shop</span>
-            <span>›</span>
-            <span>Men</span>
-            <span>›</span>
-            <span className="text-black font-medium">T-shirts</span>
-          </nav>
+        <>
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-2 text-sm text-gray-600 mb-8">
+              <span>Home</span>
+              <span>›</span>
+              <span>Shop</span>
+              <span>›</span>
+              <span>Men</span>
+              <span>›</span>
+              <span className="text-black font-medium">T-shirts</span>
+            </nav>
 
-          <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4 pb-4">
-            {productInfoData.detail.name}
-          </h1>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4 pb-4">
+              {productInfoData.detail.name}
+            </h1>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Left Side - Images */}
-            <div className="flex flex-col lg:flex-row gap-4 order-1 items-center">
-              {/* Thumbnail Images */}
-              <div
-                ref={thumbsRef}
-                className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1 max-h-28 lg:max-h-[400px]"
-                style={{ minWidth: "auto" }}
-              >
-                {images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`w-20 h-20 lg:w-24 lg:h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 ${
-                      selectedImage === idx ? "border-black" : "border-gray-200"
-                    }`}
-                  >
-                    <ProductImage url={img} />
-                  </div>
-                ))}
-              </div>
-
-              {/* Main Image */}
-              <div
-                ref={mainImageRef}
-                className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center order-1 lg:order-2"
-                style={{ aspectRatio: "1 / 1", minHeight: 240 }}
-              >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+              {/* Left Side - Images */}
+              <div className="flex flex-col lg:flex-row gap-4 order-1 items-center">
+                {/* Thumbnail Images */}
                 <div
-                  className="product-main-image w-full h-full object-contain cursor-zoom-in"
-                  onClick={() => setModalOpen(true)}
+                  ref={thumbsRef}
+                  className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1 max-h-28 lg:max-h-[400px]"
+                  style={{ minWidth: "auto" }}
                 >
-                  <ProductImage url={images[selectedImage]} />
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side - Product Info */}
-            <div className="order-2">
-              {/* Seller Info */}
-              <div className="flex items-center gap-2 mb-3 lg:mb-4">
-                <span className="text-sm lg:text-base text-gray-600">
-                  Seller: @{productInfoData.detail.sellerId.fullName}
-                </span>
-                <div className="flex items-center gap-1 ml-4">
-                  <span className="font-semibold text-sm lg:text-base">
-                    {productInfoData.detail.sellerId.feedBackAsSeller.point}
-                  </span>
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                </div>
-              </div>
-
-              {/* Date Range */}
-              <div className="text-sm lg:text-base text-gray-700 mb-3 lg:mb-4">
-                <div className="space-y-1 sm:space-y-0">
-                  <span className="block sm:inline">
-                    Bắt đầu:{" "}
-                    {new Date(
-                      productAuctionData.auction.startTime
-                    ).toLocaleDateString("vi-VN")}
-                  </span>
-                  <span className="block sm:inline sm:ml-2">
-                    - Kết thúc:{" "}
-                    {new Date(
-                      productAuctionData.auction.endTime
-                    ).toLocaleDateString("vi-VN")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
-                  <span className="text-sm lg:text-base text-red-400 font-semibold">
-                    {productAuctionData.auction.bidders} người đấu giá
-                  </span>
-                </div>
-              </div>
-
-              {/* Price Info */}
-              <div className="bg-gray-50 p-3 lg:p-4 rounded-lg mb-4 lg:mb-6">
-                {/* Highest Bid */}
-                <div className="mb-4 pb-4">
-                  <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <div className="text-sm lg:text-base text-gray-600">
-                      Ra giá cao nhất:
+                  {images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`w-20 h-20 lg:w-24 lg:h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 ${
+                        selectedImage === idx
+                          ? "border-black"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <ProductImage url={img} />
                     </div>
-                    <div className="text-2xl lg:text-3xl font-bold text-red-500">
-                      {formatPrice(productAuctionData.auction.currentPrice)}đ
+                  ))}
+                </div>
+
+                {/* Main Image */}
+                <div
+                  ref={mainImageRef}
+                  className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center order-1 lg:order-2"
+                  style={{ aspectRatio: "1 / 1", minHeight: 240 }}
+                >
+                  <div
+                    className="product-main-image w-full h-full object-contain cursor-zoom-in"
+                    onClick={() => setModalOpen(true)}
+                  >
+                    <ProductImage url={images[selectedImage]} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side - Product Info */}
+              <div className="order-2">
+                {/* Seller Info */}
+                <div className="flex items-center gap-2 mb-3 lg:mb-4">
+                  <span className="text-sm lg:text-base text-gray-600">
+                    Seller: @{productInfoData.detail.sellerId.fullName}
+                  </span>
+                  <div className="flex items-center gap-1 ml-4">
+                    <span className="font-semibold text-sm lg:text-base">
+                      {productInfoData.detail.sellerId.feedBackAsSeller.point}
+                    </span>
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  </div>
+                </div>
+
+                {/* Date Range */}
+                <div className="text-sm lg:text-base text-gray-700 mb-3 lg:mb-4">
+                  <div className="space-y-1 sm:space-y-0">
+                    <span className="block sm:inline">
+                      Bắt đầu:{" "}
+                      {new Date(
+                        productAuctionData.auction.startTime
+                      ).toLocaleDateString("vi-VN")}
+                    </span>
+                    <span className="block sm:inline sm:ml-2">
+                      - Kết thúc:{" "}
+                      {new Date(
+                        productAuctionData.auction.endTime
+                      ).toLocaleDateString("vi-VN")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                    <span className="text-sm lg:text-base text-red-400 font-semibold">
+                      {productAuctionData.auction.bidders} người đấu giá
+                    </span>
+                  </div>
+                </div>
+
+                {/* Price Info */}
+                <div className="bg-gray-50 p-3 lg:p-4 rounded-lg mb-4 lg:mb-6">
+                  {/* Highest Bid */}
+                  <div className="mb-4 pb-4">
+                    <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:grid sm:grid-cols-3 sm:gap-4">
+                      <div className="text-sm lg:text-base text-gray-600">
+                        Ra giá cao nhất:
+                      </div>
+                      <div className="text-2xl lg:text-3xl font-bold text-red-500">
+                        {formatPrice(productAuctionData.auction.currentPrice)}đ
+                      </div>
+                      {productAuctionData.auction.highestBidderId && (
+                        <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                          <span className="text-xs lg:text-sm text-gray-600">
+                            bởi: @
+                            {maskBidderName(
+                              productAuctionData.auction.highestBidderId
+                                .fullName
+                            )}
+                          </span>
+                          <div className="flex items-center gap-0.5">
+                            <span className="text-xs lg:text-sm font-semibold">
+                              {
+                                productAuctionData.auction.highestBidderId
+                                  .feedBackAsBidder.point
+                              }
+                            </span>
+                            <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
+                          </div>
+                        </div>
+                      )}
                     </div>
+                    {/* Mobile: Bidder info on separate row */}
                     {productAuctionData.auction.highestBidderId && (
-                      <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="text-xs lg:text-sm text-gray-600">
+                      <div className="flex items-center gap-2 mt-2 sm:hidden">
+                        <span className="text-xs text-gray-600">
                           bởi: @
-                          {maskBidderName(
+                          {formatPrice(
                             productAuctionData.auction.highestBidderId.fullName
                           )}
                         </span>
                         <div className="flex items-center gap-0.5">
-                          <span className="text-xs lg:text-sm font-semibold">
+                          <span className="text-xs font-semibold">
                             {
                               productAuctionData.auction.highestBidderId
                                 .feedBackAsBidder.point
                             }
                           </span>
-                          <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                         </div>
                       </div>
                     )}
                   </div>
-                  {/* Mobile: Bidder info on separate row */}
-                  {productAuctionData.auction.highestBidderId && (
-                    <div className="flex items-center gap-2 mt-2 sm:hidden">
-                      <span className="text-xs text-gray-600">
-                        bởi: @
-                        {formatPrice(
-                          productAuctionData.auction.highestBidderId.fullName
-                        )}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        <span className="text-xs font-semibold">
-                          {
-                            productAuctionData.auction.highestBidderId
-                              .feedBackAsBidder.point
-                          }
-                        </span>
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+
+                  {/* Buy Now */}
+                  {productAuctionData.auction.buyNowPrice && (
+                    <div className="mb-4 pb-4">
+                      <div className="flex items-center gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <div className="text-sm lg:text-base text-gray-600">
+                          Mua ngay với giá:
+                        </div>
+                        <div className="text-2xl lg:text-3xl font-bold text-green-500">
+                          {formatPrice(productAuctionData.auction.buyNowPrice)}đ
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* Buy Now */}
-                {productAuctionData.auction.buyNowPrice && (
-                  <div className="mb-4 pb-4">
-                    <div className="flex items-center gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
-                      <div className="text-sm lg:text-base text-gray-600">
-                        Mua ngay với giá:
-                      </div>
-                      <div className="text-2xl lg:text-3xl font-bold text-green-500">
-                        {formatPrice(productAuctionData.auction.buyNowPrice)}đ
-                      </div>
-                    </div>
+                  {/* Countdown */}
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                    <span className="text-sm lg:text-base text-red-500 font-semibold">
+                      {timeRemaining}
+                    </span>
                   </div>
-                )}
-
-                {/* Countdown */}
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
-                  <span className="text-sm lg:text-base text-red-500 font-semibold">
-                    {timeRemaining}
-                  </span>
                 </div>
-              </div>
 
-              {/* Bid Button */}
-              <button
-                className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
-                onClick={() => setActiveTab("auction")}
-              >
-                Đấu Giá Ngay!
-              </button>
-            </div>
-          </div>
-
-          {/* Below Side */}
-          <div>
-            {/* Tabs */}
-            <div className="mt-12">
-              <div className="grid grid-cols-3 gap-8 border-b">
+                {/* Bid Button */}
                 <button
-                  onClick={() => setActiveTab("details")}
-                  className={`py-4 px-2 border-b-2 font-medium transition-colors ${
-                    activeTab === "details"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-600 hover:text-black"
-                  }`}
-                >
-                  Chi Tiết Sản Phẩm
-                </button>
-                <button
+                  className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
                   onClick={() => setActiveTab("auction")}
-                  className={`py-4 px-2 border-b-2 font-medium transition-colors ${
-                    activeTab === "auction"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-600 hover:text-black"
-                  }`}
                 >
-                  Bắt đầu đấu giá
-                </button>
-                <button
-                  onClick={() => setActiveTab("qa")}
-                  className={`py-4 px-2 border-b-2 font-medium transition-colors ${
-                    activeTab === "qa"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-600 hover:text-black"
-                  }`}
-                >
-                  Hỏi Đáp
+                  Đấu Giá Ngay!
                 </button>
               </div>
-
-              {/* Tab Contents */}
-              {activeTab === "details" && (
-                <ProductDetailsInformation
-                  productId={productId}
-                  description={productDescData}
-                  isOwner={isOwner}
-                  onSave={handleSaveDescription}
-                />
-              )}
-              {activeTab === "auction" && (
-                <ProductDetailsAuction
-                  productId={productId}
-                  auctionData={productAuctionData}
-                  auctionHistoryData={productAuctHisData}
-                  authUser={auth}
-                />
-              )}
-              {activeTab === "qa" && (
-                <ProductDetailsANA
-                  productId={productId}
-                  qaData={productPublicQAData}
-                  sellerId={productInfoData.detail.sellerId}
-                  authUser={auth}
-                />
-              )}
             </div>
-          </div>
 
-          {/* Related Products */}
-          <div className="mt-12 items-center justify-center flex flex-wrap">
-            <h1 className="text-2xl font-bold mr-6 text-center">
-              Sản Phẩm Liên Quan
-            </h1>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
-              {products.map((product, i) => (
-                <ProductCardP key={i} product={product} />
-              ))}
+            {/* Below Side */}
+            <div>
+              {/* Tabs */}
+              <div className="mt-12">
+                <div className="grid grid-cols-3 gap-8 border-b">
+                  <button
+                    onClick={() => setActiveTab("details")}
+                    className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                      activeTab === "details"
+                        ? "border-black text-black"
+                        : "border-transparent text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    Chi Tiết Sản Phẩm
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("auction")}
+                    className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                      activeTab === "auction"
+                        ? "border-black text-black"
+                        : "border-transparent text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    Bắt đầu đấu giá
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("qa")}
+                    className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                      activeTab === "qa"
+                        ? "border-black text-black"
+                        : "border-transparent text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    Hỏi Đáp
+                  </button>
+                </div>
+
+                {/* Tab Contents */}
+                {activeTab === "details" && (
+                  <ProductDetailsInformation
+                    productId={productId}
+                    description={productDescData}
+                    isOwner={isOwner}
+                    onSave={handleSaveDescription}
+                  />
+                )}
+                {activeTab === "auction" && (
+                  <ProductDetailsAuction
+                    productId={productId}
+                    auctionData={productAuctionData}
+                    auctionHistoryData={productAuctHisData}
+                    authUser={auth}
+                  />
+                )}
+                {activeTab === "qa" && (
+                  <ProductDetailsANA
+                    productId={productId}
+                    qaData={productPublicQAData}
+                    sellerId={productInfoData.detail.sellerId}
+                    authUser={auth}
+                  />
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Modal / Lightbox */}
-          {modalOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-              onClick={() => setModalOpen(false)}
-            >
-              <button
-                className="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2"
+            {/* Related Products */}
+            <div className="mt-12 items-center justify-center flex flex-wrap">
+              <h1 className="text-2xl font-bold mr-6 text-center">
+                Sản Phẩm Liên Quan
+              </h1>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
+                {products.map((product, i) => (
+                  <ProductCardP key={i} product={product} />
+                ))}
+              </div>
+            </div>
+
+            {/* Modal / Lightbox */}
+            {modalOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
                 onClick={() => setModalOpen(false)}
               >
-                ✕
-              </button>
-              <div
-                className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ProductImage
-                  url={images[selectedImage]}
-                  defaultWidth="75%"
-                  defaultHeight="75%"
-                />
+                <button
+                  className="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2"
+                  onClick={() => setModalOpen(false)}
+                >
+                  ✕
+                </button>
+                <div
+                  className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ProductImage
+                    url={images[selectedImage]}
+                    defaultWidth="75%"
+                    defaultHeight="75%"
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+
+          {/* Private Chat - Only show when auction ended and user is seller or highest bidder */}
+          {productAuctionData &&
+            productAuctionData.auction.status !== "active" &&
+            (isOwner ||
+              currentUserId ===
+                productAuctionData.auction.highestBidderId?._id) && (
+              <PrivateChat
+                productId={productId}
+                authUser={auth}
+                sellerId={sellerId}
+                highestBidderId={
+                  productAuctionData.auction.highestBidderId?._id
+                }
+              />
+            )}
+        </>
       )}
     </>
   );
