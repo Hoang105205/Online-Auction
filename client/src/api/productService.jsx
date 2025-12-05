@@ -44,16 +44,6 @@ export const getAuctionHistory = async (productId, axiosInstance) => {
   }
 };
 
-// Ham xu ly logic lay q&a cua san pham
-export const getProductQA = async (productId) => {
-  try {
-    const response = await axiosPublic.get(`/products/qa/${productId}`);
-    return response.data; // Tra ve danh sach Q&A
-  } catch (error) {
-    throw error;
-  }
-};
-
 // Ham xu ly logic lay public q&a cua san pham
 export const getProductPublicQA = async (productId) => {
   try {
@@ -129,6 +119,27 @@ export const addReply = async (productId, chatId, message, axiosInstance) => {
       { message }
     );
     return response.data; // Tra ve { chat, message }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Ham xu ly logic them cau hoi moi cho san pham
+export const addPrivateChat = async (
+  productId,
+  message,
+  type = "private",
+  axiosInstance
+) => {
+  try {
+    const response = await axiosInstance.post(
+      `/products/private-chat/${productId}`,
+      {
+        message,
+        type,
+      }
+    );
+    return response.data; // Tra ve {chat, message}
   } catch (error) {
     throw error;
   }

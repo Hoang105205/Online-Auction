@@ -104,6 +104,47 @@ class ProductService {
     }
   }
 
+  // chat in product PrivateChat between highest bidder and seller
+  static async addPrivateChat(productId, sendId, message, type = "private") {
+    try {
+      const product = await Product.findById(productId);
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      if (product.auction.status !== "pending") {
+        throw new Error("Private chat only available during pending status.");
+      }
+
+      const isSeller = product.detail.sellerId.toString() === sendId;
+      const isHighestBidder =
+        product.auction.highestBidderId &&
+        product.auction.highestBidderId.toString() === sendId;
+
+      if (!isSeller && !isHighestBidder) {
+        throw new Error(
+          "Unauthorized: Only the seller or highest bidder can chat privately"
+        );
+      }
+
+      product.chat.push({
+        type,
+        sendId,
+        message,
+        time: new Date(),
+        reply: {},
+      });
+
+      await product.save();
+      await product.populate("chat.sendId", "fullName");
+
+      return product.chat;
+    } catch (error) {
+      throw new Error("Error adding question: " + error.message);
+    }
+  }
+
   // add reply to a question
   static async addReply(productId, chatId, sellerId, message) {
     try {
@@ -138,22 +179,6 @@ class ProductService {
       return product.chat;
     } catch (error) {
       throw new Error("Error adding reply: " + error.message);
-    }
-  }
-
-  // get product Q&A
-  static async getProductQA(productId) {
-    try {
-      const product = await Product.findById(productId)
-        .populate("chat.sendId", "fullName")
-        .exec();
-
-      if (!product) {
-        throw new Error("Product not found");
-      }
-      return product.chat;
-    } catch (error) {
-      throw new Error("Error getting product Q&A: " + error.message);
     }
   }
 

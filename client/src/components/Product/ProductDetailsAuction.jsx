@@ -118,17 +118,19 @@ const ProductDetailsAuction = ({
           </div>
 
           {/* Price Info */}
-          <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
-            <p>
-              • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
-            </p>
-            <p>
-              • Giá mua ngay:{" "}
-              <strong className="text-red-600">
-                {formatPrice(buyNowPrice)} đ
-              </strong>
-            </p>
-          </div>
+          {buyNowPrice && (
+            <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
+              <p>
+                • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
+              </p>
+              <p>
+                • Giá mua ngay:{" "}
+                <strong className="text-red-600">
+                  {formatPrice(buyNowPrice)} đ
+                </strong>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Bid History */}
