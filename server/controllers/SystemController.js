@@ -11,6 +11,17 @@ const getSystemConfig = async (req, res) => {
   }
 };
 
+const getTimeConfigs = async (req, res) => {
+  try {
+    const sys = await SystemService.getTimeConfigs();
+    return res.status(200).json(sys);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 const updateSystemConfig = async (req, res) => {
   try {
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -258,6 +269,7 @@ const getCategoryBySlug = async (req, res) => {
 
 module.exports = {
   getSystemConfig,
+  getTimeConfigs,
   updateSystemConfig,
   updateAutoExtendBefore,
   updateAutoExtendDuration,

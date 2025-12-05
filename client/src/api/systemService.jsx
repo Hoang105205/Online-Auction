@@ -10,6 +10,15 @@ export const getSystemConfig = async (axiosInstance) => {
   }
 };
 
+export const getTimeConfigs = async (axiosInstance) => {
+  try {
+    const res = await axiosInstance.get("/app_settings/time-configs");
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const updateSystemConfig = async (axiosInstance, data) => {
   try {
     const res = await axiosInstance.put("/app_settings", data);
