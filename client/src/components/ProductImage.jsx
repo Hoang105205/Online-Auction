@@ -1,7 +1,5 @@
 import { cld } from "../api/cloudinary";
 import { AdvancedImage } from "@cloudinary/react";
-import { auto } from "@cloudinary/url-gen/actions/resize";
-import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 
 const ProductImage = ({
   url,
