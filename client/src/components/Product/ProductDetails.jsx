@@ -19,6 +19,7 @@ import {
   getProductDescription,
   getAuctionHistory,
   getProductPublicQA,
+  getRelatedProducts,
 } from "../../api/productService";
 
 const ProductDetails = () => {
@@ -38,63 +39,63 @@ const ProductDetails = () => {
     };
   }, [auth]);
 
-  const products = [
-    {
-      id: 1,
-      name: "Vintage Camera Canon AE-1 Program",
-      image: "/img/image1.jpg",
-      currentPrice: 2500000,
-      buyNowPrice: 3500000,
-      highestBidder: "NguyenVanA",
-      postedDate: "2025-11-10",
-      endDate: "2025-11-25",
-      bidCount: 15,
-    },
-    {
-      id: 2,
-      name: "MacBook Pro 2023 M3 Chip 16GB RAM",
-      image: "/img/image2.jpg",
-      currentPrice: 35000000,
-      buyNowPrice: 42000000,
-      highestBidder: "TranThiB",
-      postedDate: "2025-11-12",
-      endDate: "2025-11-22",
-      bidCount: 28,
-    },
-    {
-      id: 3,
-      name: "Đồng hồ Rolex Submariner Date",
-      image: "/img/image3.jpg",
-      currentPrice: 180000000,
-      buyNowPrice: null,
-      highestBidder: "LeVanC",
-      postedDate: "2025-11-08",
-      endDate: "2025-11-30",
-      bidCount: 42,
-    },
-    {
-      id: 4,
-      name: "iPhone 15 Pro Max 256GB Natural Titanium",
-      image: "/img/image4.jpg",
-      currentPrice: 28000000,
-      buyNowPrice: 32000000,
-      highestBidder: "PhamThiD",
-      postedDate: "2025-11-15",
-      endDate: "2025-11-20",
-      bidCount: 35,
-    },
-    {
-      id: 5,
-      name: "Sony PlayStation 5 Console + 2 Controllers",
-      image: "/img/image5.jpg",
-      currentPrice: 12000000,
-      buyNowPrice: 15000000,
-      highestBidder: "HoangVanE",
-      postedDate: "2025-11-05",
-      endDate: "2025-11-18",
-      bidCount: 22,
-    },
-  ];
+  // const products = [
+  //   {
+  //     id: 1,
+  //     name: "Vintage Camera Canon AE-1 Program",
+  //     image: "/img/image1.jpg",
+  //     currentPrice: 2500000,
+  //     buyNowPrice: 3500000,
+  //     highestBidder: "NguyenVanA",
+  //     postedDate: "2025-11-10",
+  //     endDate: "2025-11-25",
+  //     bidCount: 15,
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "MacBook Pro 2023 M3 Chip 16GB RAM",
+  //     image: "/img/image2.jpg",
+  //     currentPrice: 35000000,
+  //     buyNowPrice: 42000000,
+  //     highestBidder: "TranThiB",
+  //     postedDate: "2025-11-12",
+  //     endDate: "2025-11-22",
+  //     bidCount: 28,
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Đồng hồ Rolex Submariner Date",
+  //     image: "/img/image3.jpg",
+  //     currentPrice: 180000000,
+  //     buyNowPrice: null,
+  //     highestBidder: "LeVanC",
+  //     postedDate: "2025-11-08",
+  //     endDate: "2025-11-30",
+  //     bidCount: 42,
+  //   },
+  //   {
+  //     id: 4,
+  //     name: "iPhone 15 Pro Max 256GB Natural Titanium",
+  //     image: "/img/image4.jpg",
+  //     currentPrice: 28000000,
+  //     buyNowPrice: 32000000,
+  //     highestBidder: "PhamThiD",
+  //     postedDate: "2025-11-15",
+  //     endDate: "2025-11-20",
+  //     bidCount: 35,
+  //   },
+  //   {
+  //     id: 5,
+  //     name: "Sony PlayStation 5 Console + 2 Controllers",
+  //     image: "/img/image5.jpg",
+  //     currentPrice: 12000000,
+  //     buyNowPrice: 15000000,
+  //     highestBidder: "HoangVanE",
+  //     postedDate: "2025-11-05",
+  //     endDate: "2025-11-18",
+  //     bidCount: 22,
+  //   },
+  // ];
 
   const { id } = useParams();
   const productId = id;
@@ -106,6 +107,7 @@ const ProductDetails = () => {
   const [productDescData, setProductDescData] = useState(null);
   const [productAuctHisData, setProductAuctHisData] = useState(null);
   const [productPublicQAData, setProductPublicQAData] = useState(null);
+  const [productRelatedData, setProductRelatedData] = useState(null);
 
   const temp = ["1", "2", "3", "4", "5"];
 
@@ -127,11 +129,13 @@ const ProductDetails = () => {
         const auctionData = await getProductAuction(productId);
         const descData = await getProductDescription(productId);
         const publicQAData = await getProductPublicQA(productId);
+        const relatedData = await getRelatedProducts(productId);
 
         setProductInfoData(basicBata);
         setProductAuctionData(auctionData);
         setProductDescData(descData);
         setProductPublicQAData(publicQAData);
+        setProductRelatedData(relatedData);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -484,16 +488,18 @@ const ProductDetails = () => {
             </div>
 
             {/* Related Products */}
-            <div className="mt-12 items-center justify-center flex flex-wrap">
-              <h1 className="text-2xl font-bold mr-6 text-center">
-                Sản Phẩm Liên Quan
-              </h1>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
-                {products.map((product, i) => (
-                  <ProductCardP key={i} product={product} />
-                ))}
+            {productRelatedData && (
+              <div className="mt-12 items-center justify-center flex flex-wrap">
+                <h1 className="text-2xl font-bold mr-6 text-center">
+                  Sản Phẩm Liên Quan
+                </h1>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 p-3">
+                  {productRelatedData.map((product, i) => (
+                    <ProductCardP key={i} product={product} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Modal / Lightbox */}
             {modalOpen && (

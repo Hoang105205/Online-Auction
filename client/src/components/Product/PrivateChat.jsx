@@ -109,16 +109,17 @@ const PrivateChat = ({ productId, authUser, sellerId, highestBidderId }) => {
       {/* Chat Popup */}
       {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl 
-                      w-[95vw] h-[85vh] 
-                      sm:w-[90vw] sm:h-[80vh]
-                      md:w-[300px] md:h-[400px]
-                      lg:w-[350px] lg:h-[500px]
+          className="fixed bottom-2 right-2 left-2 z-50 bg-white rounded-lg shadow-2xl
+                      h-[calc(100vh-1rem)]
+                      sm:bottom-4 sm:right-4 sm:left-auto sm:h-[500px]
+                      sm:w-[340px]
+                      md:w-[360px] md:h-[550px]
+                      lg:w-[380px] lg:h-[600px]
                       flex flex-col"
         >
           {/* Header */}
-          <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="bg-blue-600 text-white p-3 sm:p-4 rounded-t-lg flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
               <MessageCircle className="w-5 h-5" />
               <div>
                 <h3 className="font-semibold text-sm">Chat riêng tư</h3>
