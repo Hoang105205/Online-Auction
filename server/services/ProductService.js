@@ -98,7 +98,7 @@ class ProductService {
 
       await product.populate("chat.sendId", "fullName");
 
-      return product.chat;
+      return product.chat.filter((chat) => chat.type === "public");
     } catch (error) {
       throw new Error("Error adding question: " + error.message);
     }
@@ -139,7 +139,7 @@ class ProductService {
       await product.save();
       await product.populate("chat.sendId", "fullName");
 
-      return product.chat;
+      return product.chat.filter((chat) => chat.type === "private");
     } catch (error) {
       throw new Error("Error adding question: " + error.message);
     }
@@ -391,7 +391,7 @@ class ProductService {
     return newProduct;
   }
 
-  // take 5 ralated products from the same category
+  // take 5 ralated products from the same subcategory, if not enough, finding more in category, if still not enough, fiding more from current seller, if still not enough, finding any active products
   static async getRelatedProducts(productId, limit = 5) {
     try {
       const product = await Product.findById(productId);
@@ -400,19 +400,116 @@ class ProductService {
         throw new Error("Product not found");
       }
 
-      const relatedProducts = await Product.find({
+      let relatedProducts = [];
+
+      // same subcategory
+      relatedProducts = await Product.find({
         _id: { $ne: productId },
-        "detail.category": product.detail.category,
+        "detail.subCategory": product.detail.subCategory,
         "auction.status": "active",
       })
         .limit(limit)
         .select(
-          "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.bidders auction.startTime auction.endTime auction.highestBidderId"
+          "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.startTime auction.endTime auction.highestBidderId auctionHistory.numberOfBids"
         )
         .populate("auction.highestBidderId", "fullName")
         .exec();
 
-      return relatedProducts;
+      // same category
+      if (relatedProducts.length < limit) {
+        const remaining = limit - relatedProducts.length;
+        const existingIds = relatedProducts.map((p) => p._id);
+
+        const categoryProducts = await Product.find({
+          _id: { $ne: productId, $nin: existingIds },
+          "detail.category": product.detail.category,
+          "detail.subCategory": { $ne: product.detail.subCategory },
+          "auction.status": "active",
+        })
+          .limit(remaining)
+          .select(
+            "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.startTime auction.endTime auction.highestBidderId auctionHistory.numberOfBids"
+          )
+          .populate("auction.highestBidderId", "fullName")
+          .exec();
+
+        relatedProducts = [...relatedProducts, ...categoryProducts];
+      }
+
+      // same seller
+      if (relatedProducts.length < limit) {
+        const remaining = limit - relatedProducts.length;
+        const existingIds = relatedProducts.map((p) => p._id);
+
+        const sellerProducts = await Product.find({
+          _id: { $ne: productId, $nin: existingIds },
+          "detail.sellerId": product.detail.sellerId,
+          "auction.status": "active",
+        })
+          .limit(remaining)
+          .select(
+            "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.startTime auction.endTime auction.highestBidderId auctionHistory.numberOfBids"
+          )
+          .populate("auction.highestBidderId", "fullName")
+          .exec();
+
+        relatedProducts = [...relatedProducts, ...sellerProducts];
+      }
+
+      // any active products
+      if (relatedProducts.length < limit) {
+        const remaining = limit - relatedProducts.length;
+        const existingIds = relatedProducts.map((p) => p._id);
+
+        const activeProducts = await Product.find({
+          _id: { $ne: productId, $nin: existingIds },
+          "auction.status": "active",
+        })
+          .limit(remaining)
+          .select(
+            "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.startTime auction.endTime auction.highestBidderId auctionHistory.numberOfBids"
+          )
+          .populate("auction.highestBidderId", "fullName")
+          .exec();
+
+        relatedProducts = [...relatedProducts, ...activeProducts];
+      }
+
+      // if still not enough, return whatever found
+      if (relatedProducts.length < limit) {
+        const remaining = limit - relatedProducts.length;
+        const existingIds = relatedProducts.map((p) => p._id);
+
+        const randomProducts = await Product.find({
+          _id: { $ne: productId, $nin: existingIds },
+        })
+          .limit(remaining)
+          .select(
+            "detail.name detail.images auction.currentPrice auction.buyNowPrice auction.startTime auction.endTime auction.highestBidderId auctionHistory.numberOfBids"
+          )
+          .populate("auction.highestBidderId", "fullName")
+          .exec();
+
+        relatedProducts = [...relatedProducts, ...randomProducts];
+      }
+
+      const formattedProducts = relatedProducts.map((p) => {
+        const bidderInfo = p.auction?.highestBidderId;
+
+        return {
+          id: p._id,
+          name: p.detail.name,
+          image: p.detail.images?.[0] || null,
+          currentPrice: p.auction.currentPrice,
+          buyNowPrice: p.auction.buyNowPrice,
+          highestBidder: bidderInfo?.fullName || null,
+          postedDate: p.auction.startTime || null,
+          endDate: p.auction.endTime || null,
+          bidCount: p.auctionHistory?.numberOfBids || 0,
+        };
+      });
+
+      return formattedProducts;
     } catch (error) {
       throw new Error("Error getting related products: " + error.message);
     }
