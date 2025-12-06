@@ -1,4 +1,10 @@
-import { useParams, Link } from "react-router-dom";
+import {
+  useParams,
+  Link,
+  useSearchParams,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { getCategoryBySlug, getCategories } from "../../api/systemService";
 import {
@@ -10,8 +16,10 @@ import ProductCardP from "../Product/ProductCardP";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import Category from "./Category";
 
-export default function CategoryProduct({ searchLandingPage = "" }) {
+export default function CategoryProduct() {
   const { breadcrumb } = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const params = useParams();
   const [category, setCategory] = useState(null);
@@ -26,18 +34,22 @@ export default function CategoryProduct({ searchLandingPage = "" }) {
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Get search query from URL if present
+  const urlSearchQuery = searchParams.get("search") || "";
+
   // UI state: search + simple filters
-  const [search, setSearch] = useState(searchLandingPage);
+  const [search, setSearch] = useState(urlSearchQuery || "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSidebar, setActiveSidebar] = useState("filter"); // "filter" | "category"
   const [sortBy, setSortBy] = useState(""); // "" | "endTime" | "priceAsc"
   // Applied filters (only used when user clicks "Áp dụng")
-  const [appliedSearch, setAppliedSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState(urlSearchQuery || "");
   const [appliedSortBy, setAppliedSortBy] = useState("");
 
   // params['*'] chứa toàn bộ phần sau /category/
   const slugPath = params["*"] || breadcrumb;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCategoryAndProducts = async () => {
@@ -202,6 +214,8 @@ export default function CategoryProduct({ searchLandingPage = "" }) {
     setSortBy("");
     setAppliedSearch("");
     setAppliedSortBy("");
+    // Clear URL params
+    navigate(location.pathname);
   }
 
   return (
@@ -272,8 +286,20 @@ export default function CategoryProduct({ searchLandingPage = "" }) {
               <button
                 onClick={() => {
                   // Apply current pending inputs (use debouncedSearch when available)
-                  setAppliedSearch(debouncedSearch || search);
+                  const searchValue = debouncedSearch || search;
+                  setAppliedSearch(searchValue);
                   setAppliedSortBy(sortBy);
+                  console.log(searchValue);
+                  // Update URL with search params
+                  if (searchValue.trim()) {
+                    navigate(
+                      `${location.pathname}?search=${encodeURIComponent(
+                        searchValue.trim()
+                      )}`
+                    );
+                  } else {
+                    navigate(location.pathname);
+                  }
                   setSidebarOpen(false);
                 }}
                 className="px-4 py-2 bg-[#19528F] text-white rounded-md">
@@ -367,7 +393,18 @@ export default function CategoryProduct({ searchLandingPage = "" }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              setAppliedSearch(debouncedSearch || search);
+              const searchValue = debouncedSearch || search;
+              setAppliedSearch(searchValue);
+              // Update URL with search params
+              if (searchValue.trim()) {
+                navigate(
+                  `${location.pathname}?search=${encodeURIComponent(
+                    searchValue.trim()
+                  )}`
+                );
+              } else {
+                navigate(location.pathname);
+              }
             }}
             className="w-10/12">
             <label htmlFor="category-search" className="sr-only">
