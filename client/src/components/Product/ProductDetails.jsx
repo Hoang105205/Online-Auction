@@ -1,17 +1,20 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Star, User, Clock } from "lucide-react";
+import { HiHeart } from "react-icons/hi";
+import { toast } from "react-toastify";
+
 import ProductDetailsInformation from "./ProductDetailsInformation";
 import ProductDetailsAuction from "./ProductDetailsAuction";
 import ProductDetailsANA from "./ProductDetailsANA";
 import PrivateChat from "./PrivateChat";
 import ProductImage from "../ProductImage";
-
 import ProductCardP from "../Product/ProductCardP";
 
 import useAuth from "../../hooks/useAuth";
-
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+
+import { addToWatchList } from "../../api/userService";
 
 import {
   getProductBasicDetails,
@@ -39,64 +42,6 @@ const ProductDetails = () => {
     };
   }, [auth]);
 
-  // const products = [
-  //   {
-  //     id: 1,
-  //     name: "Vintage Camera Canon AE-1 Program",
-  //     image: "/img/image1.jpg",
-  //     currentPrice: 2500000,
-  //     buyNowPrice: 3500000,
-  //     highestBidder: "NguyenVanA",
-  //     postedDate: "2025-11-10",
-  //     endDate: "2025-11-25",
-  //     bidCount: 15,
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "MacBook Pro 2023 M3 Chip 16GB RAM",
-  //     image: "/img/image2.jpg",
-  //     currentPrice: 35000000,
-  //     buyNowPrice: 42000000,
-  //     highestBidder: "TranThiB",
-  //     postedDate: "2025-11-12",
-  //     endDate: "2025-11-22",
-  //     bidCount: 28,
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Đồng hồ Rolex Submariner Date",
-  //     image: "/img/image3.jpg",
-  //     currentPrice: 180000000,
-  //     buyNowPrice: null,
-  //     highestBidder: "LeVanC",
-  //     postedDate: "2025-11-08",
-  //     endDate: "2025-11-30",
-  //     bidCount: 42,
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "iPhone 15 Pro Max 256GB Natural Titanium",
-  //     image: "/img/image4.jpg",
-  //     currentPrice: 28000000,
-  //     buyNowPrice: 32000000,
-  //     highestBidder: "PhamThiD",
-  //     postedDate: "2025-11-15",
-  //     endDate: "2025-11-20",
-  //     bidCount: 35,
-  //   },
-  //   {
-  //     id: 5,
-  //     name: "Sony PlayStation 5 Console + 2 Controllers",
-  //     image: "/img/image5.jpg",
-  //     currentPrice: 12000000,
-  //     buyNowPrice: 15000000,
-  //     highestBidder: "HoangVanE",
-  //     postedDate: "2025-11-05",
-  //     endDate: "2025-11-18",
-  //     bidCount: 22,
-  //   },
-  // ];
-
   const { id } = useParams();
   const productId = id;
 
@@ -108,8 +53,6 @@ const ProductDetails = () => {
   const [productAuctHisData, setProductAuctHisData] = useState(null);
   const [productPublicQAData, setProductPublicQAData] = useState(null);
   const [productRelatedData, setProductRelatedData] = useState(null);
-
-  const temp = ["1", "2", "3", "4", "5"];
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -204,6 +147,19 @@ const ProductDetails = () => {
     } catch (error) {
       console.error("Có lỗi xảy ra khi cập nhật", error);
       alert("Có lỗi xảy ra khi cập nhật.");
+    }
+  };
+
+  const handleAddToWatchlist = async (productId) => {
+    if (!auth?.accessToken) {
+      toast.error("Vui lòng đăng nhập để thêm vào danh sách theo dõi.");
+      return;
+    }
+    try {
+      const result = await addToWatchList(axiosPrivate, productId);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
     }
   };
 
@@ -413,12 +369,21 @@ const ProductDetails = () => {
                 </div>
 
                 {/* Bid Button */}
-                <button
-                  className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
-                  onClick={() => setActiveTab("auction")}
-                >
-                  Đấu Giá Ngay!
-                </button>
+                {productAuctionData.auction.status === "active" ? (
+                  <button
+                    className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
+                    onClick={() => setActiveTab("auction")}
+                  >
+                    Đấu Giá Ngay!
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full bg-gray-400 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8"
+                  >
+                    Đấu giá đã kết thúc
+                  </button>
+                )}
               </div>
             </div>
 
@@ -526,6 +491,20 @@ const ProductDetails = () => {
               </div>
             )}
           </div>
+
+          {/* Watchlist Button */}
+          <>
+            <button
+              onClick={() => handleAddToWatchlist(productId)}
+              className="fixed top-20 right-6 z-40 p-4 rounded-full shadow-lg transition-all duration-300 
+                         bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:scale-110
+                         border border-gray-200"
+              aria-label="Add to watchlist"
+              title="Thêm vào danh sách theo dõi"
+            >
+              <HiHeart className="w-6 h-6" />
+            </button>
+          </>
 
           {/* Private Chat - Only show when auction ended and user is seller or highest bidder */}
           {productAuctionData &&
