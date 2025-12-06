@@ -1,5 +1,3 @@
-import { axiosPrivate } from "../config/axios";
-
 // System configuration - client API
 export const getSystemConfig = async (axiosInstance) => {
   try {

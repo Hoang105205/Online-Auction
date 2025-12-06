@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Category from "../Category/Category";
 import { Button } from "flowbite-react";
 import { ChevronRight } from "lucide-react";
@@ -81,7 +82,9 @@ import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 const SideBar = () => {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const axiosPrivate = useAxiosPrivate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -116,7 +119,17 @@ const SideBar = () => {
         ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}>
-        <form className="max-w-md mx-auto">
+        <form
+          className="max-w-md mx-auto"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+              navigate(
+                `/category?search=${encodeURIComponent(searchQuery.trim())}`
+              );
+              setIsOpenMobile(false);
+            }
+          }}>
           <label
             htmlFor="default-search"
             className="mb-2 text-sm font-medium text-gray-900 sr-only">
@@ -144,6 +157,8 @@ const SideBar = () => {
               id="default-search"
               className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               placeholder="Bạn muốn tìm gì?"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               required
             />
           </div>
