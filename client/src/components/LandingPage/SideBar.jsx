@@ -102,7 +102,7 @@ const SideBar = () => {
   return (
     <div onMouseLeave={() => setIsOpenMobile(false)}>
       <Button
-        className="absolute md:hidden z-40 p-2 bg-gray-300 text-gray-700 rounded-full shadow-md hover:bg-gray-400 hover:text-gray-900 transition-colors duration-200"
+        className="fixed md:hidden z-40 p-2 bg-gray-300 text-gray-700 rounded-full shadow-md hover:bg-gray-400 hover:text-gray-900 transition-colors duration-200"
         onClick={() => setIsOpenMobile(!isOpenMobile)}>
         <ChevronRight size={25} />
       </Button>
@@ -115,7 +115,7 @@ const SideBar = () => {
       )}
 
       <div
-        className={`fixed top-0 left-0 h-full w-[300px] bg-white p-4 transform transition-transform duration-300 z-40
+        className={`fixed top-0 left-0 h-full w-[250px] md:w-[300px] bg-white p-4 transform transition-transform duration-300 z-40
         ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}>
