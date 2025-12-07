@@ -2,15 +2,35 @@ import { useEffect, useState } from "react";
 import { getFirstProducts } from "../../api/productService";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
-import ProductCardC from "./ProductCardC";
 import { HiHeart } from "react-icons/hi";
+import { toast } from "react-toastify";
+import { addToWatchList } from "../../api/userService";
+import useAuth from "../../hooks/useAuth";
+
+import ProductCardC from "./ProductCardC";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+
 import "swiper/css";
 import "swiper/css/pagination";
 
 export default function ProductCarousel() {
+  const { auth } = useAuth();
+
   const [products, setProducts] = useState([]);
   const axiosPrivate = useAxiosPrivate();
+
+  const handleAddToWatchlist = async (productId) => {
+    if (!auth?.accessToken) {
+      toast.error("Vui lòng đăng nhập để thêm vào danh sách theo dõi.");
+      return;
+    }
+    try {
+      const result = await addToWatchList(axiosPrivate, productId);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
+    }
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -53,11 +73,15 @@ export default function ProductCarousel() {
       }}>
       {products.map((product) => (
         <SwiperSlide key={product.id}>
+          {/* Watchlist Button */}
           <button
-            //onClick={}
-            className="absolute z-10 top-2 left-2 p-2  rounded-full shadow transition-colors duration-300 
-            bg-gray-300 text-gray-400 hover:bg-white hover:text-red-500">
-            <HiHeart className="w-5 h-5" />
+            onClick={() => handleAddToWatchlist(product.id)}
+            className="absolute z-10 top-3 left-3 p-2 rounded-full shadow-lg transition-all duration-300 
+                         bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:scale-110
+                         border border-gray-200"
+            aria-label="Add to watchlist"
+            title="Thêm vào danh sách theo dõi">
+            <HiHeart className="w-6 h-6" />
           </button>
           <ProductCardC product={product} />
         </SwiperSlide>
