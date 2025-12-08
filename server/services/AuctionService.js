@@ -54,7 +54,7 @@ class AuctionService {
           error.statusCode = 400;
           throw error;
         }
-        
+
         // Xử lý Mua ngay
         if (
           product.auction.buyNowPrice > 0 &&
@@ -64,7 +64,10 @@ class AuctionService {
         }
 
         if (
-          (bidAmount - product.auction.startPrice) % product.auction.stepPrice !== 0 && bidAmount != product.auction.buyNowPrice
+          (bidAmount - product.auction.startPrice) %
+            product.auction.stepPrice !==
+            0 &&
+          bidAmount != product.auction.buyNowPrice
         ) {
           const error = new Error(
             `Giá đặt phải cách đều bước giá ${product.auction.stepPrice} từ giá khởi điểm ${product.auction.startPrice}.`
@@ -128,9 +131,8 @@ class AuctionService {
           else {
             newHighestBidderId = currentLeaderId;
 
-            // Giá mới = Max của người thua (người mới) + Bước giá
-            let calculatedPrice = bidAmount + product.auction.stepPrice;
-            newCurrentPrice = Math.min(calculatedPrice, currentLeaderMaxBid);
+            // Giá mới = Max của người thua (người mới)
+            newCurrentPrice = bidAmount;
           }
         }
 
