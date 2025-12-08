@@ -13,10 +13,8 @@ import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import "swiper/css";
 import "swiper/css/pagination";
 
-export default function ProductCarousel() {
+export default function ProductCarousel({ products }) {
   const { auth } = useAuth();
-
-  const [products, setProducts] = useState([]);
   const axiosPrivate = useAxiosPrivate();
 
   const handleAddToWatchlist = async (productId) => {
@@ -31,22 +29,6 @@ export default function ProductCarousel() {
       toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
     }
   };
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await getFirstProducts(
-          { page: 1, limit: 5 },
-          axiosPrivate
-        ); // gọi API client
-        setProducts(data.products); // gán dữ liệu vào state
-      } catch (error) {
-        console.error("Lỗi khi lấy products:", error);
-      }
-    };
-
-    fetchProducts();
-  }, []);
 
   // Don't render Swiper until products are loaded
   if (products.length === 0) {

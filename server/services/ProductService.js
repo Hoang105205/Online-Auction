@@ -525,79 +525,88 @@ class ProductService {
       let products;
       let totalItems;
 
+      // Use aggregation pipeline for both search and non-search cases
+      const pipeline = [];
+
+      // Add $search stage only if search query exists
       if (search && search.trim()) {
-        // Use aggregation pipeline with $search for text search
-        const pipeline = [
-          {
-            $search: {
-              index: "product_name",
-              text: {
-                query: search,
-                path: "detail.name",
-              },
+        pipeline.push({
+          $search: {
+            index: "product_name",
+            text: {
+              query: search,
+              path: "detail.name",
             },
           },
-        ];
-
-        // Add sorting stage
-        let sortStage = { $sort: { createdAt: -1 } };
-        if (sortBy === "endTime") {
-          sortStage = { $sort: { "auction.endTime": -1 } };
-        } else if (sortBy === "priceAsc") {
-          sortStage = { $sort: { "auction.currentPrice": 1 } };
-        }
-        pipeline.push(sortStage);
-
-        // Count total before pagination
-        const countPipeline = [...pipeline, { $count: "total" }];
-        const countResult = await Product.aggregate(countPipeline).exec();
-        totalItems = countResult[0]?.total || 0;
-
-        // Add pagination
-        pipeline.push({ $skip: (page - 1) * limit });
-        pipeline.push({ $limit: limit });
-
-        // Lookup to get full documents with populated fields
-        pipeline.push({
-          $lookup: {
-            from: "users",
-            localField: "detail.sellerId",
-            foreignField: "_id",
-            as: "sellerInfo",
-          },
         });
-        pipeline.push({
-          $lookup: {
-            from: "users",
-            localField: "auction.highestBidderId",
-            foreignField: "_id",
-            as: "bidderInfo",
-          },
-        });
-
-        products = await Product.aggregate(pipeline).exec();
-      } else {
-        // No search - use regular find
-        totalItems = await Product.countDocuments().exec();
-
-        let sortOption = { createdAt: -1 };
-        if (sortBy === "endTime") {
-          sortOption = { "auction.endTime": -1 };
-        } else if (sortBy === "priceAsc") {
-          sortOption = { "auction.currentPrice": 1 };
-        }
-
-        products = await Product.find()
-          .populate("detail.sellerId", "fullName feedBackAsSeller")
-          .populate("auction.highestBidderId", "fullName")
-          .sort(sortOption)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .exec();
       }
 
+      // Filter non-ended products for mostBids and highestPrice
+      if (
+        sortBy === "mostBids" ||
+        sortBy === "highestPrice" ||
+        sortBy === "endingSoon"
+      ) {
+        pipeline.push({
+          $match: {
+            "auction.endTime": { $gt: new Date() },
+          },
+        });
+      }
+
+      // Add calculated field and sorting
+      if (sortBy === "endTime") {
+        pipeline.push({
+          $sort: { "auction.endTime": -1, "auction.startTime": -1 },
+        });
+      } else if (sortBy === "priceAsc") {
+        pipeline.push({
+          $sort: { "auction.currentPrice": 1, "auction.startTime": -1 },
+        });
+      } else if (sortBy === "endingSoon") {
+        pipeline.push({ $sort: { "auction.endTime": -1 } });
+      } else if (sortBy === "mostBids") {
+        pipeline.push({
+          $sort: { "auctionHistory.numberOfBids": -1, "auction.endTime": -1 },
+        });
+      } else if (sortBy === "highestPrice") {
+        pipeline.push({
+          $sort: { "auction.currentPrice": -1, "auction.endTime": -1 },
+        });
+      } else {
+        pipeline.push({ $sort: { "auction.startTime": -1 } });
+      }
+
+      // Count total before pagination
+      const countPipeline = [...pipeline, { $count: "total" }];
+      const countResult = await Product.aggregate(countPipeline).exec();
+      totalItems = countResult[0]?.total || 0;
+
+      // Add pagination
+      pipeline.push({ $skip: (page - 1) * limit });
+      pipeline.push({ $limit: limit });
+
+      // Lookup to populate fields
+      pipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "detail.sellerId",
+          foreignField: "_id",
+          as: "sellerInfo",
+        },
+      });
+      pipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "auction.highestBidderId",
+          foreignField: "_id",
+          as: "bidderInfo",
+        },
+      });
+
+      products = await Product.aggregate(pipeline).exec();
+
       const formatted = products.map((p) => {
-        // Handle both aggregate (array fields) and populate (object fields)
         const sellerInfo = p.sellerInfo?.[0] || p.detail?.sellerId;
         const bidderInfo = p.bidderInfo?.[0] || p.auction?.highestBidderId;
 
@@ -640,80 +649,65 @@ class ProductService {
       let products;
       let totalItems;
 
+      // Use aggregation pipeline for both search and non-search cases
+      const pipeline = [];
+
+      // Add $search stage only if search query exists
       if (search && search.trim()) {
-        // Use aggregation pipeline with $search for text search
-        const pipeline = [
-          {
-            $search: {
-              index: "product_name",
-              text: {
-                query: search,
-                path: "detail.name",
-              },
-            },
-          },
-          // Add category filter after search
-          {
-            $match: {
-              "detail.category": category,
-              ...(subcategory && { "detail.subCategory": subcategory }),
-            },
-          },
-        ];
-
-        // Add sorting stage
-        let sortStage = { $sort: { createdAt: -1 } };
-        if (sortBy === "endTime") {
-          sortStage = { $sort: { "auction.endTime": -1 } };
-        } else if (sortBy === "priceAsc") {
-          sortStage = { $sort: { "auction.currentPrice": 1 } };
-        }
-        pipeline.push(sortStage);
-
-        // Count total before pagination
-        const countPipeline = [...pipeline, { $count: "total" }];
-        const countResult = await Product.aggregate(countPipeline).exec();
-        totalItems = countResult[0]?.total || 0;
-
-        // Add pagination
-        pipeline.push({ $skip: (page - 1) * limit });
-        pipeline.push({ $limit: limit });
-
-        // Lookup to populate highestBidderId
         pipeline.push({
-          $lookup: {
-            from: "users",
-            localField: "auction.highestBidderId",
-            foreignField: "_id",
-            as: "bidderInfo",
+          $search: {
+            index: "product_name",
+            text: {
+              query: search,
+              path: "detail.name",
+            },
           },
         });
-
-        products = await Product.aggregate(pipeline).exec();
-      } else {
-        // No search - use regular find with filter
-        const filter = { "detail.category": category };
-        if (subcategory) filter["detail.subCategory"] = subcategory;
-
-        totalItems = await Product.countDocuments(filter).exec();
-
-        let sortOption = { createdAt: -1 };
-        if (sortBy === "endTime") {
-          sortOption = { "auction.endTime": -1 };
-        } else if (sortBy === "priceAsc") {
-          sortOption = { "auction.currentPrice": 1 };
-        }
-
-        products = await Product.find(filter)
-          .populate("auction.highestBidderId", "fullName")
-          .sort(sortOption)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .exec();
       }
 
+      // Add category filter
+      pipeline.push({
+        $match: {
+          "detail.category": category,
+          ...(subcategory && { "detail.subCategory": subcategory }),
+        },
+      });
+
+      // Add calculated field and sorting
+      if (sortBy === "endTime") {
+        pipeline.push({
+          $sort: { "auction.endTime": -1, "auction.startTime": -1 },
+        });
+      } else if (sortBy === "priceAsc") {
+        pipeline.push({
+          $sort: { "auction.currentPrice": 1, "auction.startTime": -1 },
+        });
+      } else {
+        pipeline.push({ $sort: { "auction.startTime": -1 } });
+      }
+
+      // Count total before pagination
+      const countPipeline = [...pipeline, { $count: "total" }];
+      const countResult = await Product.aggregate(countPipeline).exec();
+      totalItems = countResult[0]?.total || 0;
+
+      // Add pagination
+      pipeline.push({ $skip: (page - 1) * limit });
+      pipeline.push({ $limit: limit });
+
+      // Lookup to populate highestBidderId
+      pipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "auction.highestBidderId",
+          foreignField: "_id",
+          as: "bidderInfo",
+        },
+      });
+
+      products = await Product.aggregate(pipeline).exec();
+
       const formatted = products.map((p) => {
-        // Handle both aggregate (array fields) and populate (object fields)
         const bidderInfo = p.bidderInfo?.[0] || p.auction?.highestBidderId;
 
         return {
