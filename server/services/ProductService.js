@@ -243,23 +243,39 @@ class ProductService {
   }
 
   // get product auction history
-  static async getAuctionHistory(productId) {
+  static async getAuctionHistory(productId, limit = 20) {
     try {
       const product = await Product.findById(productId)
+        .select("auction auctionHistory")
         .populate("auctionHistory.historyList.bidderId", "fullName")
+        .lean() // chi thuan doc data va tra ve object thuong cho nhe
         .exec();
 
       if (!product) {
         throw new Error("Product not found");
       }
 
-      const sortedHistoryList = product.auctionHistory.historyList.sort(
-        (a, b) => b.bidPrice - a.bidPrice
-      );
+      // get current price
+      const currentHighestPrice = product.auction.currentPrice;
+
+      // sort historyList by bidTime descending and limit results (default 20)
+      let historyList = product.auctionHistory?.historyList || [];
+      historyList.sort((a, b) => new Date(b.bidTime) - new Date(a.bidTime));
+
+      const limitedHistory = historyList.slice(0, limit);
+
+      const processedHistory = limitedHistory.map((bid) => {
+        const displayBid = { ...bid };
+
+        if (displayBid.bidPrice > currentHighestPrice) {
+          displayBid.bidPrice = currentHighestPrice;
+        }
+        return displayBid;
+      });
 
       return {
         numberOfBids: product.auctionHistory.numberOfBids,
-        historyList: sortedHistoryList,
+        historyList: processedHistory,
       };
     } catch (error) {
       throw new Error("Error getting auction history: " + error.message);
