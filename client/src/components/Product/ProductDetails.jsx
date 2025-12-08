@@ -131,11 +131,13 @@ const ProductDetails = () => {
       return "Đã kết thúc";
     }
 
-    const days = Math.floor(
-      (diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24)
-    );
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 3) {
+      return null;
+    }
 
     return `${days} ngày ${hours} giờ ${minutes} phút`;
   };
@@ -360,12 +362,14 @@ const ProductDetails = () => {
                   )}
 
                   {/* Countdown */}
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
-                    <span className="text-sm lg:text-base text-red-500 font-semibold">
-                      {timeRemaining}
-                    </span>
-                  </div>
+                  {timeRemaining && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                      <span className="text-sm lg:text-base text-red-500 font-semibold">
+                        {timeRemaining}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Bid Button */}
@@ -439,6 +443,7 @@ const ProductDetails = () => {
                     auctionData={productAuctionData}
                     auctionHistoryData={productAuctHisData}
                     authUser={auth}
+                    productStatus={productAuctionData.auction.status}
                   />
                 )}
                 {activeTab === "qa" && (

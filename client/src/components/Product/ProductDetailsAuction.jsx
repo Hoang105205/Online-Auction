@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
+import { toast } from "react-toastify";
 
 const ProductDetailsAuction = ({
   productId,
   auctionData,
   auctionHistoryData,
   authUser,
+  productStatus,
 }) => {
   const [bidAmount, setBidAmount] = useState("");
 
@@ -63,18 +65,104 @@ const ProductDetailsAuction = ({
   const handleBidSubmit = () => {
     const bidValue = parseInt(bidAmount);
     if (!bidValue) {
-      alert("Vui lòng nhập giá đấu giá!");
+      toast.error("Vui lòng nhập giá đấu giá!");
       return;
     }
-    if (bidValue < currentPrice + stepPrice) {
-      alert(
-        `Giá đấu giá phải ít nhất là ${formatPrice(
-          currentPrice + stepPrice
-        )} đ!`
+    if (bidValue >= buyNowPrice) {
+      const toastId = toast.warn(
+        <div>
+          <p>
+            Mức giá bạn đặt đã vượt giá mua ngay {formatPrice(buyNowPrice)} đ!
+          </p>
+          <p>Bạn có chắc chắn muốn mua ngay sản phẩm này?</p>
+          <div
+            style={{
+              marginTop: "10px",
+              display: "flex",
+              gap: "10px",
+              justifyContent: "center",
+            }}
+          >
+            <button
+              onClick={() => {
+                handleBuyNow(buyNowPrice);
+                toast.dismiss(toastId);
+              }}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#2563eb",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Xác nhận
+            </button>
+            <button
+              onClick={() => toast.dismiss(toastId)}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#6b7280",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Hủy
+            </button>
+          </div>
+        </div>,
+        {
+          position: "top-center",
+          autoClose: false,
+          closeOnClick: false,
+          draggable: false,
+          closeButton: false,
+        }
       );
       return;
     }
-    alert(`Đấu giá thành công với giá ${formatPrice(bidValue)} đ!`);
+    if (bidValue < currentPrice + stepPrice) {
+      toast.error(
+        `Giá đấu giá phải ít nhất là ${formatPrice(
+          currentPrice + stepPrice
+        )} đ!`,
+        {
+          position: "top-center",
+        }
+      );
+      return;
+    }
+    if (bidValue > currentPrice + stepPrice && bidValue % stepPrice !== 0) {
+      toast.error(
+        `Giá đấu giá phải chia hết cho ${formatPrice(stepPrice)} đ!`,
+        {
+          position: "top-center",
+        }
+      );
+      return;
+    }
+    handleBidSuccess(bidValue);
+    setBidAmount("");
+  };
+
+  // Hàm xử lý mua ngay
+  const handleBuyNow = (price) => {
+    toast.success(`Mua ngay thành công với giá ${formatPrice(price)} đ!`, {
+      position: "top-center",
+      autoClose: 3000,
+    });
+    setBidAmount("");
+  };
+
+  // Hàm xử lý đấu giá thành công
+  const handleBidSuccess = (price) => {
+    toast.success(`Đấu giá thành công với giá ${formatPrice(price)} đ!`, {
+      position: "top-center",
+      autoClose: 3000,
+    });
     setBidAmount("");
   };
 
@@ -82,56 +170,58 @@ const ProductDetailsAuction = ({
     <div className="py-6 overflow-y-auto max-h-[120vh]">
       <div className="max-w-4xl mx-auto px-4">
         {/* Current Price Info */}
-        <div className="bg-blue-50 p-4 sm:p-6 rounded-lg mb-8 shadow-md">
-          {/* Giá hiện tại */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
-            <span className="text-base sm:text-lg font-semibold text-gray-700">
-              Giá hiện tại:
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-blue-600">
-              {formatPrice(currentPrice)} đ
-            </span>
-          </div>
-
-          {/* Bid Input */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <label className="text-base sm:text-lg font-semibold text-gray-700 whitespace-nowrap">
-              Nhập giá tối đa:
-            </label>
-            <div className="flex gap-2 flex-1">
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={`Tối thiểu ${formatPrice(
-                  currentPrice + stepPrice
-                )} đ`}
-                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
-              />
-              <button
-                onClick={handleBidSubmit}
-                className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
-              >
-                XÁC NHẬN
-              </button>
+        {productStatus === "active" && (
+          <div className="bg-blue-50 p-4 sm:p-6 rounded-lg mb-8 shadow-md">
+            {/* Giá hiện tại */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
+              <span className="text-base sm:text-lg font-semibold text-gray-700">
+                Giá hiện tại:
+              </span>
+              <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                {formatPrice(currentPrice)} đ
+              </span>
             </div>
-          </div>
 
-          {/* Price Info */}
-          {buyNowPrice && (
-            <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
-              <p>
-                • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
-              </p>
-              <p>
-                • Giá mua ngay:{" "}
-                <strong className="text-red-600">
-                  {formatPrice(buyNowPrice)} đ
-                </strong>
-              </p>
+            {/* Bid Input */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <label className="text-base sm:text-lg font-semibold text-gray-700 whitespace-nowrap">
+                Nhập giá tối đa:
+              </label>
+              <div className="flex gap-2 flex-1">
+                <input
+                  type="number"
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  placeholder={`Tối thiểu ${formatPrice(
+                    currentPrice + stepPrice
+                  )} đ`}
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
+                />
+                <button
+                  onClick={handleBidSubmit}
+                  className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
+                >
+                  XÁC NHẬN
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Price Info */}
+            {buyNowPrice && (
+              <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
+                <p>
+                  • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
+                </p>
+                <p>
+                  • Giá mua ngay:{" "}
+                  <strong className="text-red-600">
+                    {formatPrice(buyNowPrice)} đ
+                  </strong>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bid History */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-md">
