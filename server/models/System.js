@@ -56,11 +56,13 @@ const systemSchema = new Schema(
       type: [sellerRequestSchema],
       default: [],
     },
+    // Thời gian kích hoạt gia hạn (trước khi kết thúc)
     autoExtendBefore: {
       type: Number,
       default: 0,
       min: 0,
     },
+    // Thời gian gia hạn nếu được kích hoạt 
     autoExtendDuration: {
       type: Number,
       default: 0,

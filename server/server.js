@@ -28,6 +28,7 @@ connectDB();
 app.use("/api/auth", require("./routes/AuthRoute"));
 app.use("/api/products", require("./routes/ProductRoute"));
 app.use("/api/users", require("./routes/UserRoute"));
+app.use("/api/auction", require("./routes/AuctionRoute"));
 app.use("/api/app_settings", require("./routes/SystemRoute"));
 
 // --- Middleware Xử lý Lỗi Cuối cùng ---
