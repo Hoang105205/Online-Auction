@@ -42,6 +42,8 @@ class AuctionService {
           throw error;
         }
 
+        //TODO: Kiểm tra rating của người đấu giá
+
         // Giá phải cao hơn hoặc bằng giá hiện tại
         const minEligibleBid = product.auction.highestBidderId
           ? product.auction.currentPrice
