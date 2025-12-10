@@ -61,57 +61,48 @@ const ProductDetails = () => {
   const mainImageRef = useRef(null);
   const thumbsRef = useRef(null);
 
-  // for public axios
-  useEffect(() => {
-    const fetchProductData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchProductData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const basicBata = await getProductBasicDetails(productId);
-        const auctionData = await getProductAuction(productId);
-        const descData = await getProductDescription(productId);
-        const publicQAData = await getProductPublicQA(productId);
-        const relatedData = await getRelatedProducts(productId);
+      const basicBata = await getProductBasicDetails(productId);
+      const auctionData = await getProductAuction(productId);
+      const descData = await getProductDescription(productId);
+      const publicQAData = await getProductPublicQA(productId);
+      const relatedData = await getRelatedProducts(productId);
 
-        setProductInfoData(basicBata);
-        setProductAuctionData(auctionData);
-        setProductDescData(descData);
-        setProductPublicQAData(publicQAData);
-        setProductRelatedData(relatedData);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
+      setProductInfoData(basicBata);
+      setProductAuctionData(auctionData);
+      setProductDescData(descData);
+      setProductPublicQAData(publicQAData);
+      setProductRelatedData(relatedData);
+
+      if (auth?.accessToken) {
+        const aucHisData = await getAuctionHistory(productId, axiosPrivate);
+        setProductAuctHisData(aucHisData);
       }
-    };
+    } catch (error) {
+      setError(error.message);
+      console.error("Error fetching product data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // set current user id
+  useEffect(() => {
+    if (auth?.id) {
+      fetchProductData(auth.id);
+    }
+  }, [auth]);
+
+  // fetch data on mount and when productId or auth changes
+  useEffect(() => {
     if (productId) {
       fetchProductData();
     }
-  }, [productId]);
-
-  // for private axios
-  useEffect(() => {
-    const fetchProductData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (auth?.accessToken) {
-          const aucHisData = await getAuctionHistory(productId, axiosPrivate);
-          setProductAuctHisData(aucHisData);
-        }
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (productId && auth?.accessToken) {
-      console.log("Fetching private data for user:", auth.id);
-      fetchProductData();
-    }
-  }, [auth, productId, axiosPrivate]);
+  }, [productId, auth?.accessToken]);
 
   const maskBidderName = (name) => {
     if (!name || name.length <= 4) return name;
@@ -444,6 +435,7 @@ const ProductDetails = () => {
                     auctionHistoryData={productAuctHisData}
                     authUser={auth}
                     productStatus={productAuctionData.auction.status}
+                    onBidSuccess={fetchProductData}
                   />
                 )}
                 {activeTab === "qa" && (
