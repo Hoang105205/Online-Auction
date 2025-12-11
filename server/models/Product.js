@@ -133,6 +133,12 @@ const productSchema = new Schema(
         default: 0,
         min: 0,
       },
+      bannedBidders: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+      ],
     },
     auctionHistory: {
       numberOfBids: {
