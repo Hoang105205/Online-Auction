@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Star, User, Clock } from "lucide-react";
 import { HiHeart } from "react-icons/hi";
 import { toast } from "react-toastify";
@@ -57,6 +57,7 @@ const ProductDetails = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [breadcrumbs, setBreadcrumbs] = useState([]);
 
   const mainImageRef = useRef(null);
   const thumbsRef = useRef(null);
@@ -66,17 +67,54 @@ const ProductDetails = () => {
       setLoading(true);
       setError(null);
 
-      const basicBata = await getProductBasicDetails(productId);
+      const basicData = await getProductBasicDetails(productId);
       const auctionData = await getProductAuction(productId);
       const descData = await getProductDescription(productId);
       const publicQAData = await getProductPublicQA(productId);
       const relatedData = await getRelatedProducts(productId);
 
-      setProductInfoData(basicBata);
+      setProductInfoData(basicData);
       setProductAuctionData(auctionData);
       setProductDescData(descData);
       setProductPublicQAData(publicQAData);
       setProductRelatedData(relatedData);
+
+      const crumbs = [
+        { name: "Trang Chủ", to: "/" },
+        { name: "Sản Phẩm", to: "/category" },
+      ];
+
+      if (basicData.detail.category) {
+        crumbs.push({
+          name: basicData.detail.category,
+          to: basicData.detail.categorySlug
+            ? `/category/${basicData.detail.categorySlug}`
+            : null,
+        });
+      }
+
+      if (basicData.detail.subCategory) {
+        crumbs.push({
+          name: basicData.detail.subCategory,
+          to:
+            basicData.detail.categorySlug && basicData.detail.subCategorySlug
+              ? `/category/${basicData.detail.categorySlug}/${basicData.detail.subCategorySlug}`
+              : null,
+        });
+      }
+
+      const productName = basicData.detail.name || "Sản phẩm";
+      const displayName =
+        productName.length > 20
+          ? productName.substring(0, 17) + "..."
+          : productName;
+
+      crumbs.push({
+        name: displayName,
+        to: null, // Không link vì đang ở trang này
+      });
+
+      setBreadcrumbs(crumbs);
 
       if (auth?.accessToken) {
         const aucHisData = await getAuctionHistory(productId, axiosPrivate);
@@ -189,13 +227,30 @@ const ProductDetails = () => {
           <div className="max-w-7xl mx-auto px-4 py-8">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-              <span>Home</span>
-              <span>›</span>
-              <span>Shop</span>
-              <span>›</span>
-              <span>Men</span>
-              <span>›</span>
-              <span className="text-black font-medium">T-shirts</span>
+              {breadcrumbs.map((crumb, i) => {
+                const isLast = i === breadcrumbs.length - 1;
+                return (
+                  <span key={i} className="flex items-center gap-2">
+                    {i > 0 && <span className="text-gray-400">/</span>}
+                    {isLast || !crumb.to ? (
+                      <span
+                        className={`${
+                          isLast ? "text-black font-medium" : "text-gray-600"
+                        }`}
+                      >
+                        {crumb.name}
+                      </span>
+                    ) : (
+                      <Link
+                        to={crumb.to}
+                        className="text-gray-600 hover:text-black hover:underline transition-colors"
+                      >
+                        {crumb.name}
+                      </Link>
+                    )}
+                  </span>
+                );
+              })}
             </nav>
 
             <h1 className="text-2xl lg:text-3xl font-bold mb-3 lg:mb-4 pb-4">
@@ -250,7 +305,7 @@ const ProductDetails = () => {
                   </span>
                   <div className="flex items-center gap-1 ml-4">
                     <span className="font-semibold text-sm lg:text-base">
-                      {productInfoData.detail.sellerId.feedBackAsSeller.point}
+                      {productInfoData.detail.sellerId.rating ?? " ? "}%
                     </span>
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   </div>
@@ -306,10 +361,9 @@ const ProductDetails = () => {
                           </span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-xs lg:text-sm font-semibold">
-                              {
-                                productAuctionData.auction.highestBidderId
-                                  .feedBackAsBidder.point
-                              }
+                              {productAuctionData.auction.highestBidderId
+                                .rating ?? " ? "}
+                              %
                             </span>
                             <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
                           </div>
