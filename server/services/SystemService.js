@@ -388,14 +388,14 @@ class SystemService {
 
   static async updateCategory(categoryId, updateData = {}) {
     if (!categoryId) {
-      const error = new Error("categoryId is required");
+      const error = new Error("phải có categoryId");
       error.statusCode = 400;
       throw error;
     }
 
     const sys = await SystemSetting.findOne().exec();
     if (!sys) {
-      const error = new Error("System config not found");
+      const error = new Error("Không tìm thấy cấu hình hệ thống");
       error.statusCode = 500;
       throw error;
     }
@@ -408,7 +408,7 @@ class SystemService {
       return false;
     });
     if (!cat) {
-      const error = new Error("Category not found");
+      const error = new Error("Không tìm thấy danh mục");
       error.statusCode = 404;
       throw error;
     }
@@ -433,7 +433,7 @@ class SystemService {
 
   static async removeCategory(categoryId) {
     if (!categoryId) {
-      const error = new Error("categoryId is required");
+      const error = new Error("phải có categoryId");
       error.statusCode = 400;
       throw error;
     }
@@ -449,7 +449,7 @@ class SystemService {
       return false;
     });
     if (!cat) {
-      const error = new Error("Category not found");
+      const error = new Error("Không tìm thấy danh mục");
       error.statusCode = 404;
       throw error;
     }
@@ -458,7 +458,7 @@ class SystemService {
     const categoryName = (cat.categoryName || "").trim();
     if (!categoryName) {
       const error = new Error(
-        "Cannot remove category without a categoryName. Please set categoryName first."
+        "Không thể xóa danh mục mà không có tên danh mục. Vui lòng đặt tên danh mục trước."
       );
       error.statusCode = 400;
       throw error;
@@ -468,7 +468,7 @@ class SystemService {
     const exists = await Product.exists({ "detail.category": categoryName });
     if (exists) {
       const error = new Error(
-        "Cannot remove category: there are products assigned to this category."
+        "Không thể xóa danh mục: có sản phẩm đang sử dụng danh mục này."
       );
       error.statusCode = 400;
       throw error;
@@ -554,7 +554,7 @@ class SystemService {
 
   static async removeProduct(productId) {
     if (!productId) {
-      const error = new Error("productId is required");
+      const error = new Error("phải có productId");
       error.statusCode = 400;
       throw error;
     }
@@ -568,7 +568,7 @@ class SystemService {
 
     const prod = await Product.findById(productId).exec();
     if (!prod) {
-      const error = new Error("Product not found");
+      const error = new Error("Không tìm thấy sản phẩm");
       error.statusCode = 404;
       throw error;
     }
@@ -588,20 +588,20 @@ class SystemService {
 
   static async removeSubCategory(categoryId, subCategoryId) {
     if (!categoryId) {
-      const error = new Error("categoryId is required");
+      const error = new Error("phải có categoryId");
       error.statusCode = 400;
       throw error;
     }
 
     if (!subCategoryId) {
-      const error = new Error("subCategoryId is required");
+      const error = new Error("phải có subCategoryId");
       error.statusCode = 400;
       throw error;
     }
 
     const sys = await SystemSetting.findOne().exec();
     if (!sys) {
-      const error = new Error("System config not found");
+      const error = new Error("Không tìm thấy cấu hình hệ thống");
       error.statusCode = 500;
       throw error;
     }
@@ -615,15 +615,18 @@ class SystemService {
     });
 
     if (!cat) {
-      const error = new Error("Category not found");
+      const error = new Error("Không tìm thấy danh mục");
       error.statusCode = 404;
       throw error;
     }
 
-    // Find the subcategory
+    // Find the subcategory (accept both subdocument _id and subCategoryId field)
+    const targetSubCategoryId = subCategoryId.toString();
     const subCat = cat.subCategories.find((s) => {
-      if (s._id && s._id.toString() === subCategoryId.toString()) return true;
-      return false;
+      const matchesDocId = s._id && s._id.toString() === targetSubCategoryId;
+      const matchesRefId =
+        s.subCategoryId && s.subCategoryId.toString() === targetSubCategoryId;
+      return matchesDocId || matchesRefId;
     });
 
     if (!subCat) {
@@ -631,12 +634,11 @@ class SystemService {
       error.statusCode = 404;
       throw error;
     }
-
     // Get the subcategory name to check products
     const subCategoryName = (subCat.subCategoryName || "").trim();
     if (!subCategoryName) {
       const error = new Error(
-        "Cannot remove subcategory without a subCategoryName. Please set subCategoryName first."
+        "Không thể xóa danh mục phụ mà không có tên danh mục phụ. Vui lòng đặt tên danh mục phụ trước."
       );
       error.statusCode = 400;
       throw error;
@@ -652,16 +654,19 @@ class SystemService {
 
     if (exists) {
       const error = new Error(
-        "Cannot remove subcategory: there are products assigned to this subcategory."
+        "Không thể xóa danh mục phụ: có sản phẩm đang sử dụng danh mục phụ này."
       );
       error.statusCode = 400;
       throw error;
     }
 
     // Safe to remove - filter out the subcategory
-    cat.subCategories = cat.subCategories.filter(
-      (s) => !(s._id && s._id.toString() === subCategoryId.toString())
-    );
+    cat.subCategories = cat.subCategories.filter((s) => {
+      const matchesDocId = s._id && s._id.toString() === targetSubCategoryId;
+      const matchesRefId =
+        s.subCategoryId && s.subCategoryId.toString() === targetSubCategoryId;
+      return !(matchesDocId || matchesRefId);
+    });
 
     await sys.save();
     return sys;
