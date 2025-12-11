@@ -34,6 +34,14 @@ class AuctionService {
           throw error;
         }
 
+        if (product.auction.bannedBidders.includes(userId)) {
+          const error = new Error(
+            "Bạn đã bị người bán chặn khỏi sản phẩm này."
+          );
+          error.statusCode = 400; // Bad Request
+          throw error;
+        }
+
         if (product.detail.sellerId.toString() === userId.toString()) {
           const error = new Error(
             "Bạn không thể tự đấu giá sản phẩm của mình."
@@ -42,7 +50,7 @@ class AuctionService {
           throw error;
         }
 
-        //TODO: Kiểm tra rating của người đấu giá
+        //TODO: Kiểm tra rating của người đấu giá & người đấu giá mới (nếu có chính sách)
 
         // Giá phải cao hơn hoặc bằng giá hiện tại
         const minEligibleBid = product.auction.highestBidderId
@@ -233,6 +241,138 @@ class AuctionService {
         throw retryError;
       }
       throw err;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async kickBidder(productId, sellerId, bidderIdToKick) {
+    const session = await mongoose.startSession();
+
+    try {
+      let result;
+      await session.withTransaction(async () => {
+        const product = await Product.findById(productId).session(session);
+
+        // 1. VALIDATE CƠ BẢN
+        if (!product) {
+          const error = new Error("Sản phẩm không tồn tại.");
+          error.statusCode = 404;
+          throw error;
+        }
+
+        if (product.detail.sellerId.toString() !== sellerId.toString()) {
+          const error = new Error(
+            "Chỉ người bán mới có quyền chặn người đấu giá."
+          );
+          error.statusCode = 400; // Bad Request
+          throw error;
+        }
+
+        if (product.auction.status !== "active") {
+          const error = new Error(
+            "Chỉ có thể chặn người dùng khi phiên đấu giá đang diễn ra."
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        // 2. THỰC HIỆN CHẶN
+        if (!product.auction.bannedBidders.includes(bidderIdToKick)) {
+          product.auction.bannedBidders.push(bidderIdToKick);
+        }
+
+        // 3. Dọn dẹp lịch sử
+        product.auctionHistory.historyList =
+          product.auctionHistory.historyList.filter(
+            (h) => h.bidderId.toString() !== bidderIdToKick.toString()
+          );
+
+        product.auctionHistory.numberOfBids =
+          product.auctionHistory.historyList.length;
+
+        // 4. Tính toán lại người dẫn đầu & giá hiện tại
+        const remainingBids = product.auctionHistory.historyList;
+
+        if (remainingBids.length === 0) {
+          product.auction.currentPrice = product.auction.startPrice;
+          product.auction.highestBidderId = null;
+          product.auction.bidders = 0;
+        } else {
+          // Group by User để tìm Max Bid của từng người còn lại
+          // (Vì một người có thể bid nhiều lần, ta chỉ quan tâm lần cao nhất của họ)
+          const bidderMap = {};
+
+          remainingBids.forEach((bid) => {
+            const bId = bid.bidderId.toString();
+
+            if (!bidderMap[bId]) {
+              bidderMap[bId] = { price: bid.bidPrice, time: bid.bidTime };
+            } else {
+              if (bid.bidPrice > bidderMap[bId].price) {
+                // Tìm thấy giá cao hơn -> Cập nhật
+                bidderMap[bId] = { price: bid.bidPrice, time: bid.bidTime };
+              }
+            }
+          });
+
+          const sortedBidders = Object.keys(bidderMap)
+            .map((id) => ({
+              id,
+              price: bidderMap[id].price,
+              time: bidderMap[id].time,
+            }))
+            .sort((a, b) => {
+              // Ưu tiên 1: Giá giảm dần
+              if (b.price !== a.price) {
+                return b.price - a.price;
+              }
+              // Ưu tiên 2: Thời gian tăng dần (Đến sớm xếp trên)
+              return new Date(a.time) - new Date(b.time);
+            });
+
+          // Người đứng đầu (Leader mới)
+          const newLeader = sortedBidders[0];
+          product.auction.highestBidderId = newLeader.id;
+
+          // Tính lại số người tham gia
+          product.auction.bidders = sortedBidders.length;
+
+          // Tính giá hiện tại (Current Price)
+          if (sortedBidders.length === 1) {
+            product.auction.currentPrice = product.auction.startPrice;
+          } else {
+            const runnerUp = sortedBidders[1]; // Người về nhì
+
+            product.auction.currentPrice = runnerUp.price;
+          }
+        }
+
+        // 5. LƯU & CẬP NHẬT USER
+        await User.findByIdAndUpdate(
+          bidderIdToKick,
+          { $pull: { auctionsParticipated: productId } },
+          { session }
+        );
+
+        // 6. LƯU SẢN PHẨM
+        await product.save({ session });
+
+        result = { message: "Chặn người đấu giá thành công." };
+      });
+
+      return result;
+    } catch (error) {
+      if (
+        error.name === "VersionError" ||
+        (error.errorLabels &&
+          error.errorLabels.includes("TransientTransactionError"))
+      ) {
+        const retryError = new Error("Dữ liệu thay đổi, vui lòng thử lại.");
+        retryError.statusCode = 409;
+        throw retryError;
+      }
+      throw error;
     } finally {
       session.endSession();
     }
