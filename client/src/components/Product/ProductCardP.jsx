@@ -124,7 +124,8 @@ const ProductCardP = ({ product, isWon = false }) => {
             isNewProduct
               ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-200/50 animate-pulse-border"
               : ""
-          }`}>
+          }`}
+        >
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
             {isNewProduct && (
@@ -140,7 +141,8 @@ const ProductCardP = ({ product, isWon = false }) => {
                 className="
               absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 
               group-hover:opacity-100 group-hover:translate-y-0
-              translate-y-4 transition-all duration-300 w-[80%]">
+              translate-y-4 transition-all duration-300 w-[80%]"
+              >
                 Đấu giá ngay
               </Button>
             )}
@@ -212,7 +214,8 @@ const ProductCardP = ({ product, isWon = false }) => {
                   <span
                     className={`font-medium ${
                       isEnded ? "text-gray-500" : "text-orange-600"
-                    }`}>
+                    }`}
+                  >
                     {timeRemaining}
                   </span>
                 </div>

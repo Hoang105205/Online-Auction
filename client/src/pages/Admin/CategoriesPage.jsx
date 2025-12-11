@@ -16,6 +16,7 @@ import {
   addCategory,
   updateCategory,
   removeCategory as apiRemoveCategory,
+  removeSubCategory as apiRemoveSubCategory,
 } from "../../api/systemService";
 
 export default function CategoriesPage() {
@@ -26,11 +27,9 @@ export default function CategoriesPage() {
   const [openRows, setOpenRows] = useState(new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newCount, setNewCount] = useState(0);
   const [newParent, setNewParent] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
-  const [editCount, setEditCount] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -98,7 +97,6 @@ export default function CategoriesPage() {
     }
     // status currently not used (mock), placeholder for future
     if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "count") data.sort((a, b) => b.count - a.count);
     return data;
   }, [query, sortBy, categories]);
 
@@ -131,7 +129,6 @@ export default function CategoriesPage() {
     if (!item) return;
     setEditingId(id);
     setEditName(item.name);
-    setEditCount(item.count || 0);
     // ensure add form hidden to avoid UI conflict
     setShowAddForm(false);
   }
@@ -247,7 +244,6 @@ export default function CategoriesPage() {
   function cancelEdit() {
     setEditingId(null);
     setEditName("");
-    setEditCount(0);
   }
 
   function handleDeleteClick(id) {
@@ -268,22 +264,9 @@ export default function CategoriesPage() {
           const parent = categories.find((c) => c.id === parentId);
           if (!parent || !parent._raw) throw new Error("Parent not found");
           const raw = parent._raw;
-          const existing = Array.isArray(raw.subCategories)
-            ? raw.subCategories
-            : [];
-          const updatedSubs = existing
-            .map((s) => ({
-              subCategoryId: s.subCategoryId || s._id,
-              subCategoryName: s.subCategoryName || s.name || "",
-              slug: s.slug || "",
-            }))
-            .filter(
-              (s) => String(s.subCategoryId || s._id || "") !== String(targetId)
-            );
+          const parentRawId = raw.categoryId || raw._id;
 
-          await updateCategory(axiosInstance, raw.categoryId || raw._id, {
-            subCategories: updatedSubs,
-          });
+          await apiRemoveSubCategory(axiosInstance, parentRawId, targetId);
         } else {
           // top-level category
           const cat = categories.find((c) => c.id === targetId);
@@ -429,7 +412,6 @@ export default function CategoriesPage() {
       }));
       setCategories(norm);
       setNewName("");
-      setNewCount(0);
       setNewParent("");
       setShowAddForm(false);
       setPage(1);
@@ -479,7 +461,6 @@ export default function CategoriesPage() {
             >
               <option value="date">Sort by Date</option>
               <option value="name">Sort by Name</option>
-              <option value="count">Sort by Count</option>
             </select>
 
             {/* removed unused chevron-only button (no action/label) */}
@@ -506,15 +487,6 @@ export default function CategoriesPage() {
                 <input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Số lượng</label>
-                <input
-                  type="number"
-                  value={newCount}
-                  onChange={(e) => setNewCount(e.target.value)}
                   className="mt-1 w-full px-3 py-2 border rounded"
                 />
               </div>
@@ -562,7 +534,6 @@ export default function CategoriesPage() {
               <tr className="text-sm text-gray-500 border-b">
                 <th className="py-4 px-4">ID</th>
                 <th className="py-4 px-4">Danh mục</th>
-                <th className="py-4 px-4">Số lượng</th>
                 <th className="py-4 px-4">Actions</th>
                 <th className="py-4 px-4"></th>
               </tr>
@@ -586,14 +557,6 @@ export default function CategoriesPage() {
                           />
                         </td>
                         <td className="py-4 px-4">
-                          <input
-                            type="number"
-                            value={editCount}
-                            onChange={(e) => setEditCount(e.target.value)}
-                            className="w-24 px-2 py-1 border rounded"
-                          />
-                        </td>
-                        <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={submitEdit}
@@ -613,7 +576,6 @@ export default function CategoriesPage() {
                     ) : (
                       <>
                         <td className="py-4 px-4">{c.name}</td>
-                        <td className="py-4 px-4">{c.count}</td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
                             <button

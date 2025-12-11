@@ -267,6 +267,43 @@ const getCategoryBySlug = async (req, res) => {
   }
 };
 
+const removeSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryId } = req.params;
+    if (!categoryId)
+      return res
+        .status(400)
+        .json({ message: "categoryId không được để trống." });
+    if (!subCategoryId)
+      return res
+        .status(400)
+        .json({ message: "subCategoryId không được để trống." });
+
+    const sys = await SystemService.removeSubCategory(
+      categoryId,
+      subCategoryId
+    );
+    return res
+      .status(200)
+      .json({ message: "Xoá subcategory thành công.", system: sys });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const getDashboardStats = async (req, res) => {
+  try {
+    const stats = await SystemService.getDashboardStats();
+    return res.status(200).json(stats);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getSystemConfig,
   getTimeConfigs,
@@ -282,6 +319,8 @@ module.exports = {
   addCategory,
   updateCategory,
   removeCategory,
+  getDashboardStats,
+  removeSubCategory,
   listUsers,
   listProducts,
   removeProduct,

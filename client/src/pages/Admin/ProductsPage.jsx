@@ -8,6 +8,7 @@ import {
 } from "react-icons/hi";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { listProducts, removeProduct } from "../../api/systemService";
+import ProductImage from "../../components/ProductImage";
 
 export default function ProductsPage() {
   const [query, setQuery] = useState("");
@@ -175,17 +176,20 @@ export default function ProductsPage() {
                       <td className="py-4 px-4">{p._id || p.id}</td>
                       <>
                         <td className="py-4 px-4 flex items-center gap-3">
-                          <img
-                            src={
-                              (p.detail &&
-                                p.detail.images &&
-                                p.detail.images[0]) ||
-                              "/auth-images/default.jpg"
-                            }
-                            alt="thumb"
-                            className="w-10 h-10 rounded-md object-cover"
-                          />
-                          <div>{(p.detail && p.detail.name) || "—"}</div>
+                          {p.detail &&
+                          p.detail.images &&
+                          p.detail.images.length > 0 ? (
+                            <ProductImage
+                              url={p.detail.images[0]}
+                              defaultWidth="40px"
+                              defaultHeight="40px"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-md bg-gray-200" />
+                          )}
+                          <div className="font-medium">
+                            {(p.detail && p.detail.name) || "—"}
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           {(p.detail && p.detail.category) || "—"}
@@ -232,9 +236,63 @@ export default function ProductsPage() {
                       <tr className="text-sm text-gray-600 bg-gray-50">
                         <td className="py-3 px-4">&nbsp;</td>
                         <td colSpan={4} className="py-3 px-4">
-                          <div className="text-sm text-gray-500">
-                            {(p.detail && p.detail.description) ||
-                              "Mô tả: không có."}
+                          <div className="space-y-3">
+                            {/* Product Image */}
+                            {p.detail &&
+                              p.detail.images &&
+                              p.detail.images.length > 0 && (
+                                <div className="flex gap-3 mb-3">
+                                  {p.detail.images
+                                    .slice(0, 3)
+                                    .map((img, idx) => (
+                                      <ProductImage
+                                        key={idx}
+                                        url={img}
+                                        defaultWidth="64px"
+                                        defaultHeight="64px"
+                                      />
+                                    ))}
+                                </div>
+                              )}
+
+                            {/* Description */}
+                            <div>
+                              <span className="font-semibold text-gray-600">
+                                Mô tả:
+                              </span>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {(p.detail && p.detail.description) ||
+                                  "Không có mô tả."}
+                              </p>
+                            </div>
+
+                            {/* SubCategory */}
+                            {p.detail && p.detail.subCategory && (
+                              <div>
+                                <span className="font-semibold text-gray-600">
+                                  Danh mục con:
+                                </span>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {p.detail.subCategory}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Auction Status */}
+                            {p.auction && (
+                              <div>
+                                <span className="font-semibold text-gray-600">
+                                  Trạng thái:
+                                </span>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Hiện tại:{" "}
+                                  {p.auction.currentPrice ||
+                                    p.auction.startPrice ||
+                                    "—"}{" "}
+                                  ₫
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right">&nbsp;</td>

@@ -1,10 +1,11 @@
-// client/src/layouts/AdminLayout.jsx (Mã mẫu)
+// client/src/layouts/AdminLayout.jsx
 
 import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSideBar from "../components/Admin/AdminSideBar";
 import useAuth from "../hooks/useAuth";
 import useRefreshToken from "../hooks/useRefreshToken";
+import { HiLogout } from "react-icons/hi";
 
 const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,13 +40,7 @@ const AdminLayout = () => {
                 />
               </svg>
             </button>
-            <div className="flex items-center gap-3">
-              <img
-                src="/auth-images/avatar1.jpg"
-                alt="me"
-                className="w-8 h-8 rounded-full"
-              />
-            </div>
+            <MobileAdminUser />
           </header>
 
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
@@ -59,6 +54,34 @@ const AdminLayout = () => {
     </>
   );
 };
+
+function MobileAdminUser() {
+  const { auth } = useAuth();
+  const { logout } = useRefreshToken();
+
+  const displayName = auth?.fullName || auth?.user?.fullName || "Admin";
+  const displayEmail = auth?.email || auth?.user?.email || "";
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="text-right">
+        <p className="font-semibold text-gray-800 text-xs leading-tight">
+          {displayName}
+        </p>
+        {displayEmail && (
+          <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+        )}
+      </div>
+      <button
+        onClick={() => logout()}
+        className="p-2 text-red-600 hover:bg-gray-200 rounded-md transition-colors"
+        title="Đăng xuất"
+      >
+        <HiLogout className="text-lg" />
+      </button>
+    </div>
+  );
+}
 
 function DesktopAdminUser() {
   const { auth } = useAuth();
@@ -79,7 +102,7 @@ function DesktopAdminUser() {
       </div>
       <button
         onClick={() => logout()}
-        className="px-3 py-2 bg-gray-100 rounded text-sm"
+        className="px-3 py-2 bg-gray-400 rounded text-sm text-white hover:bg-gray-500 transition-colors flex items-center gap-1"
       >
         Đăng xuất
       </button>

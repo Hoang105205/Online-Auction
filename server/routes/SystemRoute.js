@@ -9,6 +9,14 @@ const ROLES_LIST = require("../config/roles_list");
 // Get category based on slugify of name
 router.get("/categories/:slug", SystemController.getCategoryBySlug);
 
+// Dashboard stats (Admin-only)
+router.get(
+  "/dashboard/stats",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.getDashboardStats
+);
+
 // Admin-only: view and modify system config
 router.get(
   "/",
@@ -98,6 +106,13 @@ router.delete(
   verifyJWT,
   verifyRoles(ROLES_LIST.Admin),
   SystemController.removeCategory
+);
+
+router.delete(
+  "/categories/:categoryId/subcategories/:subCategoryId",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.removeSubCategory
 );
 
 router.get(
