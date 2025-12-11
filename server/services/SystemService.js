@@ -534,7 +534,9 @@ class SystemService {
 
     const total = await Product.countDocuments(filter).exec();
     const products = await Product.find(filter)
-      .select("detail auction auctionHistory")
+      .select(
+        "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
+      )
       .skip((page - 1) * limit)
       .limit(limit)
       .populate("detail.sellerId", "fullName email")
@@ -582,6 +584,187 @@ class SystemService {
     ).exec();
 
     return sys ? sys.categories[0] : null;
+  }
+
+  static async removeSubCategory(categoryId, subCategoryId) {
+    if (!categoryId) {
+      const error = new Error("categoryId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!subCategoryId) {
+      const error = new Error("subCategoryId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const sys = await SystemSetting.findOne().exec();
+    if (!sys) {
+      const error = new Error("System config not found");
+      error.statusCode = 500;
+      throw error;
+    }
+
+    // Find the category
+    const cat = sys.categories.find((c) => {
+      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
+        return true;
+      if (c._id && c._id.toString() === categoryId.toString()) return true;
+      return false;
+    });
+
+    if (!cat) {
+      const error = new Error("Category not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Find the subcategory
+    const subCat = cat.subCategories.find((s) => {
+      if (s._id && s._id.toString() === subCategoryId.toString()) return true;
+      return false;
+    });
+
+    if (!subCat) {
+      const error = new Error("SubCategory not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Get the subcategory name to check products
+    const subCategoryName = (subCat.subCategoryName || "").trim();
+    if (!subCategoryName) {
+      const error = new Error(
+        "Cannot remove subcategory without a subCategoryName. Please set subCategoryName first."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check if any product uses this subcategory
+    // Products store subCategory as string
+    const categoryName = (cat.categoryName || "").trim();
+    const exists = await Product.exists({
+      "detail.category": categoryName,
+      "detail.subCategory": subCategoryName,
+    });
+
+    if (exists) {
+      const error = new Error(
+        "Cannot remove subcategory: there are products assigned to this subcategory."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Safe to remove - filter out the subcategory
+    cat.subCategories = cat.subCategories.filter(
+      (s) => !(s._id && s._id.toString() === subCategoryId.toString())
+    );
+
+    await sys.save();
+    return sys;
+  }
+
+  static async getDashboardStats() {
+    try {
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Total products
+      const totalProducts = await Product.countDocuments().exec();
+
+      // New products in last 24h
+      const newProducts24h = await Product.countDocuments({
+        createdAt: { $gte: oneDayAgo },
+      }).exec();
+
+      // Ongoing auctions (status === "ongoing")
+      const ongoingAuctions = await Product.countDocuments({
+        "auction.status": "ongoing",
+      }).exec();
+
+      // Completed auctions (status === "completed")
+      const completedAuctions = await Product.countDocuments({
+        "auction.status": "completed",
+      }).exec();
+
+      // Total revenue (sum of all completed auction prices)
+      const revenueResult = await Product.aggregate([
+        { $match: { "auction.status": "completed" } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$auction.currentPrice" },
+          },
+        },
+      ]).exec();
+      const totalRevenue = revenueResult[0]?.totalRevenue || 0;
+
+      // Recent completed auctions (last 5 with images)
+      const recentAuctions = await Product.find({
+        "auction.status": "completed",
+      })
+        .select("detail auction createdAt")
+        .sort({ "auction.endTime": -1 })
+        .limit(5)
+        .lean()
+        .exec();
+
+      // Get top 3 seller upgrade requests (newest first)
+      const sys = await SystemSetting.findOne()
+        .select("sellerRequests")
+        .populate({
+          path: "sellerRequests.bidderId",
+          select: "fullName email",
+        })
+        .lean()
+        .exec();
+
+      let upgradeRequests = [];
+      let pendingRequestsCount = 0;
+      if (sys && sys.sellerRequests && sys.sellerRequests.length > 0) {
+        const validRequests = sys.sellerRequests.filter((r) => r.bidderId);
+        pendingRequestsCount = validRequests.length;
+
+        upgradeRequests = validRequests
+          .sort((a, b) => {
+            // Sort by dateStart descending (newest first)
+            const timeA = new Date(a.dateStart).getTime();
+            const timeB = new Date(b.dateStart).getTime();
+            return timeB - timeA;
+          })
+          .slice(0, 3) // Take top 3
+          .map((r) => ({
+            bidderId: r.bidderId._id,
+            name: r.bidderId.fullName,
+            email: r.bidderId.email,
+            dateStart: r.dateStart,
+          }));
+      }
+
+      const newUsers7d = await User.countDocuments({
+        createdAt: { $gte: sevenDaysAgo },
+      }).exec();
+
+      return {
+        totalProducts,
+        ongoingAuctions,
+        completedAuctions,
+        totalRevenue,
+        newProducts24h,
+        newUsers7d,
+        pendingRequestsCount,
+        recentAuctions,
+        upgradeRequests,
+      };
+    } catch (error) {
+      const err = new Error("Error getting dashboard stats: " + error.message);
+      err.statusCode = 500;
+      throw err;
+    }
   }
 }
 

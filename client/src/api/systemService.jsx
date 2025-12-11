@@ -162,6 +162,21 @@ export const removeCategory = async (axiosInstance, categoryId) => {
   }
 };
 
+export const removeSubCategory = async (
+  axiosInstance,
+  categoryId,
+  subCategoryId
+) => {
+  try {
+    const res = await axiosInstance.delete(
+      `/app_settings/categories/${categoryId}/subcategories/${subCategoryId}`
+    );
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const listUsers = async (
   axiosInstance,
   { page = 1, limit = 20, q = "" } = {}
@@ -223,7 +238,17 @@ export default {
   addCategory,
   updateCategory,
   removeCategory,
+  removeSubCategory,
   listUsers,
   listProducts,
   getCategoryBySlug,
+};
+
+export const getDashboardStats = async (axiosInstance) => {
+  try {
+    const res = await axiosInstance.get("/app_settings/dashboard/stats");
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
 };

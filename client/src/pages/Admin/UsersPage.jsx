@@ -270,9 +270,6 @@ export default function UsersPage() {
                               <div className="font-medium">
                                 {u.fullName || u.email}
                               </div>
-                              <div className="text-xs text-gray-400">
-                                {u.email}
-                              </div>
                             </div>
                           </td>
                           <td className="py-4 px-4">
@@ -323,9 +320,25 @@ export default function UsersPage() {
                       <tr className="text-sm text-gray-600 bg-gray-50">
                         <td className="py-3 px-4">&nbsp;</td>
                         <td colSpan={3} className="py-3 px-4">
-                          <div className="text-sm text-gray-500">
-                            Thông tin thêm: email@example.com • Đã đăng ký:
-                            01/01/2024
+                          <div className="text-sm text-gray-700 space-y-2">
+                            <div>
+                              <span className="font-semibold text-gray-600">
+                                Email:
+                              </span>{" "}
+                              {u.email}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-gray-600">
+                                Địa chỉ:
+                              </span>{" "}
+                              {u.address || "Chưa cập nhật"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Đã đăng ký:{" "}
+                              {new Date(u.createdAt).toLocaleDateString(
+                                "vi-VN"
+                              ) || "01/01/2024"}
+                            </div>
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right">&nbsp;</td>
