@@ -113,9 +113,9 @@ const ProductCardP = ({ product, isWon = false }) => {
     <div>
       <button
         onClick={() => handleAddToWatchlist(product.id)}
-        className="relative z-10 top-12 left-2 p-2  rounded-full shadow transition-colors duration-300 
-      bg-gray-300 text-gray-400 hover:bg-white hover:text-red-500"
-      >
+        className="relative z-10 top-12 left-2 p-2 rounded-full shadow-lg transition-all duration-300 
+                         bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:scale-110
+                         border border-gray-200">
         <HiHeart className="w-6 h-6" />
       </button>
       <Link to={`/details/${product.id}`}>

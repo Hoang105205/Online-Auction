@@ -7,7 +7,6 @@ export const Category = ({
   selectedsubCategory = null,
 }) => {
   const [open, setOpen] = useState(false);
-  const [openSubIndex, setOpenSubIndex] = useState(false);
   const [firstTap, setFirstTap] = useState(false);
 
   return (
@@ -15,7 +14,6 @@ export const Category = ({
       className="flex w-full p-1"
       onMouseLeave={() => {
         setOpen(false);
-        setOpenSubIndex(null);
       }}>
       <NavLink
         to={`/category/${encodeURIComponent(category.slug)}`}
@@ -30,7 +28,7 @@ export const Category = ({
             setOpen(true);
             setFirstTap(true);
 
-            setTimeout(() => setFirstTap(false), 2000);
+            setTimeout(() => setFirstTap(false), 200);
           } else {
             setOpen(false);
             setFirstTap(false);
@@ -59,29 +57,23 @@ export const Category = ({
         </svg>
       </NavLink>
 
-      {open && (
+      {open && category.subCategories && category.subCategories.length > 0 && (
         <div className="relative">
           <div className="absolute left-0 top-0 shadow-md z-10 bg-white border border-gray-300 divide-gray-100 rounded-lg flex">
             <div className="ml-1">
               {category.subCategories.map((item, idx) => (
-                <div
-                  key={item.subCategoryId}
-                  onMouseEnter={() => setOpenSubIndex(idx)}
-                  onMouseLeave={() =>
-                    setOpenSubIndex((i) => (i === idx ? null : i))
-                  }>
-                  <NavLink
-                    to={`/category/${encodeURIComponent(
-                      category.slug
-                    )}/${encodeURIComponent(item.slug)}`}
-                    className={`text-base font-medium whitespace-nowrap rounded-lg px-4 py-2 flex justify-between items-center ${
-                      selectedsubCategory === item.subCategoryName
-                        ? "bg-[#15579C] text-white"
-                        : "bg-white hover:bg-gray-100 text-gray-700"
-                    }`}>
-                    <span>{item.subCategoryName}</span>
-                  </NavLink>
-                </div>
+                <NavLink
+                  key={idx}
+                  to={`/category/${encodeURIComponent(
+                    category.slug
+                  )}/${encodeURIComponent(item.slug)}`}
+                  className={`text-base font-medium whitespace-nowrap rounded-lg px-4 py-2 flex justify-between items-center ${
+                    selectedsubCategory === item.subCategoryName
+                      ? "bg-[#15579C] text-white"
+                      : "bg-white hover:bg-gray-100 text-gray-700"
+                  }`}>
+                  <span>{item.subCategoryName}</span>
+                </NavLink>
               ))}
             </div>
           </div>

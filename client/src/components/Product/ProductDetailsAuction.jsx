@@ -1,15 +1,25 @@
 import React, { useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
+import { toast } from "react-toastify";
+
+import { placeBid } from "../../api/auctionService";
+
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const ProductDetailsAuction = ({
   productId,
   auctionData,
   auctionHistoryData,
   authUser,
+  productStatus,
+  onBidSuccess,
 }) => {
+  const axiosPrivate = useAxiosPrivate();
   const [bidAmount, setBidAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (!authUser?.accessToken) {
     return (
@@ -41,6 +51,58 @@ const ProductDetailsAuction = ({
   const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
   const { numberOfBids, historyList } = auctionHistoryData;
 
+  const minBidPrice = currentPrice + stepPrice;
+
+  const handleRefreshHistory = async () => {
+    if (isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+
+      if (onBidSuccess) {
+        await onBidSuccess();
+      }
+
+      toast.success("Đã cập nhật lịch sử đấu giá!", {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi cập nhật!", {
+        position: "top-center",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleBidAmountChange = (e) => {
+    const value = e.target.value;
+
+    if (value === "") {
+      setBidAmount("");
+      return;
+    }
+
+    const numValue = parseInt(value);
+
+    if (numValue < minBidPrice) {
+      setBidAmount(minBidPrice.toString());
+    } else if (numValue > buyNowPrice) {
+      setBidAmount(buyNowPrice.toString());
+    } else {
+      setBidAmount(value);
+    }
+  };
+
+  const handleInputIncrement = (e) => {
+    if (bidAmount === "" || !bidAmount) {
+      e.preventDefault();
+      setBidAmount(minBidPrice.toString());
+      return;
+    }
+  };
+
   const maskBidderName = (name) => {
     if (!name || name.length <= 4) return name;
     return name.substring(0, 4) + "***";
@@ -61,87 +123,246 @@ const ProductDetailsAuction = ({
   };
 
   const handleBidSubmit = () => {
+    if (isSubmitting) return;
+
     const bidValue = parseInt(bidAmount);
     if (!bidValue) {
-      alert("Vui lòng nhập giá đấu giá!");
+      toast.error("Vui lòng nhập giá đấu giá!");
       return;
     }
-    if (bidValue < currentPrice + stepPrice) {
-      alert(
-        `Giá đấu giá phải ít nhất là ${formatPrice(
-          currentPrice + stepPrice
-        )} đ!`
+    if (bidValue >= buyNowPrice) {
+      const toastId = toast.warn(
+        <div>
+          <p>
+            Mức giá bạn đặt đã vượt giá mua ngay {formatPrice(buyNowPrice)} đ!
+          </p>
+          <p>Bạn có chắc chắn muốn mua ngay sản phẩm này?</p>
+          <div
+            style={{
+              marginTop: "10px",
+              display: "flex",
+              gap: "10px",
+              justifyContent: "center",
+            }}
+          >
+            <button
+              onClick={() => {
+                handleBuyNow(buyNowPrice);
+                toast.dismiss(toastId);
+              }}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#2563eb",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Xác nhận
+            </button>
+            <button
+              onClick={() => toast.dismiss(toastId)}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#6b7280",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Hủy
+            </button>
+          </div>
+        </div>,
+        {
+          position: "top-center",
+          autoClose: false,
+          closeOnClick: false,
+          draggable: false,
+          closeButton: false,
+        }
       );
       return;
     }
-    alert(`Đấu giá thành công với giá ${formatPrice(bidValue)} đ!`);
-    setBidAmount("");
+    if (bidValue < currentPrice + stepPrice) {
+      toast.error(
+        `Giá đấu giá phải ít nhất là ${formatPrice(
+          currentPrice + stepPrice
+        )} đ!`,
+        {
+          position: "top-center",
+        }
+      );
+      return;
+    }
+    if (
+      bidValue > currentPrice + stepPrice &&
+      (bidValue - currentPrice) % stepPrice !== 0
+    ) {
+      toast.error(
+        `Giá đấu giá trừ giá hiện tại phải chia hết cho ${formatPrice(
+          stepPrice
+        )} đ!`,
+        {
+          position: "top-center",
+        }
+      );
+      return;
+    }
+    handleBidSuccess(bidValue);
+  };
+
+  // Hàm xử lý mua ngay
+  const handleBuyNow = async (price) => {
+    try {
+      await placeBid(axiosPrivate, {
+        productId: productId,
+        bidAmount: price,
+      });
+
+      toast.success(`Mua ngay thành công với giá ${formatPrice(price)} đ!`, {
+        position: "top-center",
+        autoClose: 3000,
+      });
+
+      setBidAmount("");
+
+      if (onBidSuccess) {
+        await onBidSuccess();
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Có lỗi xảy ra khi mua ngay!";
+      toast.error(errorMsg, {
+        position: "top-center",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Hàm xử lý đấu giá thành công
+  const handleBidSuccess = async (price) => {
+    try {
+      await placeBid(axiosPrivate, {
+        productId: productId,
+        bidAmount: price,
+      });
+
+      toast.success(`Đấu giá thành công với giá ${formatPrice(price)} đ!`, {
+        position: "top-center",
+        autoClose: 3000,
+      });
+
+      setBidAmount("");
+
+      if (onBidSuccess) {
+        await onBidSuccess();
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Có lỗi xảy ra khi đấu giá!";
+      toast.error(errorMsg, {
+        position: "top-center",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="py-6 overflow-y-auto max-h-[120vh]">
       <div className="max-w-4xl mx-auto px-4">
         {/* Current Price Info */}
-        <div className="bg-blue-50 p-4 sm:p-6 rounded-lg mb-8 shadow-md">
-          {/* Giá hiện tại */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
-            <span className="text-base sm:text-lg font-semibold text-gray-700">
-              Giá hiện tại:
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-blue-600">
-              {formatPrice(currentPrice)} đ
-            </span>
-          </div>
-
-          {/* Bid Input */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <label className="text-base sm:text-lg font-semibold text-gray-700 whitespace-nowrap">
-              Nhập giá tối đa:
-            </label>
-            <div className="flex gap-2 flex-1">
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={`Tối thiểu ${formatPrice(
-                  currentPrice + stepPrice
-                )} đ`}
-                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
-              />
-              <button
-                onClick={handleBidSubmit}
-                className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
-              >
-                XÁC NHẬN
-              </button>
+        {productStatus === "active" && (
+          <div className="bg-blue-50 p-4 sm:p-6 rounded-lg mb-8 shadow-md">
+            {/* Giá hiện tại */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
+              <span className="text-base sm:text-lg font-semibold text-gray-700">
+                Giá hiện tại:
+              </span>
+              <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                {formatPrice(currentPrice)} đ
+              </span>
             </div>
-          </div>
 
-          {/* Price Info */}
-          {buyNowPrice && (
-            <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
-              <p>
-                • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
-              </p>
-              <p>
-                • Giá mua ngay:{" "}
-                <strong className="text-red-600">
-                  {formatPrice(buyNowPrice)} đ
-                </strong>
-              </p>
+            {/* Bid Input */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <label className="text-base sm:text-lg font-semibold text-gray-700 whitespace-nowrap">
+                Nhập giá tối đa:
+              </label>
+              <div className="flex gap-2 flex-1">
+                <input
+                  type="number"
+                  value={bidAmount}
+                  onChange={handleBidAmountChange}
+                  onFocus={handleInputIncrement}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                      handleInputIncrement(e);
+                    }
+                  }}
+                  min={minBidPrice}
+                  step={stepPrice}
+                  placeholder={`Tối thiểu ${formatPrice(
+                    currentPrice + stepPrice
+                  )} đ`}
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
+                />
+                <button
+                  onClick={handleBidSubmit}
+                  className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
+                >
+                  XÁC NHẬN
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Price Info */}
+            {buyNowPrice && (
+              <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
+                <p>
+                  • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
+                </p>
+                <p>
+                  • Giá mua ngay:{" "}
+                  <strong className="text-red-600">
+                    {formatPrice(buyNowPrice)} đ
+                  </strong>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bid History */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-md">
           <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">
-              Lịch sử đấu giá:
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Tổng số lượt đấu giá: <strong>{numberOfBids}</strong>
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                  Lịch sử đấu giá:
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  Tổng số lượt đấu giá: <strong>{numberOfBids}</strong>
+                </p>
+              </div>
+              <button
+                onClick={handleRefreshHistory}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Làm mới lịch sử"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                <span className="hidden sm:inline">
+                  {isRefreshing ? "Đang tải..." : "Làm mới"}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Table */}
