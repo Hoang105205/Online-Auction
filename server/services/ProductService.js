@@ -1,6 +1,7 @@
 const Product = require("../models/Product");
 const User = require("../models/User");
 const cloudinary = require("../config/cloudinary");
+const { calculateUserRating } = require("../utils/userUtils");
 
 class ProductService {
   // get product basic details (for above information)
@@ -8,11 +9,15 @@ class ProductService {
     try {
       const product = await Product.findById(productId)
         .populate("detail.sellerId", "fullName feedBackAsSeller")
+        .lean()
         .exec();
 
       if (!product) {
         throw new Error("Product not found");
       }
+
+      const rating = await calculateUserRating(product.detail.sellerId._id);
+      product.detail.sellerId.rating = rating.percentage;
 
       return {
         detail: product.detail,
@@ -26,10 +31,18 @@ class ProductService {
     try {
       const product = await Product.findById(productId)
         .populate("auction.highestBidderId", "fullName feedBackAsBidder")
+        .lean()
         .exec();
 
       if (!product) {
         throw new Error("Product not found");
+      }
+
+      if (product.auction.highestBidderId) {
+        const bidderRating = await calculateUserRating(
+          product.auction.highestBidderId._id
+        );
+        product.auction.highestBidderId.rating = bidderRating.percentage;
       }
 
       return {

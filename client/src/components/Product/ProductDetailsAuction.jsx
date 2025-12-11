@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Clock, RefreshCw } from "lucide-react";
+import { Clock, RefreshCw, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { toast } from "react-toastify";
@@ -50,6 +50,8 @@ const ProductDetailsAuction = ({
 
   const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
   const { numberOfBids, historyList } = auctionHistoryData;
+
+  const highestBidderId = auctionData.auction.highestBidderId?._id;
 
   const minBidPrice = currentPrice + stepPrice;
 
@@ -217,15 +219,12 @@ const ProductDetailsAuction = ({
   // Hàm xử lý mua ngay
   const handleBuyNow = async (price) => {
     try {
-      await placeBid(axiosPrivate, {
+      const result = await placeBid(axiosPrivate, {
         productId: productId,
         bidAmount: price,
       });
 
-      toast.success(`Mua ngay thành công với giá ${formatPrice(price)} đ!`, {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.success(result.message);
 
       setBidAmount("");
 
@@ -235,9 +234,7 @@ const ProductDetailsAuction = ({
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Có lỗi xảy ra khi mua ngay!";
-      toast.error(errorMsg, {
-        position: "top-center",
-      });
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -246,15 +243,12 @@ const ProductDetailsAuction = ({
   // Hàm xử lý đấu giá thành công
   const handleBidSuccess = async (price) => {
     try {
-      await placeBid(axiosPrivate, {
+      const result = await placeBid(axiosPrivate, {
         productId: productId,
         bidAmount: price,
       });
 
-      toast.success(`Đấu giá thành công với giá ${formatPrice(price)} đ!`, {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.success(result.message);
 
       setBidAmount("");
 
@@ -264,9 +258,7 @@ const ProductDetailsAuction = ({
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Có lỗi xảy ra khi đấu giá!";
-      toast.error(errorMsg, {
-        position: "top-center",
-      });
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -397,9 +389,14 @@ const ProductDetailsAuction = ({
                           </span>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 w-[35%]">
-                          <span className="text-xs sm:text-sm font-medium text-gray-800">
-                            {maskBidderName(bid.bidderId?.fullName)}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {bid.bidderId?._id === highestBidderId && (
+                              <Crown className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+                            )}
+                            <span className="text-xs sm:text-sm font-medium text-gray-800">
+                              {maskBidderName(bid.bidderId?.fullName)}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-right w-[30%]">
                           <span className="text-xs sm:text-sm font-semibold text-gray-800 whitespace-nowrap">
