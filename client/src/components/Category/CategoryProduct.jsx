@@ -322,7 +322,7 @@ export default function CategoryProduct() {
               {categories &&
                 categories.map((category) => (
                   <Category
-                    key={category.categoryId}
+                    key={category._id}
                     category={category}
                     selectedCategory={
                       breadcrumbs.length >= 3 ? breadcrumbs[2].name : null
