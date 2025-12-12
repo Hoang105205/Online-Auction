@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Clock, RefreshCw, Crown } from "lucide-react";
+import { Clock, Crown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { toast } from "react-toastify";
@@ -22,6 +22,9 @@ const ProductDetailsAuction = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [localHistoryData, setLocalHistoryData] = useState(auctionHistoryData);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const itemsPerPage = 10;
 
   if (!authUser?.accessToken) {
     return (
@@ -56,17 +59,22 @@ const ProductDetailsAuction = ({
 
   const minBidPrice = currentPrice + stepPrice;
 
-  const handleRefreshHistory = async () => {
-    if (isRefreshing) return;
+  const handlePageChange = async (newPage) => {
+    if (newPage < 1 || newPage > pagination?.totalPages) return;
 
     try {
       setIsRefreshing(true);
-      const updatedHistory = await getAuctionHistory(productId, axiosPrivate);
+      const updatedHistory = await getAuctionHistory(
+        productId,
+        axiosPrivate,
+        newPage,
+        itemsPerPage
+      );
       setLocalHistoryData(updatedHistory);
-
-      toast.success("Đã cập nhật lịch sử đấu giá!");
+      setPagination(updatedHistory.pagination);
+      setCurrentPage(newPage);
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi cập nhật!");
+      toast.error("Có lỗi xảy ra khi tải trang!");
     } finally {
       setIsRefreshing(false);
     }
@@ -81,6 +89,7 @@ const ProductDetailsAuction = ({
   useEffect(() => {
     if (auctionHistoryData) {
       setLocalHistoryData(auctionHistoryData);
+      setPagination(auctionHistoryData.pagination);
     }
   }, [auctionHistoryData]);
 
@@ -111,7 +120,7 @@ const ProductDetailsAuction = ({
       toast.error("Vui lòng nhập giá đấu giá!");
       return;
     }
-    if (bidValue >= buyNowPrice) {
+    if (buyNowPrice && bidValue >= buyNowPrice) {
       const toastId = toast.warn(
         <div>
           <p>
@@ -243,6 +252,75 @@ const ProductDetailsAuction = ({
     }
   };
 
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+
+    const { currentPage, totalPages } = pagination;
+    const pages = [];
+
+    pages.push(1);
+
+    if (currentPage > 3) {
+      pages.push("...");
+    }
+
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
+      pages.push(i);
+    }
+
+    if (currentPage < totalPages - 2) {
+      pages.push("...");
+    }
+
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
+        {/* Previous Button */}
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1 || isRefreshing}
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Page Numbers */}
+        {pages.map((page, index) => (
+          <button
+            key={index}
+            onClick={() => typeof page === "number" && handlePageChange(page)}
+            disabled={page === "..." || isRefreshing}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              page === currentPage
+                ? "bg-blue-600 text-white"
+                : page === "..."
+                ? "cursor-default"
+                : "border border-gray-300 hover:bg-gray-50"
+            } ${page === "..." ? "" : "min-w-[40px]"}`}
+          >
+            {page}
+          </button>
+        ))}
+
+        {/* Next Button */}
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || isRefreshing}
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="py-6 overflow-y-auto max-h-[120vh]">
       <div className="max-w-4xl mx-auto px-4">
@@ -311,28 +389,18 @@ const ProductDetailsAuction = ({
         {/* Bid History */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-md">
           <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800">
-                  Lịch sử đấu giá:
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  Tổng số lượt đấu giá: <strong>{numberOfBids}</strong>
-                </p>
-              </div>
-              <button
-                onClick={handleRefreshHistory}
-                disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Làm mới lịch sử"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                <span className="hidden sm:inline">
-                  {isRefreshing ? "Đang tải..." : "Làm mới"}
-                </span>
-              </button>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                Lịch sử đấu giá:
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                Tổng số lượt đấu giá: <strong>{numberOfBids}</strong>
+                {pagination && (
+                  <span className="ml-2">
+                    (Trang {pagination.currentPage}/{pagination.totalPages})
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
@@ -402,6 +470,9 @@ const ProductDetailsAuction = ({
             </div>
           </div>
         </div>
+
+        {/* Pagination */}
+        {renderPagination()}
 
         {/* Note */}
         <div className="mt-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
