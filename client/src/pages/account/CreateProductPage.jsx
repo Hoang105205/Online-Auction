@@ -30,14 +30,15 @@ const productSchema = z
     hasBuyNowPrice: z.boolean(),
     buyNowPrice: z.string().optional(),
     autoExtend: z.boolean(),
+    requireRatedBidders: z.boolean(),
     category: z
       .object({
-        categoryId: z.string(),
+        _id: z.string(),
         categoryName: z.string(),
         slug: z.string().optional(),
         subCategories: z.array(
           z.object({
-            subCategoryId: z.string(),
+            _id: z.string(),
             subCategoryName: z.string(),
           })
         ),
@@ -48,7 +49,7 @@ const productSchema = z
       }),
     subcategory: z
       .object({
-        subCategoryId: z.string(),
+        _id: z.string(),
         subCategoryName: z.string(),
       })
       .nullable()
@@ -143,6 +144,7 @@ export default function CreateProductPage() {
       hasBuyNowPrice: false,
       buyNowPrice: "",
       autoExtend: false,
+      requireRatedBidders: false,
       category: null,
       subcategory: null,
       endDate: "",
@@ -223,14 +225,9 @@ export default function CreateProductPage() {
         hasBuyNowPrice: data.hasBuyNowPrice,
         buyNowPrice: data.buyNowPrice,
         autoExtend: data.autoExtend,
-        category:
-          data.category?.categoryName ||
-          data.category?.categoryId ||
-          data.category,
-        subcategory:
-          data.subcategory?.subCategoryName ||
-          data.subcategory?.subCategoryId ||
-          data.subcategory,
+        requireRatedBidders: data.requireRatedBidders,
+        category: data.category?._id || data.category,
+        subcategory: data.subcategory?._id || data.subcategory,
         endDate: data.endDate,
         description: data.description,
       };
@@ -520,6 +517,32 @@ export default function CreateProductPage() {
             </p>
           </div>
 
+          {/* Require Rated Bidders */}
+          <div>
+            <Label
+              htmlFor="requireRatedBidders"
+              className="flex items-start gap-3 cursor-pointer select-none">
+              <Controller
+                name="requireRatedBidders"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="requireRatedBidders"
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <span className="text-sm font-medium text-gray-900">
+                Chỉ cho phép người đã được đánh giá đấu giá
+              </span>
+            </Label>
+            <p className="text-xs text-gray-500 mt-1 pl-7">
+              Nếu bật tùy chọn này, chỉ những người dùng đã từng được đánh giá
+              ít nhất một lần mới có thể tham gia đấu giá sản phẩm của bạn.
+            </p>
+          </div>
+
           {/* Category Selection */}
           <div>
             <Label value="Chọn danh mục" />
@@ -552,7 +575,7 @@ export default function CreateProductPage() {
                   <div className="p-2">
                     {filteredCategories.map((cat) => (
                       <button
-                        key={cat.categoryId}
+                        key={cat._id}
                         type="button"
                         onClick={() => {
                           setValue("category", cat);
@@ -608,7 +631,7 @@ export default function CreateProductPage() {
                     <div className="p-2">
                       {filteredSubcategories.map((sub) => (
                         <button
-                          key={sub.subCategoryId}
+                          key={sub._id}
                           type="button"
                           onClick={() => {
                             setValue("subcategory", sub);

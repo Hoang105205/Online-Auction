@@ -123,6 +123,10 @@ const productSchema = new Schema(
         type: Boolean,
         default: false,
       },
+      requireRatedBidders: {
+        type: Boolean,
+        default: false,
+      },
       status: {
         type: String,
         enum: ["active", "pending", "ended", "cancelled"], // active: ongoing auction; pending: end auction but still in cash process; ended: auction ended and cleared; cancelled: auction cancelled by seller
