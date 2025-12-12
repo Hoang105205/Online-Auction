@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Clock, RefreshCw, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { toast } from "react-toastify";
 
 import { placeBid } from "../../api/auctionService";
-
+import { getAuctionHistory } from "../../api/productService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const ProductDetailsAuction = ({
@@ -20,6 +20,8 @@ const ProductDetailsAuction = ({
   const [bidAmount, setBidAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [localHistoryData, setLocalHistoryData] = useState(auctionHistoryData);
 
   if (!authUser?.accessToken) {
     return (
@@ -49,7 +51,6 @@ const ProductDetailsAuction = ({
   }
 
   const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
-  const { numberOfBids, historyList } = auctionHistoryData;
 
   const highestBidderId = auctionData.auction.highestBidderId?._id;
 
@@ -60,50 +61,28 @@ const ProductDetailsAuction = ({
 
     try {
       setIsRefreshing(true);
+      const updatedHistory = await getAuctionHistory(productId, axiosPrivate);
+      setLocalHistoryData(updatedHistory);
 
-      if (onBidSuccess) {
-        await onBidSuccess();
-      }
-
-      toast.success("Đã cập nhật lịch sử đấu giá!", {
-        position: "top-center",
-        autoClose: 2000,
-      });
+      toast.success("Đã cập nhật lịch sử đấu giá!");
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi cập nhật!", {
-        position: "top-center",
-      });
+      toast.error("Có lỗi xảy ra khi cập nhật!");
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleBidAmountChange = (e) => {
-    const value = e.target.value;
+  const { numberOfBids, historyList } = localHistoryData ||
+    auctionHistoryData || { numberOfBids: 0, historyList: [] };
 
-    if (value === "") {
-      setBidAmount("");
-      return;
+  const timesOut =
+    auctionData.auction.endTime < new Date().toISOString() ? true : false;
+
+  useEffect(() => {
+    if (auctionHistoryData) {
+      setLocalHistoryData(auctionHistoryData);
     }
-
-    const numValue = parseInt(value);
-
-    if (numValue < minBidPrice) {
-      setBidAmount(minBidPrice.toString());
-    } else if (numValue > buyNowPrice) {
-      setBidAmount(buyNowPrice.toString());
-    } else {
-      setBidAmount(value);
-    }
-  };
-
-  const handleInputIncrement = (e) => {
-    if (bidAmount === "" || !bidAmount) {
-      e.preventDefault();
-      setBidAmount(minBidPrice.toString());
-      return;
-    }
-  };
+  }, [auctionHistoryData]);
 
   const maskBidderName = (name) => {
     if (!name || name.length <= 4) return name;
@@ -268,7 +247,7 @@ const ProductDetailsAuction = ({
     <div className="py-6 overflow-y-auto max-h-[120vh]">
       <div className="max-w-4xl mx-auto px-4">
         {/* Current Price Info */}
-        {productStatus === "active" && (
+        {productStatus === "active" && !timesOut && (
           <div className="bg-blue-50 p-4 sm:p-6 rounded-lg mb-8 shadow-md">
             {/* Giá hiện tại */}
             <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
@@ -289,25 +268,25 @@ const ProductDetailsAuction = ({
                 <input
                   type="number"
                   value={bidAmount}
-                  onChange={handleBidAmountChange}
-                  onFocus={handleInputIncrement}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                      handleInputIncrement(e);
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  onFocus={(e) => {
+                    // Tự động điền giá tối thiểu khi focus vào ô trống
+                    if (!bidAmount) {
+                      setBidAmount(minBidPrice.toString());
                     }
                   }}
-                  min={minBidPrice}
-                  step={stepPrice}
                   placeholder={`Tối thiểu ${formatPrice(
                     currentPrice + stepPrice
                   )} đ`}
                   className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
+                  disabled={isSubmitting}
                 />
                 <button
                   onClick={handleBidSubmit}
+                  disabled={isSubmitting}
                   className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
                 >
-                  XÁC NHẬN
+                  {isSubmitting ? "Đang xử lý..." : "XÁC NHẬN"}
                 </button>
               </div>
             </div>

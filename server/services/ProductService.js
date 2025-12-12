@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const User = require("../models/User");
+const System = require("../models/System");
 const cloudinary = require("../config/cloudinary");
 const { calculateUserRating } = require("../utils/userUtils");
 
@@ -14,6 +15,30 @@ class ProductService {
 
       if (!product) {
         throw new Error("Product not found");
+      }
+
+      const sys = await System.findOne({}).lean().exec();
+
+      if (sys && sys.categories) {
+        const cat = sys.categories.find(
+          (c) => c._id.toString() === product.detail.category.toString()
+        );
+        if (cat) {
+          const categoryName = cat.categoryName;
+          const categorySlug = cat.slug;
+
+          const subCat = cat.subCategories?.find(
+            (sc) => sc._id.toString() === product.detail.subCategory.toString()
+          );
+
+          product.detail.category = categoryName;
+          product.detail.categorySlug = categorySlug;
+
+          if (subCat) {
+            product.detail.subCategory = subCat.subCategoryName;
+            product.detail.subCategorySlug = subCat.slug;
+          }
+        }
       }
 
       const rating = await calculateUserRating(product.detail.sellerId._id);

@@ -63,12 +63,14 @@ const productSchema = new Schema(
         trim: true,
       },
       category: {
-        type: String,
+        type: Schema.Types.ObjectId,
+        ref: "System",
         required: true,
         trim: true,
       },
       subCategory: {
-        type: String,
+        type: Schema.Types.ObjectId,
+        ref: "System",
         required: true,
         trim: true,
       },
