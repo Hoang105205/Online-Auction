@@ -19,18 +19,18 @@ const productSchema = z
       .string()
       .nonempty("Giá khởi điểm là bắt buộc")
       .refine((val) => !isNaN(Number(val)) && Number(val) >= 1000, {
-        message: "Giá khởi điểm phải lớn hơn 1,000 VND",
+        message: "Giá khởi điểm phải lớn hơn 1.000 VND",
       }),
     step: z
       .string()
       .nonempty("Bước giá là bắt buộc")
       .refine((val) => !isNaN(Number(val)) && Number(val) >= 1000, {
-        message: "Bước giá phải lớn hơn 1,000 VND",
+        message: "Bước giá phải lớn hơn 1.000 VND",
       }),
     hasBuyNowPrice: z.boolean(),
     buyNowPrice: z.string().optional(),
     autoExtend: z.boolean(),
-    requireRatedBidders: z.boolean(),
+    allowNewBidders: z.boolean(),
     category: z
       .object({
         _id: z.string(),
@@ -144,7 +144,7 @@ export default function CreateProductPage() {
       hasBuyNowPrice: false,
       buyNowPrice: "",
       autoExtend: false,
-      requireRatedBidders: false,
+      allowNewBidders: false,
       category: null,
       subcategory: null,
       endDate: "",
@@ -225,7 +225,7 @@ export default function CreateProductPage() {
         hasBuyNowPrice: data.hasBuyNowPrice,
         buyNowPrice: data.buyNowPrice,
         autoExtend: data.autoExtend,
-        requireRatedBidders: data.requireRatedBidders,
+        allowNewBidders: data.allowNewBidders,
         category: data.category?._id || data.category,
         subcategory: data.subcategory?._id || data.subcategory,
         endDate: data.endDate,
@@ -520,26 +520,26 @@ export default function CreateProductPage() {
           {/* Require Rated Bidders */}
           <div>
             <Label
-              htmlFor="requireRatedBidders"
+              htmlFor="allowNewBidders"
               className="flex items-start gap-3 cursor-pointer select-none">
               <Controller
-                name="requireRatedBidders"
+                name="allowNewBidders"
                 control={control}
                 render={({ field }) => (
                   <Checkbox
-                    id="requireRatedBidders"
+                    id="allowNewBidders"
                     checked={field.value}
                     onChange={field.onChange}
                   />
                 )}
               />
               <span className="text-sm font-medium text-gray-900">
-                Chỉ cho phép người đã được đánh giá đấu giá
+                Cho phép người chưa từng được đánh giá đấu giá
               </span>
             </Label>
             <p className="text-xs text-gray-500 mt-1 pl-7">
-              Nếu bật tùy chọn này, chỉ những người dùng đã từng được đánh giá
-              ít nhất một lần mới có thể tham gia đấu giá sản phẩm của bạn.
+              Nếu bật tùy chọn này, những người dùng chưa từng được đánh giá mới
+              có thể tham gia đấu giá sản phẩm của bạn.
             </p>
           </div>
 
