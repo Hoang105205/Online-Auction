@@ -122,14 +122,14 @@ export default function CategoryProduct() {
           setBreadcrumbs(crumbs);
 
           // Fetch products by category or subcategory
-          const categoryName = cat.categoryName;
-          const subcategoryName =
-            index >= 0 ? cat.subCategories[index].subCategoryName : null;
+          const categoryId = cat._id;
+          const subcategoryId =
+            index >= 0 ? cat.subCategories[index]._id : null;
 
           const result = await getProductsByCategory(
             {
-              category: categoryName,
-              subcategory: subcategoryName,
+              category: categoryId,
+              subcategory: subcategoryId,
               page: currentPage,
               limit: 8,
               sortBy: appliedSortBy,

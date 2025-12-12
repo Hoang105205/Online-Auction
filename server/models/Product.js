@@ -123,7 +123,7 @@ const productSchema = new Schema(
         type: Boolean,
         default: false,
       },
-      requireRatedBidders: {
+      allowNewBidders: {
         type: Boolean,
         default: false,
       },

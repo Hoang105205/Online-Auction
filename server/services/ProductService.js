@@ -2,6 +2,7 @@ const Product = require("../models/Product");
 const User = require("../models/User");
 const System = require("../models/System");
 const cloudinary = require("../config/cloudinary");
+const mongoose = require("mongoose");
 const { calculateUserRating } = require("../utils/userUtils");
 const sendEmail = require("../utils/sendEmail");
 
@@ -529,16 +530,8 @@ class ProductService {
     const detail = {
       sellerId: userId,
       name: payload.productName || payload.name || "(No name)",
-      category:
-        payload.category?.name ||
-        payload.category ||
-        payload.categoryName ||
-        "",
-      subCategory:
-        payload.subcategory?.name ||
-        payload.subcategory ||
-        payload.subCategory ||
-        "",
+      category: payload.category,
+      subCategory: payload.subcategory,
       description: payload.description || "",
       images: [],
     };
@@ -551,7 +544,8 @@ class ProductService {
       highestBidderId: null,
       startTime: payload.startTime ? new Date(payload.startTime) : new Date(),
       endTime: payload.endDate ? new Date(payload.endDate) : null,
-      autoExtend: !!payload.autoExtend,
+      autoExtend: payload.autoExtend || false,
+      allowNewBidders: payload.allowNewBidders || false,
       status:
         payload.startTime && new Date(payload.startTime) > new Date()
           ? "pending"
@@ -779,7 +773,7 @@ class ProductService {
           $sort: { "auction.currentPrice": 1, "auction.startTime": -1 },
         });
       } else if (sortBy === "endingSoon") {
-        pipeline.push({ $sort: { "auction.endTime": -1 } });
+        pipeline.push({ $sort: { "auction.endTime": 1 } });
       } else if (sortBy === "mostBids") {
         pipeline.push({
           $sort: { "auctionHistory.numberOfBids": -1, "auction.endTime": -1 },
@@ -883,8 +877,12 @@ class ProductService {
       // Add category filter
       pipeline.push({
         $match: {
-          "detail.category": category,
-          ...(subcategory && { "detail.subCategory": subcategory }),
+          "detail.category":
+            mongoose.Types.ObjectId.createFromHexString(category),
+          ...(subcategory && {
+            "detail.subCategory":
+              mongoose.Types.ObjectId.createFromHexString(subcategory),
+          }),
         },
       });
 
