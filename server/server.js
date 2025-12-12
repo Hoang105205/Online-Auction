@@ -24,6 +24,9 @@ const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 connectDB();
 
+// --- Cron Jobs ---
+const startAuctionStatusJob = require("./jobs/auctionStatusJob");
+
 // --- Routes ---
 app.use("/api/auth", require("./routes/AuthRoute"));
 app.use("/api/products", require("./routes/ProductRoute"));
@@ -42,4 +45,6 @@ const PORT = process.env.PORT || 3000;
 mongoose.connection.once("open", () => {
   console.log("Đã kết nối đến Database.");
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+  startAuctionStatusJob();
 });
