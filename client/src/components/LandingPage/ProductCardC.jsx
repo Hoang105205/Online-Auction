@@ -5,6 +5,8 @@ import { Button } from "flowbite-react";
 
 const ProductCardC = ({ product, isWon = false }) => {
   // Calculate time remaining
+
+  let absoluteDate = false;
   const getTimeRemaining = (endDate) => {
     const now = new Date();
     const end = new Date(endDate);
@@ -18,6 +20,8 @@ const ProductCardC = ({ product, isWon = false }) => {
 
     // If more than 3 days, show absolute date
     if (days > 3) {
+      absoluteDate = true;
+
       return end.toLocaleDateString("vi-VN", {
         day: "2-digit",
         month: "2-digit",
@@ -81,7 +85,9 @@ const ProductCardC = ({ product, isWon = false }) => {
               absolute bottom-2 font-bold left-1/2 -translate-x-1/2 opacity-0 bg-white text-gray-800 hover:bg-gray-100 hover:text-sky-600
               group-hover:opacity-100 group-hover:translate-y-0
               translate-y-4 transition-all duration-300 w-[80%]">
-              CHỈ CÒN {timeRemaining}
+              {absoluteDate
+                ? `HẾT HẠN VÀO ${timeRemaining}`
+                : `CHỈ CÒN ${timeRemaining}`}
             </Button>
           )}
           {isWon && (
