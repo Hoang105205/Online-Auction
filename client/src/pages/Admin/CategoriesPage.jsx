@@ -24,6 +24,7 @@ export default function CategoriesPage() {
   const [sortBy, setSortBy] = useState("date");
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [openRows, setOpenRows] = useState(new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -44,24 +45,27 @@ export default function CategoriesPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await getCategories(axiosInstance);
+        const res = await getCategories(axiosInstance, {
+          page,
+          limit: pageSize,
+          q: query,
+        });
         if (!mounted) return;
-        let items = [];
-        if (Array.isArray(res)) items = res;
-        else if (res && res.data && Array.isArray(res.data.categories))
-          items = res.data.categories;
-        else if (res && Array.isArray(res.data)) items = res.data;
-        else if (res && Array.isArray(res.categories)) items = res.categories;
+
+        // res expected shape: { total, page, limit, totalPages, categories }
+        const items =
+          res && Array.isArray(res.categories) ? res.categories : [];
+        setTotalPages(res?.totalPages || 1);
 
         // normalize server categories to UI shape
         const norm = (items || []).map((c) => ({
           // prefer server-provided categoryId, fall back to _id if present
-          id: String(c.categoryId || c._id || ""),
+          id: String(c._id || c.categoryId || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: String(s.subCategoryId || s._id || ""),
+                id: String(s._id || s.subCategoryId || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -83,25 +87,17 @@ export default function CategoriesPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [page, query]);
 
   const filtered = useMemo(() => {
-    // only filter top-level categories; children are shown inline
+    // server already applied filtering by query; here we only sort the page items
     let data = categories.slice();
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      data = data.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
-      );
-    }
-    // status currently not used (mock), placeholder for future
     if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
     return data;
-  }, [query, sortBy, categories]);
+  }, [sortBy, categories]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  // server returns already-paginated categories for the current page
+  const paginated = filtered;
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -172,7 +168,7 @@ export default function CategoriesPage() {
           const raw = categories.find((c) => c.id === parentId)?._raw || {};
           await updateCategory(
             axiosInstance,
-            raw.categoryId || raw._id,
+            raw._id || raw.categoryId || "",
             payload
           );
         } else {
@@ -183,21 +179,21 @@ export default function CategoriesPage() {
             ? raw.subCategories
             : [];
           const updatedSubs = existing.map((s) => {
-            const sid = String(s.subCategoryId || s._id || "");
+            const sid = String(s._id || s.subCategoryId || "");
             if (sid === editingId) {
               return {
-                subCategoryId: s.subCategoryId || s._id,
+                subCategoryId: s._id || s.subCategoryId || "",
                 subCategoryName: editName.trim(),
                 slug: slugify(editName.trim()),
               };
             }
             return {
-              subCategoryId: s.subCategoryId || s._id,
+              subCategoryId: s._id || s.subCategoryId || "",
               subCategoryName: s.subCategoryName || s.name || "",
               slug: s.slug || "",
             };
           });
-          await updateCategory(axiosInstance, raw.categoryId || raw._id, {
+          await updateCategory(axiosInstance, raw._id || raw.categoryId, {
             subCategories: updatedSubs,
           });
         }
@@ -213,12 +209,12 @@ export default function CategoriesPage() {
           items = fresh.categories;
         else items = [];
         const norm = (items || []).map((c) => ({
-          id: String(c.categoryId || c._id || ""),
+          id: String(c._id || c.categoryId || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: String(s.subCategoryId || s._id || ""),
+                id: String(s._id || s.subCategoryId || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -264,7 +260,7 @@ export default function CategoriesPage() {
           const parent = categories.find((c) => c.id === parentId);
           if (!parent || !parent._raw) throw new Error("Parent not found");
           const raw = parent._raw;
-          const parentRawId = raw.categoryId || raw._id;
+          const parentRawId = raw._id || raw.categoryId || "";
 
           await apiRemoveSubCategory(axiosInstance, parentRawId, targetId);
         } else {
@@ -272,7 +268,7 @@ export default function CategoriesPage() {
           const cat = categories.find((c) => c.id === targetId);
           if (!cat || !cat._raw) throw new Error("Category not found");
           const raw = cat._raw;
-          await apiRemoveCategory(axiosInstance, raw.categoryId || raw._id);
+          await apiRemoveCategory(axiosInstance, raw._id);
         }
 
         // refresh
@@ -287,12 +283,12 @@ export default function CategoriesPage() {
         else items = [];
 
         const norm = (items || []).map((c) => ({
-          id: String(c.categoryId || c._id || ""),
+          id: String(c._id || c.categoryId || ""),
           name: c.categoryName || "",
           slug: c.slug || "",
           children: Array.isArray(c.subCategories)
             ? c.subCategories.map((s) => ({
-                id: String(s.subCategoryId || s._id || ""),
+                id: String(s._id || s.subCategoryId || ""),
                 name: s.subCategoryName || s.name || "",
                 slug: s.slug || "",
               }))
@@ -377,12 +373,12 @@ export default function CategoriesPage() {
           : [];
         const newSub = { subCategoryName: name, slug };
         const updatedSubs = existing.map((s) => ({
-          subCategoryId: s.subCategoryId || s._id,
+          subCategoryId: s._id || s.subCategoryId || "",
           subCategoryName: s.subCategoryName || s.name || "",
           slug: s.slug || "",
         }));
         updatedSubs.push(newSub);
-        await updateCategory(axiosInstance, raw.categoryId || raw._id, {
+        await updateCategory(axiosInstance, raw._id || raw.categoryId || "", {
           subCategories: updatedSubs,
         });
       }
@@ -398,12 +394,12 @@ export default function CategoriesPage() {
         items = fresh.categories;
       else items = [];
       const norm = (items || []).map((c) => ({
-        id: String(c.categoryId || c._id || ""),
+        id: String(c._id || c.categoryId || ""),
         name: c.categoryName || "",
         slug: c.slug || "",
         children: Array.isArray(c.subCategories)
           ? c.subCategories.map((s) => ({
-              id: String(s.subCategoryId || s._id || ""),
+              id: String(s._id || s.subCategoryId || ""),
               name: s.subCategoryName || s.name || "",
               slug: s.slug || "",
             }))

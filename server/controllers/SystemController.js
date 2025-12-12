@@ -155,7 +155,8 @@ const rejectSellerRequest = async (req, res) => {
 // Categories
 const getCategories = async (req, res) => {
   try {
-    const cats = await SystemService.getCategories();
+    const params = req.query || {};
+    const cats = await SystemService.getCategories(params);
     return res.status(200).json(cats);
   } catch (err) {
     return res

@@ -64,13 +64,11 @@ const productSchema = new Schema(
       },
       category: {
         type: Schema.Types.ObjectId,
-        ref: "System",
         required: true,
         trim: true,
       },
       subCategory: {
         type: Schema.Types.ObjectId,
-        ref: "System",
         required: true,
         trim: true,
       },
@@ -122,6 +120,10 @@ const productSchema = new Schema(
         required: true,
       },
       autoExtend: {
+        type: Boolean,
+        default: false,
+      },
+      requireRatedBidders: {
         type: Boolean,
         default: false,
       },
