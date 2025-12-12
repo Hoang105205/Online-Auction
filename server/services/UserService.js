@@ -198,6 +198,12 @@ class UserService {
       throw error;
     }
 
+    if (product.detail.sellerId.toString() === userId) {
+      const error = new Error("Bạn không thể thêm sản phẩm của chính mình vào danh sách theo dõi.");
+      error.statusCode = 400;
+      throw error;
+    }
+
     const result = await User.updateOne(
       { _id: userId },
       { $addToSet: { watchList: productId } }

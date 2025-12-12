@@ -105,7 +105,7 @@ const ProductCardP = ({ product, isWon = false }) => {
       const result = await addToWatchList(axiosPrivate, productId);
       toast.success(result.message);
     } catch (error) {
-      toast.error("Đã xảy ra lỗi khi thêm vào danh sách theo dõi.");
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm vào danh sách theo dõi.");
     }
   };
 

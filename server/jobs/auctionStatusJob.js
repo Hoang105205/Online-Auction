@@ -11,7 +11,8 @@ const startAuctionStatusJob = () => {
   // Run every 5 minutes: "*/5 * * * *"
   // Run every 10 minutes "*/10 * * * *"
   // Run every hour: "0 * * * *"
-  cron.schedule("*/10 * * * *", async () => {
+  // Run every 30 seconds: "*/30 * * * * *"
+  cron.schedule("*/30 * * * * *", async () => {
     try {
       const now = new Date();
 

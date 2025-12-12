@@ -344,41 +344,47 @@ class SystemService {
   // ===== Hoang =====
 
   // Categories management
-  static async getCategories({ page = 1, limit = 20, q = "" } = {}) {
-    page = Math.max(1, Number(page) || 1);
-    limit = Math.min(100, Number(limit) || 20);
-    q = (q || "").trim();
+  // static async getCategories({ page = 1, limit = 20, q = "" } = {}) {
+  //   page = Math.max(1, Number(page) || 1);
+  //   limit = Math.min(100, Number(limit) || 20);
+  //   q = (q || "").trim();
 
-    const sys = await SystemSetting.findOne().lean().exec();
-    const all = sys && Array.isArray(sys.categories) ? sys.categories : [];
+  //   const sys = await SystemSetting.findOne().lean().exec();
+  //   const all = sys && Array.isArray(sys.categories) ? sys.categories : [];
 
-    let filtered = all;
-    if (q) {
-      const re = new RegExp(q, "i");
-      filtered = all.filter((c) => {
-        if (re.test(c.categoryName || "")) return true;
-        if (re.test(c.slug || "")) return true;
-        if (Array.isArray(c.subCategories)) {
-          for (const s of c.subCategories) {
-            if (re.test(s.subCategoryName || s.name || "")) return true;
-          }
-        }
-        return false;
-      });
-    }
+  //   let filtered = all;
+  //   if (q) {
+  //     const re = new RegExp(q, "i");
+  //     filtered = all.filter((c) => {
+  //       if (re.test(c.categoryName || "")) return true;
+  //       if (re.test(c.slug || "")) return true;
+  //       if (Array.isArray(c.subCategories)) {
+  //         for (const s of c.subCategories) {
+  //           if (re.test(s.subCategoryName || s.name || "")) return true;
+  //         }
+  //       }
+  //       return false;
+  //     });
+  //   }
 
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-    const start = (page - 1) * limit;
-    const pageItems = filtered.slice(start, start + limit);
+  //   const total = filtered.length;
+  //   const totalPages = Math.max(1, Math.ceil(total / limit));
+  //   const start = (page - 1) * limit;
+  //   const pageItems = filtered.slice(start, start + limit);
 
-    return {
-      total,
-      page,
-      limit,
-      totalPages,
-      categories: pageItems,
-    };
+  //   return {
+  //     total,
+  //     page,
+  //     limit,
+  //     totalPages,
+  //     categories: pageItems,
+  //   };
+  // }
+
+  // Categories management
+  static async getCategories() {
+    const sys = await SystemSetting.findOne().exec();
+    return sys ? sys.categories : [];
   }
 
   static async addCategory({

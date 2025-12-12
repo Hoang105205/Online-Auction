@@ -189,13 +189,12 @@ const requestSeller = async (req, res) => {
     return res.status(200).json({
       message: result.message || "Yêu cầu trở thành người bán đã được gửi",
     });
-  }
-  catch (err) {
+  } catch (err) {
     res
       .status(err.statusCode || 500)
       .json({ message: err.message || "Server error" });
   }
-}
+};
 
 module.exports = {
   getUserBasicProfile,

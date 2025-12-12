@@ -153,10 +153,25 @@ const rejectSellerRequest = async (req, res) => {
 // ===== Hoang =====
 
 // Categories
+
+// ===== Duc =====
+// const getCategories = async (req, res) => {
+//   try {
+//     const params = req.query || {};
+//     const cats = await SystemService.getCategories(params);
+//     return res.status(200).json(cats);
+//   } catch (err) {
+//     return res
+//       .status(err.statusCode || 500)
+//       .json({ message: err.message || "Server error" });
+//   }
+// };
+
+// ===== Huy =====
+// Categories
 const getCategories = async (req, res) => {
   try {
-    const params = req.query || {};
-    const cats = await SystemService.getCategories(params);
+    const cats = await SystemService.getCategories();
     return res.status(200).json(cats);
   } catch (err) {
     return res
