@@ -115,7 +115,7 @@ const SideBar = () => {
       )}
 
       <div
-        className={`fixed top-0 left-0 h-full w-[250px] md:w-[300px] bg-white p-4 transform transition-transform duration-300 z-40
+        className={`fixed top-0 left-0 h-full w-[clamp(250px,calc(250px+(50/672)*(100vw-768px)),300px)] bg-white p-4 transform transition-transform duration-300 z-40
         ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}>
@@ -166,7 +166,7 @@ const SideBar = () => {
         <div className="w-full mx-auto p-2">
           {categories &&
             categories.map((category) => (
-              <Category key={category.categoryId} category={category} />
+              <Category key={category._id} category={category} />
             ))}
         </div>
       </div>
