@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Star, User, Clock } from "lucide-react";
+import { Star, User, Clock, RotateCcw } from "lucide-react";
 import { HiHeart } from "react-icons/hi";
 import { toast } from "react-toastify";
 
@@ -112,7 +112,12 @@ const ProductDetails = () => {
       setBreadcrumbs(crumbs);
 
       if (auth?.accessToken) {
-        const aucHisData = await getAuctionHistory(productId, axiosPrivate);
+        const aucHisData = await getAuctionHistory(
+          productId,
+          axiosPrivate,
+          1,
+          10
+        );
         setProductAuctHisData(aucHisData);
       }
     } catch (error) {
@@ -185,8 +190,15 @@ const ProductDetails = () => {
       const result = await addToWatchList(axiosPrivate, productId);
       toast.success(result.message);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm vào danh sách theo dõi.");
+      toast.error(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi thêm vào danh sách theo dõi."
+      );
     }
+  };
+
+  const handleReset = () => {
+    window.location.reload();
   };
 
   let images = [];
@@ -554,6 +566,20 @@ const ProductDetails = () => {
               title="Thêm vào danh sách theo dõi"
             >
               <HiHeart className="w-6 h-6" />
+            </button>
+          </>
+
+          {/* Reset Button */}
+          <>
+            <button
+              onClick={handleReset}
+              className="fixed top-40 right-6 z-40 p-4 rounded-full shadow-lg transition-all duration-300 
+                       bg-white text-gray-400 hover:bg-blue-50 hover:text-blue-600 hover:scale-110
+                       border border-gray-200"
+              aria-label="Reset page"
+              title="Làm mới trang"
+            >
+              <RotateCcw className="w-6 h-6" />
             </button>
           </>
 

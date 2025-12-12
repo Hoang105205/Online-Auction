@@ -69,7 +69,6 @@ const PrivateChat = ({ productId, authUser, sellerId, highestBidderId }) => {
       setChatList(response.chat);
 
       setNewMessage("");
-      toast.success("Gửi thành công!");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Gửi thất bại. Vui lòng thử lại.");

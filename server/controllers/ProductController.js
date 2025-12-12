@@ -279,12 +279,18 @@ class ProductController {
   static async getAuctionHistory(req, res) {
     try {
       const { id } = req.params;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
 
       if (!id) {
         return res.status(400).json({ error: "Product ID is required" });
       }
 
-      const auctionHistory = await ProductService.getAuctionHistory(id);
+      const auctionHistory = await ProductService.getAuctionHistory(
+        id,
+        page,
+        limit
+      );
 
       return res.status(200).json(auctionHistory);
     } catch (error) {

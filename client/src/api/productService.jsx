@@ -33,10 +33,15 @@ export const getProductDescription = async (productId) => {
 };
 
 // Ham xu ly logic lay phan lich su dau gia cua san pham
-export const getAuctionHistory = async (productId, axiosInstance) => {
+export const getAuctionHistory = async (
+  productId,
+  axiosInstance,
+  page = 1,
+  limit = 10
+) => {
   try {
     const response = await axiosInstance.get(
-      `/products/auction-history/${productId}`
+      `/products/auction-history/${productId}?page=${page}&limit=${limit}`
     );
     return response.data; // Tra ve { numberOfBids, historyList }
   } catch (error) {
