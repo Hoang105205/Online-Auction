@@ -344,9 +344,41 @@ class SystemService {
   // ===== Hoang =====
 
   // Categories management
-  static async getCategories() {
-    const sys = await SystemSetting.findOne().exec();
-    return sys ? sys.categories : [];
+  static async getCategories({ page = 1, limit = 20, q = "" } = {}) {
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(100, Number(limit) || 20);
+    q = (q || "").trim();
+
+    const sys = await SystemSetting.findOne().lean().exec();
+    const all = sys && Array.isArray(sys.categories) ? sys.categories : [];
+
+    let filtered = all;
+    if (q) {
+      const re = new RegExp(q, "i");
+      filtered = all.filter((c) => {
+        if (re.test(c.categoryName || "")) return true;
+        if (re.test(c.slug || "")) return true;
+        if (Array.isArray(c.subCategories)) {
+          for (const s of c.subCategories) {
+            if (re.test(s.subCategoryName || s.name || "")) return true;
+          }
+        }
+        return false;
+      });
+    }
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const pageItems = filtered.slice(start, start + limit);
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages,
+      categories: pageItems,
+    };
   }
 
   static async addCategory({
@@ -355,28 +387,18 @@ class SystemService {
     slug = "",
     subCategories = [],
   } = {}) {
+    // We only store categoryName/slug and subcategory subdocuments. The document _id is used as
+    // the identifier (no separate categoryId/subCategoryId fields are required).
     const cat = {
-      categoryId:
-        categoryId && mongoose.Types.ObjectId.isValid(categoryId)
-          ? new mongoose.Types.ObjectId(categoryId)
-          : undefined,
       categoryName,
       slug,
       subCategories: Array.isArray(subCategories)
         ? subCategories.map((s) => ({
-            subCategoryId:
-              s.subCategoryId &&
-              mongoose.Types.ObjectId.isValid(s.subCategoryId)
-                ? new mongoose.Types.ObjectId(s.subCategoryId)
-                : undefined,
             subCategoryName: s.subCategoryName || s.name || "",
             slug: s.slug || s.subCategorySlug || "",
           }))
         : [],
     };
-
-    // remove undefined fields to keep doc clean
-    if (!cat.categoryId) delete cat.categoryId;
 
     const sys = await SystemSetting.findOneAndUpdate(
       {},
@@ -402,8 +424,6 @@ class SystemService {
 
     // Find by categoryId (ref) OR by subdocument _id
     const cat = sys.categories.find((c) => {
-      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
-        return true;
       if (c._id && c._id.toString() === categoryId.toString()) return true;
       return false;
     });
@@ -418,10 +438,6 @@ class SystemService {
     if (updateData.slug !== undefined) cat.slug = updateData.slug;
     if (Array.isArray(updateData.subCategories)) {
       cat.subCategories = updateData.subCategories.map((s) => ({
-        subCategoryId:
-          s.subCategoryId && mongoose.Types.ObjectId.isValid(s.subCategoryId)
-            ? new mongoose.Types.ObjectId(s.subCategoryId)
-            : undefined,
         subCategoryName: s.subCategoryName || s.name || "",
         slug: s.slug || s.subCategorySlug || "",
       }));
@@ -432,8 +448,9 @@ class SystemService {
   }
 
   static async removeCategory(categoryId) {
-    if (!categoryId) {
-      const error = new Error("phải có categoryId");
+    // 1. Validate ID
+    if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
+      const error = new Error("CategoryId không hợp lệ");
       error.statusCode = 400;
       throw error;
     }
@@ -441,43 +458,33 @@ class SystemService {
     const sys = await SystemSetting.findOne().exec();
     if (!sys) return null;
 
-    // find the category first
-    const cat = sys.categories.find((c) => {
-      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
-        return true;
-      if (c._id && c._id.toString() === categoryId.toString()) return true;
-      return false;
-    });
-    if (!cat) {
-      const error = new Error("Không tìm thấy danh mục");
+    // 2. Tìm xem Category có tồn tại trong System không
+    const catExists = sys.categories.some(
+      (c) => c._id && c._id.toString() === categoryId.toString()
+    );
+    if (!catExists) {
+      const error = new Error("Không tìm thấy danh mục cần xóa");
       error.statusCode = 404;
       throw error;
     }
 
-    // ensure we have a categoryName to check against products
-    const categoryName = (cat.categoryName || "").trim();
-    if (!categoryName) {
+    // 3. KIỂM TRA RÀNG BUỘC: Có sản phẩm nào đang dùng ID này không?
+    // Vì DB Product đã lưu ObjectId, ta query chính xác theo ObjectId
+    const count = await Product.countDocuments({
+      "detail.category": new mongoose.Types.ObjectId(categoryId),
+    });
+
+    if (count > 0) {
       const error = new Error(
-        "Không thể xóa danh mục mà không có tên danh mục. Vui lòng đặt tên danh mục trước."
+        `Không thể xóa: Có ${count} sản phẩm đang thuộc danh mục này.`
       );
       error.statusCode = 400;
       throw error;
     }
 
-    // check if any product uses this category (products store category as string)
-    const exists = await Product.exists({ "detail.category": categoryName });
-    if (exists) {
-      const error = new Error(
-        "Không thể xóa danh mục: có sản phẩm đang sử dụng danh mục này."
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // safe to remove
+    // 4. Xóa (Lọc bỏ ID ra khỏi mảng)
     sys.categories = sys.categories.filter(
-      (c) =>
-        !(c.categoryId && c.categoryId.toString() === categoryId.toString())
+      (c) => c._id.toString() !== categoryId.toString()
     );
 
     await sys.save();
@@ -533,6 +540,11 @@ class SystemService {
       filter["auction.status"] = status;
 
     const total = await Product.countDocuments(filter).exec();
+    // load categories to map ids -> names
+    const sysCategories =
+      (await SystemSetting.findOne().select("categories").lean().exec())
+        ?.categories || [];
+
     const products = await Product.find(filter)
       .select(
         "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
@@ -542,6 +554,27 @@ class SystemService {
       .populate("detail.sellerId", "fullName email")
       .lean()
       .exec();
+
+    // build map for quick lookup
+    const categoryMap = new Map();
+    for (const c of sysCategories) {
+      categoryMap.set(String(c._id), c);
+    }
+
+    // replace category/subCategory ids with names where possible
+    for (const p of products) {
+      if (!p.detail) continue;
+      const catId = p.detail.category && String(p.detail.category);
+      if (catId && categoryMap.has(catId)) {
+        const cat = categoryMap.get(catId);
+        p.detail.category = cat.categoryName || "";
+        const subId = p.detail.subCategory && String(p.detail.subCategory);
+        if (subId && Array.isArray(cat.subCategories)) {
+          const sub = cat.subCategories.find((s) => String(s._id) === subId);
+          if (sub) p.detail.subCategory = sub.subCategoryName || "";
+        }
+      }
+    }
 
     return {
       total,
@@ -587,86 +620,65 @@ class SystemService {
   }
 
   static async removeSubCategory(categoryId, subCategoryId) {
-    if (!categoryId) {
-      const error = new Error("phải có categoryId");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (!subCategoryId) {
-      const error = new Error("phải có subCategoryId");
+    // 1. Validate IDs
+    if (
+      !categoryId ||
+      !subCategoryId ||
+      !mongoose.Types.ObjectId.isValid(categoryId) ||
+      !mongoose.Types.ObjectId.isValid(subCategoryId)
+    ) {
+      const error = new Error("ID không hợp lệ");
       error.statusCode = 400;
       throw error;
     }
 
     const sys = await SystemSetting.findOne().exec();
     if (!sys) {
-      const error = new Error("Không tìm thấy cấu hình hệ thống");
+      const error = new Error("System config not found");
       error.statusCode = 500;
       throw error;
     }
 
-    // Find the category
-    const cat = sys.categories.find((c) => {
-      if (c.categoryId && c.categoryId.toString() === categoryId.toString())
-        return true;
-      if (c._id && c._id.toString() === categoryId.toString()) return true;
-      return false;
-    });
-
+    // 2. Tìm Category Cha
+    const cat = sys.categories.find(
+      (c) => c._id && c._id.toString() === categoryId.toString()
+    );
     if (!cat) {
-      const error = new Error("Không tìm thấy danh mục");
+      const error = new Error("Không tìm thấy danh mục cha");
       error.statusCode = 404;
       throw error;
     }
 
-    // Find the subcategory (accept both subdocument _id and subCategoryId field)
-    const targetSubCategoryId = subCategoryId.toString();
-    const subCat = cat.subCategories.find((s) => {
-      const matchesDocId = s._id && s._id.toString() === targetSubCategoryId;
-      const matchesRefId =
-        s.subCategoryId && s.subCategoryId.toString() === targetSubCategoryId;
-      return matchesDocId || matchesRefId;
+    // 3. Tìm SubCategory Con (để đảm bảo nó có tồn tại trước khi xóa)
+    const targetSubIdStr = subCategoryId.toString();
+    const subCatExists = cat.subCategories.some(
+      (s) => s._id && s._id.toString() === targetSubIdStr
+    );
+
+    if (!subCatExists) {
+      const error = new Error("Không tìm thấy danh mục con cần xóa");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 4. KIỂM TRA RÀNG BUỘC: Có sản phẩm nào đang dùng SubCategory ID này không?
+    // Lưu ý: Chỉ cần check subCategory ID là đủ và an toàn nhất.
+    const count = await Product.countDocuments({
+      "detail.subCategory": new mongoose.Types.ObjectId(subCategoryId),
     });
 
-    if (!subCat) {
-      const error = new Error("SubCategory not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    // Get the subcategory name to check products
-    const subCategoryName = (subCat.subCategoryName || "").trim();
-    if (!subCategoryName) {
+    if (count > 0) {
       const error = new Error(
-        "Không thể xóa danh mục phụ mà không có tên danh mục phụ. Vui lòng đặt tên danh mục phụ trước."
+        `Không thể xóa: Có ${count} sản phẩm đang thuộc danh mục phụ này.`
       );
       error.statusCode = 400;
       throw error;
     }
 
-    // Check if any product uses this subcategory
-    // Products store subCategory as string
-    const categoryName = (cat.categoryName || "").trim();
-    const exists = await Product.exists({
-      "detail.category": categoryName,
-      "detail.subCategory": subCategoryName,
-    });
-
-    if (exists) {
-      const error = new Error(
-        "Không thể xóa danh mục phụ: có sản phẩm đang sử dụng danh mục phụ này."
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // Safe to remove - filter out the subcategory
-    cat.subCategories = cat.subCategories.filter((s) => {
-      const matchesDocId = s._id && s._id.toString() === targetSubCategoryId;
-      const matchesRefId =
-        s.subCategoryId && s.subCategoryId.toString() === targetSubCategoryId;
-      return !(matchesDocId || matchesRefId);
-    });
+    // 5. Xóa (Lọc bỏ ID con ra khỏi mảng subCategories của cha)
+    cat.subCategories = cat.subCategories.filter(
+      (s) => s._id.toString() !== targetSubIdStr
+    );
 
     await sys.save();
     return sys;

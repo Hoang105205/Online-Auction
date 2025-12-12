@@ -17,10 +17,6 @@ const sellerRequestSchema = new Schema(
 );
 
 const subCategorySchema = new Schema({
-  subCategoryId: {
-    type: Schema.Types.ObjectId,
-    ref: "Category",
-  },
   subCategoryName: {
     type: String,
     trim: true,
@@ -32,10 +28,6 @@ const subCategorySchema = new Schema({
 });
 
 const categorySchema = new Schema({
-  categoryId: {
-    type: Schema.Types.ObjectId,
-    ref: "Category",
-  },
   categoryName: {
     type: String,
     trim: true,
@@ -62,7 +54,7 @@ const systemSchema = new Schema(
       default: 0,
       min: 0,
     },
-    // Thời gian gia hạn nếu được kích hoạt 
+    // Thời gian gia hạn nếu được kích hoạt
     autoExtendDuration: {
       type: Number,
       default: 0,

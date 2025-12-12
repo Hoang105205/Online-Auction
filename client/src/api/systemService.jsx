@@ -121,9 +121,13 @@ export const rejectSellerRequest = async (axiosInstance, bidderId) => {
 // ===== Hoang =====
 
 // Categories
-export const getCategories = async (axiosInstance) => {
+export const getCategories = async (
+  axiosInstance,
+  { page = 1, limit = 20, q = "" } = {}
+) => {
   try {
-    const res = await axiosInstance.get(`/app_settings/categories`);
+    const params = { page, limit, q };
+    const res = await axiosInstance.get(`/app_settings/categories`, { params });
     return res.data;
   } catch (error) {
     throw error;
