@@ -3,6 +3,7 @@ const User = require("../models/User");
 const System = require("../models/System");
 const cloudinary = require("../config/cloudinary");
 const { calculateUserRating } = require("../utils/userUtils");
+const sendEmail = require("../utils/sendEmail");
 
 class ProductService {
   // get product basic details (for above information)
@@ -118,11 +119,15 @@ class ProductService {
   // add question to ProductDetailsQNA
   static async addQuestion(productId, sendId, message, type = "public") {
     try {
-      const product = await Product.findById(productId);
+      const product = await Product.findById(productId)
+        .populate("detail.sellerId", "fullName email")
+        .populate("chat.sendId", "fullName");
 
       if (!product) {
         throw new Error("Product not found");
       }
+
+      const sender = await User.findById(sendId).select("fullName").exec();
 
       product.chat.push({
         type,
@@ -133,6 +138,73 @@ class ProductService {
       });
 
       await product.save();
+
+      if (product.detail.sellerId.email) {
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const productLink = `${clientUrl}/details/${productId}`;
+
+        const subject = `Bạn có 1 câu hỏi cần trả lời về sản phẩm "${product.detail.name}"`;
+
+        const htmlMessage = `
+        <div style="background:#f4f7f9;padding:32px 12px;font-family:Helvetica,Arial,sans-serif;line-height:1.55;color:#1f2937;">
+          <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#10b981,#059669);padding:28px 24px;text-align:center;">
+              <h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.5px;color:#ffffff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">Auctify</h1>
+              <p style="margin:8px 0 0;font-size:13px;font-weight:500;color:#d1fae5;letter-spacing:1px;text-transform:uppercase;">Câu hỏi mới về sản phẩm</p>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:38px 40px 30px;">
+              <p style="margin:0 0 18px;font-size:16px;font-weight:500;">Xin chào ${
+                product.detail.sellerId.fullName
+              },</p>
+              <p style="margin:0 0 20px;font-size:15px;color:#374151;">Bạn có một câu hỏi mới về sản phẩm <strong style="color:#10b981;">${
+                product.detail.name
+              }</strong>.</p>
+
+              <!-- Question Box -->
+              <div style="background:#f0fdf4;border-left:4px solid #10b981;padding:20px 18px;border-radius:8px;margin:24px 0;">
+                <div style="margin-bottom:12px;">
+                  <span style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Người hỏi</span>
+                  <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#047857;">${
+                    sender?.fullName || "Người dùng"
+                  }</p>
+                </div>
+                <div>
+                  <span style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Câu hỏi</span>
+                  <p style="margin:6px 0 0;font-size:15px;color:#1f2937;line-height:1.6;">${message}</p>
+                </div>
+              </div>
+
+              <p style="margin:24px 0 20px;font-size:14px;color:#4b5563;">Vui lòng trả lời câu hỏi để khách hàng có thêm thông tin về sản phẩm của bạn.</p>
+
+              <!-- CTA Button -->
+              <div style="text-align:center;margin:30px 0;">
+                <a href="${productLink}" style="background:#10b981;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 32px;border-radius:50px;display:inline-block;box-shadow:0 4px 10px rgba(16,185,129,0.35);letter-spacing:.5px;">
+                  Xem chi tiết sản phẩm
+                </a>
+                <p style="margin:14px 0 0;font-size:11px;color:#64748b;">Hoặc sao chép link: <a href="${productLink}" style="color:#10b981;text-decoration:none;">${productLink}</a></p>
+              </div>
+
+              <p style="margin:34px 0 6px;font-size:13px;color:#6b7280;">Trân trọng,</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">Auctify Team</p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background:#f9fafb;padding:18px 24px;text-align:center;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:11px;color:#94a3b8;">Bạn gặp vấn đề? Liên hệ <a href="mailto:auctify.onlineauction@gmail.com" style="color:#10b981;text-decoration:none;font-weight:600;">auctify.onlineauction@gmail.com</a></p>
+              <p style="margin:10px 0 0;font-size:11px;color:#94a3b8;">© 2025 Auctify. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+        `;
+
+        // Gửi email bất đồng bộ
+        sendEmail(product.detail.sellerId.email, subject, htmlMessage).catch(
+          console.error
+        );
+      }
 
       await product.populate("chat.sendId", "fullName");
 
@@ -145,7 +217,9 @@ class ProductService {
   // chat in product PrivateChat between highest bidder and seller
   static async addPrivateChat(productId, sendId, message, type = "private") {
     try {
-      const product = await Product.findById(productId);
+      const product = await Product.findById(productId)
+        .populate("detail.sellerId", "fullName email")
+        .populate("auction.highestBidderId", "fullName email");
 
       if (!product) {
         throw new Error("Product not found");
@@ -155,16 +229,19 @@ class ProductService {
         throw new Error("Private chat only available during pending status.");
       }
 
-      const isSeller = product.detail.sellerId.toString() === sendId;
+      const isSeller =
+        product.detail.sellerId._id.toString() === sendId.toString();
       const isHighestBidder =
         product.auction.highestBidderId &&
-        product.auction.highestBidderId.toString() === sendId;
+        product.auction.highestBidderId._id.toString() === sendId.toString();
 
       if (!isSeller && !isHighestBidder) {
         throw new Error(
           "Unauthorized: Only the seller or highest bidder can chat privately"
         );
       }
+
+      const sender = await User.findById(sendId).select("fullName").exec();
 
       product.chat.push({
         type,
@@ -175,6 +252,90 @@ class ProductService {
       });
 
       await product.save();
+
+      // Gửi email cho người nhận (không phải người gửi)
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+      const productLink = `${clientUrl}/details/${productId}`;
+
+      let recipientEmail = "";
+      let recipientName = "";
+
+      if (isSeller) {
+        // Người gửi là seller → gửi cho highest bidder
+        recipientEmail = product.auction.highestBidderId.email;
+        recipientName = product.auction.highestBidderId.fullName;
+      } else {
+        // Người gửi là highest bidder → gửi cho seller
+        recipientEmail = product.detail.sellerId.email;
+        recipientName = product.detail.sellerId.fullName;
+      }
+
+      if (recipientEmail) {
+        const subject = `Bạn có 1 tin nhắn mới về sản phẩm "${product.detail.name}"`;
+
+        const htmlMessage = `
+        <div style="background:#f4f7f9;padding:32px 12px;font-family:Helvetica,Arial,sans-serif;line-height:1.55;color:#1f2937;">
+          <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);padding:28px 24px;text-align:center;">
+              <h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.5px;color:#ffffff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">Auctify</h1>
+              <p style="margin:8px 0 0;font-size:13px;font-weight:500;color:#ede9fe;letter-spacing:1px;text-transform:uppercase;">Tin nhắn riêng tư</p>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:38px 40px 30px;">
+              <p style="margin:0 0 18px;font-size:16px;font-weight:500;">Xin chào ${recipientName},</p>
+              <p style="margin:0 0 20px;font-size:15px;color:#374151;">Bạn có một tin nhắn mới về sản phẩm <strong style="color:#8b5cf6;">${
+                product.detail.name
+              }</strong>.</p>
+
+              <!-- Message Box -->
+              <div style="background:#faf5ff;border-left:4px solid #8b5cf6;padding:20px 18px;border-radius:8px;margin:24px 0;">
+                <div style="margin-bottom:12px;">
+                  <span style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Từ</span>
+                  <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#6d28d9;">${
+                    sender?.fullName || "Người dùng"
+                  }</p>
+                </div>
+                <div>
+                  <span style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Tin nhắn</span>
+                  <p style="margin:6px 0 0;font-size:15px;color:#1f2937;line-height:1.6;">${message}</p>
+                </div>
+              </div>
+
+              <p style="margin:24px 0 20px;font-size:14px;color:#4b5563;">Nhấn vào nút bên dưới để xem chi tiết và trả lời tin nhắn.</p>
+
+              <!-- CTA Button -->
+              <div style="text-align:center;margin:30px 0;">
+                <a href="${productLink}" style="background:#8b5cf6;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 32px;border-radius:50px;display:inline-block;box-shadow:0 4px 10px rgba(139,92,246,0.35);letter-spacing:.5px;">
+                  Xem chi tiết & Trả lời
+                </a>
+                <p style="margin:14px 0 0;font-size:11px;color:#64748b;">Hoặc sao chép link: <a href="${productLink}" style="color:#8b5cf6;text-decoration:none;">${productLink}</a></p>
+              </div>
+
+              <div style="background:#fef3c7;border:1px solid #fbbf24;padding:14px 16px;border-radius:10px;font-size:12px;color:#92400e;line-height:1.5;">
+                💬 <strong>Lưu ý:</strong> Đây là tin nhắn riêng tư chỉ có bạn và ${
+                  isSeller ? "người đấu giá cao nhất" : "người bán"
+                } mới xem được.
+              </div>
+
+              <p style="margin:34px 0 6px;font-size:13px;color:#6b7280;">Trân trọng,</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">Auctify Team</p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background:#f9fafb;padding:18px 24px;text-align:center;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:11px;color:#94a3b8;">Bạn gặp vấn đề? Liên hệ <a href="mailto:auctify.onlineauction@gmail.com" style="color:#8b5cf6;text-decoration:none;font-weight:600;">auctify.onlineauction@gmail.com</a></p>
+              <p style="margin:10px 0 0;font-size:11px;color:#94a3b8;">© 2025 Auctify. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+        `;
+
+        // Gửi email bất đồng bộ
+        sendEmail(recipientEmail, subject, htmlMessage).catch(console.error);
+      }
+
       await product.populate("chat.sendId", "fullName");
 
       return product.chat.filter((chat) => chat.type === "private");
