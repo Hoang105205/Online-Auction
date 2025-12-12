@@ -84,22 +84,17 @@ const ProductDetails = () => {
         { name: "Sản Phẩm", to: "/category" },
       ];
 
-      if (basicData.detail.category) {
+      if (basicData.detail.category && basicData.detail.categorySlug) {
         crumbs.push({
           name: basicData.detail.category,
-          to: basicData.detail.categorySlug
-            ? `/category/${basicData.detail.categorySlug}`
-            : null,
+          to: `/category/${basicData.detail.categorySlug}`,
         });
       }
 
-      if (basicData.detail.subCategory) {
+      if (basicData.detail.subCategory && basicData.detail.subCategorySlug) {
         crumbs.push({
           name: basicData.detail.subCategory,
-          to:
-            basicData.detail.categorySlug && basicData.detail.subCategorySlug
-              ? `/category/${basicData.detail.categorySlug}/${basicData.detail.subCategorySlug}`
-              : null,
+          to: `/category/${basicData.detail.categorySlug}/${basicData.detail.subCategorySlug}`,
         });
       }
 
@@ -197,10 +192,15 @@ const ProductDetails = () => {
   let images = [];
   let sellerId = "";
   let timeRemaining = "";
+  let timesOut = false;
 
   if (productInfoData && productAuctionData) {
     images = productInfoData.detail?.images || [];
     sellerId = productInfoData.detail.sellerId._id;
+    timesOut =
+      productAuctionData.auction.endTime < new Date().toISOString()
+        ? true
+        : false;
     timeRemaining = calculateTimeRemaining(productAuctionData.auction.endTime);
   }
 
@@ -418,7 +418,7 @@ const ProductDetails = () => {
                 </div>
 
                 {/* Bid Button */}
-                {productAuctionData.auction.status === "active" ? (
+                {productAuctionData.auction.status === "active" && !timesOut ? (
                   <button
                     className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
                     onClick={() => setActiveTab("auction")}
