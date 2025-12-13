@@ -2,17 +2,70 @@ const Product = require("../models/Product");
 const SystemSetting = require("../models/System");
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const { calculateUserRating } = require("../utils/userUtils");
+const sendEmail = require("../utils/sendEmail");
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount);
+};
+
+// Professional email helpers (blue theme)
+const formatDateVN = (date) =>
+  new Date(date).toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const wrapBidEmail = (title, heading, sectionsHtml) => `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <style>
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#e6f6fd;color:#0369a1;font-weight:600}
+    .value{color:#0ea5e9;font-weight:700}
+  </style>
+</head>
+<body style="margin:0;background:#f6f8fb;padding:24px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(2,6,23,0.06)">
+    <tr>
+      <td style="background:#0ea5e9;padding:16px 20px;color:#fff;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+        <strong style="font-size:16px;">Auctify</strong>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px;font-family:Segoe UI,Arial,Helvetica,sans-serif;color:#0f172a;">
+        ${heading}
+        ${sectionsHtml}
+        <p style="margin-top:18px;font-size:12px;color:#64748b">Đây là email tự động, vui lòng không trả lời.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
 class AuctionService {
   static async placeBid(productId, userId, bidAmount) {
     // Khởi tạo Session
     const session = await mongoose.startSession();
+    let emailTasks = [];
 
     try {
       let result;
 
       await session.withTransaction(async () => {
-        const product = await Product.findById(productId).session(session);
+        const product = await Product.findById(productId)
+          .populate("detail.sellerId", "email fullName")
+          .session(session);
 
         // 1. VALIDATE CƠ BẢN
         if (!product) {
@@ -42,7 +95,7 @@ class AuctionService {
           throw error;
         }
 
-        if (product.detail.sellerId.toString() === userId.toString()) {
+        if (product.detail.sellerId._id.toString() === userId.toString()) {
           const error = new Error(
             "Bạn không thể tự đấu giá sản phẩm của mình."
           );
@@ -50,7 +103,26 @@ class AuctionService {
           throw error;
         }
 
-        //TODO: Kiểm tra rating của người đấu giá & người đấu giá mới (nếu có chính sách)
+        const bidderRating = await calculateUserRating(userId);
+
+        if (bidderRating.total > 0 && bidderRating.percentage < 80) {
+          const error = new Error(
+            "Bạn không đủ điều kiện để tham gia đấu giá sản phẩm này do tỷ lệ phản hồi không tốt."
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        if (
+          product.auction.allowNewBidders === false &&
+          bidderRating.total === 0
+        ) {
+          const error = new Error(
+            "Bạn không đủ điều kiện để tham gia đấu giá sản phẩm này do chưa có đánh giá nào."
+          );
+          error.statusCode = 400;
+          throw error;
+        }
 
         // Giá phải cao hơn hoặc bằng giá hiện tại
         const minEligibleBid = product.auction.highestBidderId
@@ -86,6 +158,21 @@ class AuctionService {
           throw error;
         }
 
+        // CHUẨN BỊ DỮ LIỆU EMAIL
+        // 1. Lấy thông tin người RA GIÁ (Current Bidder)
+        const currentBidder = await User.findById(userId)
+          .select("email fullName")
+          .session(session);
+
+        // 2. Lấy thông tin người GIỮ GIÁ TRƯỚC ĐÓ (Previous Leader)
+        const previousLeaderId = product.auction.highestBidderId;
+        let previousLeader = null;
+        if (previousLeaderId) {
+          previousLeader = await User.findById(previousLeaderId)
+            .select("email fullName")
+            .session(session);
+        }
+
         // 2. TÌM GIÁ TRẦN CỦA NGƯỜI ĐANG THẮNG (Leader)
         const currentLeaderId = product.auction.highestBidderId;
         let currentLeaderMaxBid = 0;
@@ -105,12 +192,14 @@ class AuctionService {
         // 3. THUẬT TOÁN ĐẤU GIÁ TỰ ĐỘNG
         let newCurrentPrice = product.auction.currentPrice;
         let newHighestBidderId = currentLeaderId;
+        let isNewWinner = false;
 
         // TRƯỜNG HỢP A: Chưa có ai đặt (Sản phẩm mới)
         if (!currentLeaderId) {
           newHighestBidderId = userId;
           // Giá hiện tại = Giá khởi điểm (Người đầu tiên chỉ cần trả giá khởi điểm)
           newCurrentPrice = product.auction.startPrice;
+          isNewWinner = true;
         }
         // TRƯỜNG HỢP B: Người dùng tự nâng giá trần của mình lên
         else if (userId.toString() === currentLeaderId.toString()) {
@@ -125,6 +214,7 @@ class AuctionService {
           }
 
           newHighestBidderId = userId;
+          isNewWinner = true;
         }
         // TRƯỜNG HỢP C: Đấu với người khác
         else {
@@ -136,6 +226,7 @@ class AuctionService {
             let calculatedPrice =
               currentLeaderMaxBid + product.auction.stepPrice;
             newCurrentPrice = Math.min(calculatedPrice, bidAmount);
+            isNewWinner = true;
           }
           // C2. Người mới ra giá THẤP HƠN hoặc BẰNG Người cũ (Old Winner stays)
           else {
@@ -147,7 +238,7 @@ class AuctionService {
         }
 
         // 4. CẬP NHẬT TRẠNG THÁI (MUA NGAY)
-        // TODO: thêm vào sản phẩm đã thắng của người mua và sản phẩm đăng có người thắng của người bán
+        // TODO: xử lí mail
         const isBuyNowTriggered =
           product.auction.buyNowPrice > 0 &&
           bidAmount >= product.auction.buyNowPrice;
@@ -218,6 +309,101 @@ class AuctionService {
           }
         }
 
+        const productName = product.detail.name;
+        const displayPrice = formatCurrency(newCurrentPrice);
+
+        if (isNewWinner) {
+          // ---> A. Gửi Seller: Có giá mới
+          {
+            const subject = `[Seller] Giá mới: ${productName}`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Có giá mới cho <span class="pill">${productName}</span></h2>`;
+            const sections = `
+              <p style="margin:0 0 12px 0;line-height:1.6">Một người dùng vừa đặt giá mới.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                <tr>
+                  <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                    <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                    <div><strong>Giá hiện tại:</strong> <span class="value">${displayPrice}</span></div>
+                  </td>
+                </tr>
+              </table>`;
+            emailTasks.push({
+              to: product.detail.sellerId.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+
+          // ---> B. Gửi Bidder mới: Chúc mừng
+          {
+            const subject = `[Bidder] Dẫn đầu: ${productName}`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Chúc mừng, bạn đang dẫn đầu! 🎉</h2>`;
+            const sections = `
+              <p style="margin:0 0 12px 0;line-height:1.6">Bạn vừa dẫn đầu phiên đấu giá cho <strong>${productName}</strong>.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                <tr>
+                  <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                    <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                    <div><strong>Giá hiện tại:</strong> <span class="value">${displayPrice}</span></div>
+                  </td>
+                </tr>
+              </table>`;
+            emailTasks.push({
+              to: currentBidder.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+
+          // ---> C. Gửi Leader cũ: Bị vượt mặt (Chỉ gửi nếu khác người mới)
+          if (
+            previousLeader &&
+            previousLeaderId.toString() !== userId.toString()
+          ) {
+            const subject = `[Alert] Bạn đã bị vượt giá: ${productName}`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Bạn vừa bị vượt giá</h2>`;
+            const sections = `
+              <p style="margin:0 0 12px 0;line-height:1.6">Giá của bạn cho <strong>${productName}</strong> đã bị vượt qua.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                <tr>
+                  <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                    <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                    <div><strong>Giá hiện tại:</strong> <span class="value">${displayPrice}</span></div>
+                  </td>
+                </tr>
+              </table>`;
+            emailTasks.push({
+              to: previousLeader.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+        } else {
+          // ---> D. Gửi Bidder mới (Nhưng thua ngay lập tức do Auto-bid):
+          {
+            const subject = `[Bidder] Bạn đã bị vượt qua tự động!`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Bạn đã bị vượt giá tự động</h2>`;
+            const sections = `
+              <p style="margin:0 0 12px 0;line-height:1.6">Giá bạn đặt cho <strong>${productName}</strong> thấp hơn giá trần của người dẫn đầu hiện tại.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                <tr>
+                  <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                    <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                    <div style="margin-bottom:6px"><strong>Người đấu giá dẫn đầu:</strong> Ẩn danh</div>
+                    <div><strong>Giá hiện tại:</strong> <span class="value">${displayPrice}</span></div>
+                  </td>
+                </tr>
+              </table>`;
+            emailTasks.push({
+              to: currentBidder.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+
+          // (Optional: Có thể gửi Seller thông báo giá nhảy lên, nhưng thường để tránh spam thì thôi)
+        }
+
         await product.save({ session });
 
         result = {
@@ -227,6 +413,11 @@ class AuctionService {
               : "Đặt giá thành công!",
         };
       });
+
+      // XỬ LÝ GỬI EMAIL SAU KHI TRANSACTION HOÀN TẤT
+      Promise.all(
+        emailTasks.map((task) => sendEmail(task.to, task.subject, task.content))
+      );
 
       return result;
     } catch (err) {
