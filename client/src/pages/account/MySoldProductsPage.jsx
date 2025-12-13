@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import WonProductCard from "../../components/Account/WonProductCard";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { Spinner } from "flowbite-react";
-import { getWonProducts } from "../../api/userService";
+import { getSoldProducts } from "../../api/userService";
 
 const ITEMS_PER_PAGE = 3; // server paginates; keep as default
 
-const WinAuctionsPage = () => {
+const MySoldProductsPage = () => {
   const axiosPrivate = useAxiosPrivate();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -22,7 +22,7 @@ const WinAuctionsPage = () => {
     const run = async () => {
       try {
         setIsLoading(true);
-        const result = await getWonProducts(axiosPrivate, {
+        const result = await getSoldProducts(axiosPrivate, {
           page: currentPage,
           limit: ITEMS_PER_PAGE,
         });
@@ -35,10 +35,10 @@ const WinAuctionsPage = () => {
           status: p.auction?.status || "pending", // pending | ended | cancelled
           bidCount: p.auction?.bidders ?? 0,
           updatedAt: p.updatedAt,
-          sellerName: p.detail?.sellerId?.fullName || "—",
-          sellerRating:
-            typeof p.detail?.sellerId?.rating === "number"
-              ? p.detail.sellerId.rating
+          winnerName: p.auction?.highestBidderId?.fullName || "—",
+          winnerRating:
+            typeof p.auction?.highestBidderId?.rating === "number"
+              ? p.auction.highestBidderId.rating
               : undefined,
         }));
         setProducts(mapped);
@@ -47,7 +47,7 @@ const WinAuctionsPage = () => {
         setError(null);
       } catch (err) {
         if (!isMounted) return;
-        setError(err.message || "Không thể tải danh sách đã thắng.");
+        setError(err.message || "Không thể tải danh sách sản phẩm đã bán.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -79,7 +79,7 @@ const WinAuctionsPage = () => {
         >
           <Spinner size="lg" color="info" />
           <p className="mt-3 text-sm text-gray-700">
-            Đang tải danh sách đã thắng...
+            Đang tải sản phẩm đã bán...
           </p>
         </div>
       )}
@@ -104,14 +104,14 @@ const WinAuctionsPage = () => {
 
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Đấu giá đã thắng
+          Sản phẩm đã bán - đã kết thúc
         </h2>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-700 font-medium mb-1">
-              Tổng số đấu giá thắng
+              Tổng số sản phẩm
             </p>
             <p className="text-3xl font-bold text-green-600">{count}</p>
           </div>
@@ -138,23 +138,27 @@ const WinAuctionsPage = () => {
       {/* Products Grid */}
       {products.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">🏆</div>
+          <div className="text-gray-400 text-6xl mb-4">📦</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Chưa có đấu giá nào thắng
+            Chưa có sản phẩm đã bán
           </h3>
           <p className="text-gray-600">
-            Bạn chưa thắng đấu giá nào. Hãy tham gia đấu giá để có cơ hội thắng!
+            Hiện chưa có sản phẩm nào của bạn đã kết thúc.
           </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((auction) => (
-              <WonProductCard key={auction.id} product={auction} role="buyer" />
+            {products.map((product) => (
+              <WonProductCard
+                key={product.id}
+                product={product}
+                role="seller"
+              />
             ))}
           </div>
 
-          {/* Pagination (responsive, with ellipsis like Watchlist) */}
+          {/* Pagination (responsive, with ellipsis like WinAuctions) */}
           {totalPages > 1 && (
             <div className="mt-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -251,11 +255,11 @@ const WinAuctionsPage = () => {
                     Trước
                   </button>
                   <div className="flex items-center gap-2">
-                    <label htmlFor="won-page-select" className="sr-only">
+                    <label htmlFor="sold-page-select" className="sr-only">
                       Chọn trang
                     </label>
                     <select
-                      id="won-page-select"
+                      id="sold-page-select"
                       value={currentPage}
                       onChange={(e) => handlePageChange(Number(e.target.value))}
                       className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white"
@@ -291,4 +295,4 @@ const WinAuctionsPage = () => {
     </div>
   );
 };
-export default WinAuctionsPage;
+export default MySoldProductsPage;
