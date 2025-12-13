@@ -193,6 +193,7 @@ class AuctionService {
         let newCurrentPrice = product.auction.currentPrice;
         let newHighestBidderId = currentLeaderId;
         let isNewWinner = false;
+        let isBuyNowSuccess = false;
 
         // TRƯỜNG HỢP A: Chưa có ai đặt (Sản phẩm mới)
         if (!currentLeaderId) {
@@ -249,6 +250,9 @@ class AuctionService {
 
           product.auction.status = "pending";
           product.auction.endTime = now;
+
+          isBuyNowSuccess = true;
+          isNewWinner = true;
         } else {
           if (
             product.auction.buyNowPrice > 0 &&
@@ -258,6 +262,9 @@ class AuctionService {
             product.auction.currentPrice = newCurrentPrice;
             product.auction.status = "pending";
             product.auction.endTime = now;
+
+            isBuyNowSuccess = true;
+            isNewWinner = true;
           } else {
             product.auction.currentPrice = newCurrentPrice;
           }
@@ -288,7 +295,11 @@ class AuctionService {
         );
 
         // 7. AUTO EXTEND (Gia hạn tự động)
-        if (product.auction.autoExtend && product.auction.status === "active") {
+        if (
+          !isBuyNowSuccess &&
+          product.auction.autoExtend &&
+          product.auction.status === "active"
+        ) {
           const sys = await SystemSetting.findOne().session(session);
 
           if (sys) {
@@ -312,7 +323,50 @@ class AuctionService {
         const productName = product.detail.name;
         const displayPrice = formatCurrency(newCurrentPrice);
 
-        if (isNewWinner) {
+        if (isBuyNowSuccess) {
+          // A. Gửi Seller: Đã bán được hàng
+          {
+            const subject = `[Seller] Chốt đơn Mua Ngay: ${productName}`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Sản phẩm đã kết thúc phiên đấu giá! 🎉</h2>`;
+            const sections = `
+                  <p>Một người dùng đã chốt giá Mua Ngay.</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                    <tr>
+                      <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                        <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                        <div><strong>Giá chốt:</strong> <span class="value">${displayPrice}</span></div>
+                        <div style="margin-top:6px;font-size:12px;color:#64748b">Trạng thái: Chờ thanh toán (Pending)</div>
+                      </td>
+                    </tr>
+                  </table>`;
+            emailTasks.push({
+              to: product.detail.sellerId.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+
+          // B. Gửi Winner (Người mua): Chúc mừng
+          {
+            const subject = `[Winner] Bạn đã chiến thắng: ${productName}`;
+            const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Chúc mừng bạn đã chiến thắng! 🏆</h2>`;
+            const sections = `
+                  <p>Bạn đã chiến thắng sản phẩm <strong>${productName}</strong> thông qua tính năng Mua Ngay.</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+                    <tr>
+                      <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                        <div><strong>Giá cuối cùng:</strong> <span class="value">${displayPrice}</span></div>
+                      </td>
+                    </tr>
+                  </table>
+                  <p>Vui lòng tiến hành thanh toán để hoàn tất giao dịch.</p>`;
+            emailTasks.push({
+              to: currentBidder.email,
+              subject,
+              content: wrapBidEmail(subject, heading, sections),
+            });
+          }
+        } else if (isNewWinner) {
           // ---> A. Gửi Seller: Có giá mới
           {
             const subject = `[Seller] Giá mới: ${productName}`;
