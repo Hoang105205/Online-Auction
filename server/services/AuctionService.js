@@ -239,7 +239,6 @@ class AuctionService {
         }
 
         // 4. CẬP NHẬT TRẠNG THÁI (MUA NGAY)
-        // TODO: xử lí mail
         const isBuyNowTriggered =
           product.auction.buyNowPrice > 0 &&
           bidAmount >= product.auction.buyNowPrice;
