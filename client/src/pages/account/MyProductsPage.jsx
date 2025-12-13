@@ -7,7 +7,7 @@ import {
   HiChevronRight,
   HiLockClosed,
 } from "react-icons/hi";
-import ProductCard from "../../components/ProductCard";
+import ProductCard from "../../components/Account/ProductCard";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import useAuth from "../../hooks/useAuth";
 import { getMyProducts } from "../../api/userService";

@@ -166,3 +166,21 @@ export const requestSeller = async (axiosInstance) => {
     throw error;
   }
 };
+
+/**
+ * Lấy danh sách sản phẩm người dùng đã thắng đấu giá với phân trang
+ * API: GET /api/users/won-products
+ */
+export const getWonProducts = async (axiosInstance, { page = 1, limit = 3 }) => {
+  try {
+    const response = await axiosInstance.get("/users/won-products", {
+      params: {
+        page,
+        limit,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

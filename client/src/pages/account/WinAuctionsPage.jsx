@@ -1,100 +1,67 @@
-import { useState, useMemo } from "react";
-import ProductCard from "../../components/ProductCard";
-import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
+import { useState, useEffect } from "react";
+import WonProductCard from "../../components/Account/WonProductCard";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+import { Spinner } from "flowbite-react";
+import { getWonProducts } from "../../api/userService";
 
-// Mock data for auctions user has won
-const MOCK_WON_AUCTIONS = [
-  {
-    id: 101,
-    name: "Samsung Galaxy S24 Ultra 512GB",
-    image: "/img/image1.jpg",
-    currentPrice: 26000000,
-    postedDate: "2025-10-20",
-    endDate: "2025-11-05",
-    wonDate: "2025-11-05",
-  },
-  {
-    id: 102,
-    name: "Bàn phím cơ Keychron K8 Pro",
-    image: "/img/image2.jpg",
-    currentPrice: 2800000,
-    postedDate: "2025-10-15",
-    endDate: "2025-11-01",
-    wonDate: "2025-11-01",
-  },
-  {
-    id: 103,
-    name: "Tai nghe Sony WH-1000XM5 Noise Cancelling",
-    image: "/img/image3.jpg",
-    currentPrice: 7500000,
-    postedDate: "2025-10-10",
-    endDate: "2025-10-28",
-    wonDate: "2025-10-28",
-  },
-  {
-    id: 104,
-    name: "Apple Watch Series 9 GPS 45mm",
-    image: "/img/image4.jpg",
-    currentPrice: 9800000,
-    postedDate: "2025-10-05",
-    endDate: "2025-10-25",
-    wonDate: "2025-10-25",
-  },
-  {
-    id: 105,
-    name: "Máy ảnh Fujifilm X-T5 Body",
-    image: "/img/image5.jpg",
-    currentPrice: 38000000,
-    postedDate: "2025-09-28",
-    endDate: "2025-10-20",
-    wonDate: "2025-10-20",
-  },
-];
-
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 3; // server paginates; keep as default
 
 const WinAuctionsPage = () => {
-  const [sortBy, setSortBy] = useState("recent"); // recent | oldest | price-high | price-low
+  const axiosPrivate = useAxiosPrivate();
+
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [count, setCount] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const sortedAuctions = useMemo(() => {
-    const sorted = [...MOCK_WON_AUCTIONS];
-
-    switch (sortBy) {
-      case "recent":
-        return sorted.sort((a, b) => new Date(b.wonDate) - new Date(a.wonDate));
-      case "oldest":
-        return sorted.sort((a, b) => new Date(a.wonDate) - new Date(b.wonDate));
-      case "price-high":
-        return sorted.sort((a, b) => b.currentPrice - a.currentPrice);
-      case "price-low":
-        return sorted.sort((a, b) => a.currentPrice - b.currentPrice);
-      default:
-        return sorted;
-    }
-  }, [sortBy]);
-
-  // Reset to page 1 when sort changes
-  useMemo(() => {
-    setCurrentPage(1);
-  }, [sortBy]);
-
-  // Pagination calculations
-  const totalPages = Math.ceil(sortedAuctions.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentAuctions = sortedAuctions.slice(startIndex, endIndex);
+  useEffect(() => {
+    let isMounted = true;
+    const run = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getWonProducts(axiosPrivate, {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        });
+        if (!isMounted) return;
+        const mapped = (result.products || []).map((p) => ({
+          id: p._id,
+          name: p.detail?.name || "Sản phẩm",
+          image: p.detail?.images && p.detail.images[0],
+          currentPrice: p.auction?.currentPrice ?? 0,
+          status: p.auction?.status || "pending", // pending | ended | cancelled
+          bidCount: p.auction?.bidders ?? 0,
+          updatedAt: p.updatedAt,
+          sellerName: p.detail?.sellerId?.fullName || "—",
+          sellerRating:
+            typeof p.detail?.sellerId?.rating === "number"
+              ? p.detail.sellerId.rating
+              : undefined,
+        }));
+        setProducts(mapped);
+        setCount(result.pagination?.totalItems || mapped.length);
+        setTotalPages(result.pagination?.totalPages || 0);
+        setError(null);
+      } catch (err) {
+        if (!isMounted) return;
+        setError(err.message || "Không thể tải danh sách đã thắng.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    run();
+    return () => {
+      isMounted = false;
+    };
+  }, [axiosPrivate, currentPage, reloadToken]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  // Calculate total value
-  const totalValue = MOCK_WON_AUCTIONS.reduce(
-    (sum, auction) => sum + auction.currentPrice,
-    0
-  );
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -104,8 +71,37 @@ const WinAuctionsPage = () => {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      {/* Header with Stats */}
+    <div className="p-6 md:p-8 relative">
+      {isLoading && (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm"
+          aria-live="polite"
+        >
+          <Spinner size="lg" color="info" />
+          <p className="mt-3 text-sm text-gray-700">
+            Đang tải danh sách đã thắng...
+          </p>
+        </div>
+      )}
+
+      {error && !isLoading && (
+        <div className="p-8 flex flex-col items-center justify-center gap-4 text-center">
+          <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-red-700 mb-2">
+              Lỗi tải danh sách
+            </h2>
+            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={() => setReloadToken(Date.now())}
+              className="px-4 py-2 rounded-md text-sm font-medium bg-red-600 hover:bg-red-700 text-white shadow-sm"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           Đấu giá đã thắng
@@ -117,9 +113,7 @@ const WinAuctionsPage = () => {
             <p className="text-sm text-green-700 font-medium mb-1">
               Tổng số đấu giá thắng
             </p>
-            <p className="text-3xl font-bold text-green-600">
-              {MOCK_WON_AUCTIONS.length}
-            </p>
+            <p className="text-3xl font-bold text-green-600">{count}</p>
           </div>
 
           <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-200 rounded-lg p-4">
@@ -127,46 +121,33 @@ const WinAuctionsPage = () => {
               Tổng giá trị
             </p>
             <p className="text-2xl font-bold text-blue-600">
-              {formatPrice(totalValue)}
+              {formatPrice(
+                products.reduce((sum, p) => sum + (p.currentPrice || 0), 0)
+              )}
             </p>
           </div>
 
           <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-lg p-4">
             <p className="text-sm text-purple-700 font-medium mb-1">
-              Đấu giá gần nhất
+              Cập nhật gần nhất
             </p>
             <p className="text-lg font-bold text-purple-600">
-              {new Date(
-                Math.max(...MOCK_WON_AUCTIONS.map((a) => new Date(a.wonDate)))
-              ).toLocaleDateString("vi-VN")}
+              {products.length > 0
+                ? new Date(
+                    Math.max(...products.map((a) => new Date(a.updatedAt)))
+                  ).toLocaleDateString("vi-VN")
+                : "—"}
             </p>
           </div>
         </div>
 
-        {/* Sort Options */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-gray-600">
-            Hiển thị {sortedAuctions.length} sản phẩm
-          </p>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 font-medium">Sắp xếp:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-            >
-              <option value="recent">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-              <option value="price-high">Giá cao nhất</option>
-              <option value="price-low">Giá thấp nhất</option>
-            </select>
-          </div>
+        <div className="flex items-center justify-between">
+          <p className="text-gray-600">Tổng cộng {count} sản phẩm</p>
         </div>
       </div>
 
       {/* Products Grid */}
-      {sortedAuctions.length === 0 ? (
+      {products.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">🏆</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -179,58 +160,141 @@ const WinAuctionsPage = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentAuctions.map((auction) => (
-              <ProductCard key={auction.id} product={auction} isWon={true} />
+            {products.map((auction) => (
+              <WonProductCard key={auction.id} product={auction} role="buyer" />
             ))}
           </div>
 
-          {/* Pagination */}
+          {/* Pagination (responsive, with ellipsis like Watchlist) */}
           {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              {/* Previous Button */}
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`p-2 rounded-lg border transition-colors ${
-                  currentPage === 1
-                    ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-label="Trang trước"
-              >
-                <HiChevronLeft className="w-5 h-5" />
-              </button>
+            <div className="mt-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="text-sm text-gray-600 hidden md:block">
+                  Trang {Math.min(currentPage, totalPages)} / {totalPages}
+                </div>
 
-              {/* Page Numbers */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
+                {/* Desktop pagination */}
+                <div className="hidden md:flex items-center gap-1">
                   <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`min-w-[40px] h-10 px-3 rounded-lg border font-medium transition-colors ${
-                      currentPage === page
-                        ? "bg-sky-600 text-white border-sky-600"
-                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    type="button"
+                    onClick={() =>
+                      handlePageChange(Math.max(1, currentPage - 1))
+                    }
+                    disabled={currentPage <= 1}
+                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage <= 1
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
                     }`}
                   >
-                    {page}
+                    Trước
                   </button>
-                )
-              )}
+                  {(() => {
+                    const buildPageList = (current, total) => {
+                      if (total <= 7)
+                        return Array.from({ length: total }, (_, i) => i + 1);
+                      const pages = [];
+                      pages.push(1);
+                      const left = Math.max(2, current - 1);
+                      const right = Math.min(total - 1, current + 1);
+                      if (left > 2) pages.push("...");
+                      for (let p = left; p <= right; p++) pages.push(p);
+                      if (right < total - 1) pages.push("...");
+                      pages.push(total);
+                      return pages;
+                    };
+                    const pageList = buildPageList(currentPage, totalPages);
+                    return pageList.map((p, idx) =>
+                      p === "..." ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="px-3 py-2 text-sm text-gray-500"
+                        >
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => handlePageChange(p)}
+                          className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                            currentPage === p
+                              ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage >= totalPages}
+                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage >= totalPages
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Sau
+                  </button>
+                </div>
 
-              {/* Next Button */}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`p-2 rounded-lg border transition-colors ${
-                  currentPage === totalPages
-                    ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-label="Trang sau"
-              >
-                <HiChevronRight className="w-5 h-5" />
-              </button>
+                {/* Mobile pagination */}
+                <div className="flex md:hidden items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Trang trước"
+                    onClick={() =>
+                      handlePageChange(Math.max(1, currentPage - 1))
+                    }
+                    disabled={currentPage <= 1}
+                    className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage <= 1
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Trước
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="won-page-select" className="sr-only">
+                      Chọn trang
+                    </label>
+                    <select
+                      id="won-page-select"
+                      value={currentPage}
+                      onChange={(e) => handlePageChange(Number(e.target.value))}
+                      className="border border-gray-300 rounded-md px-2 py-2 text-sm bg-white"
+                    >
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          Trang {i + 1}/{totalPages}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Trang sau"
+                    onClick={() =>
+                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage >= totalPages}
+                    className={`px-2 py-2 rounded-md border text-sm transition-colors ${
+                      currentPage >= totalPages
+                        ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>

@@ -12,6 +12,7 @@ const {
   getParticipatingAuctions,
   getMyProducts,
   requestSeller,
+  getWonProducts,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -76,6 +77,13 @@ router.post(
   verifyJWT,
   verifyRoles(ROLES_LIST.Bidder),
   requestSeller
+);
+
+router.get(
+  "/won-products",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  getWonProducts
 );
 
 module.exports = router;
