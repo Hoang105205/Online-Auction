@@ -45,7 +45,6 @@ const PrivateChat = ({ productId, authUser, sellerId, highestBidderId }) => {
       const data = await getProductPrivateQA(productId, axiosPrivate);
       setChatList(data);
     } catch (error) {
-      console.error("Error fetching private Q&A:", error);
       toast.error("Không thể tải tin nhắn");
     } finally {
       setLoading(false);
@@ -70,7 +69,6 @@ const PrivateChat = ({ productId, authUser, sellerId, highestBidderId }) => {
 
       setNewMessage("");
     } catch (error) {
-      console.error("Error sending message:", error);
       toast.error("Gửi thất bại. Vui lòng thử lại.");
     } finally {
       setSending(false);

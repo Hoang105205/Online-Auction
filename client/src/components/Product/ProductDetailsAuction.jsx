@@ -53,11 +53,20 @@ const ProductDetailsAuction = ({
     );
   }
 
-  const { currentPrice, stepPrice, buyNowPrice } = auctionData.auction;
+  const { currentPrice, stepPrice, buyNowPrice, startPrice } =
+    auctionData.auction;
 
   const highestBidderId = auctionData.auction.highestBidderId?._id;
 
-  const minBidPrice = currentPrice + stepPrice;
+  const isFirstBid =
+    auctionHistoryData.numberOfBids === 0 ||
+    auctionHistoryData.historyList === undefined
+      ? true
+      : false;
+
+  const minBidPrice = isFirstBid ? startPrice : currentPrice + stepPrice;
+
+  const maxBidPrice = buyNowPrice || null;
 
   const handlePageChange = async (newPage) => {
     if (newPage < 1 || newPage > pagination?.totalPages) return;
@@ -116,10 +125,12 @@ const ProductDetailsAuction = ({
     if (isSubmitting) return;
 
     const bidValue = parseInt(bidAmount);
+
     if (!bidValue) {
       toast.error("Vui lòng nhập giá đấu giá!");
       return;
     }
+
     if (buyNowPrice && bidValue >= buyNowPrice) {
       const toastId = toast.warn(
         <div>
@@ -176,31 +187,37 @@ const ProductDetailsAuction = ({
       );
       return;
     }
-    if (bidValue < currentPrice + stepPrice) {
-      toast.error(
-        `Giá đấu giá phải ít nhất là ${formatPrice(
-          currentPrice + stepPrice
-        )} đ!`,
-        {
-          position: "top-center",
-        }
-      );
-      return;
+
+    if (isFirstBid) {
+      if (bidValue < startPrice) {
+        toast.error(
+          `Giá đấu giá phải ít nhất là ${formatPrice(startPrice)} đ!`
+        );
+        return;
+      }
+    } else {
+      if (bidValue < currentPrice + stepPrice) {
+        toast.error(
+          `Giá đấu giá phải ít nhất là ${formatPrice(
+            currentPrice + stepPrice
+          )} đ!`
+        );
+        return;
+      }
+
+      if (
+        bidValue > currentPrice + stepPrice &&
+        (bidValue - currentPrice) % stepPrice !== 0
+      ) {
+        toast.error(
+          `Giá đấu giá trừ giá hiện tại phải chia hết cho ${formatPrice(
+            stepPrice
+          )} đ!`
+        );
+        return;
+      }
     }
-    if (
-      bidValue > currentPrice + stepPrice &&
-      (bidValue - currentPrice) % stepPrice !== 0
-    ) {
-      toast.error(
-        `Giá đấu giá trừ giá hiện tại phải chia hết cho ${formatPrice(
-          stepPrice
-        )} đ!`,
-        {
-          position: "top-center",
-        }
-      );
-      return;
-    }
+
     handleBidSuccess(bidValue);
   };
 
@@ -330,7 +347,7 @@ const ProductDetailsAuction = ({
             {/* Giá hiện tại */}
             <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-4">
               <span className="text-base sm:text-lg font-semibold text-gray-700">
-                Giá hiện tại:
+                {isFirstBid ? "Giá khởi điểm:" : "Giá hiện tại:"}
               </span>
               <span className="text-2xl sm:text-3xl font-bold text-blue-600">
                 {formatPrice(currentPrice)} đ
@@ -353,9 +370,9 @@ const ProductDetailsAuction = ({
                       setBidAmount(minBidPrice.toString());
                     }
                   }}
-                  placeholder={`Tối thiểu ${formatPrice(
-                    currentPrice + stepPrice
-                  )} đ`}
+                  placeholder={`Tối thiểu ${formatPrice(minBidPrice)} đ${
+                    maxBidPrice ? ` - Tối đa ${formatPrice(maxBidPrice)} đ` : ""
+                  }`}
                   className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   disabled={isSubmitting}
                 />
@@ -370,19 +387,54 @@ const ProductDetailsAuction = ({
             </div>
 
             {/* Price Info */}
-            {buyNowPrice && (
-              <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
-                <p>
-                  • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
-                </p>
-                <p>
-                  • Giá mua ngay:{" "}
-                  <strong className="text-red-600">
-                    {formatPrice(buyNowPrice)} đ
-                  </strong>
-                </p>
-              </div>
-            )}
+            <div className="mt-4 text-xs sm:text-sm text-gray-600 space-y-1">
+              {isFirstBid ? (
+                <>
+                  <p>
+                    • Giá khởi điểm:{" "}
+                    <strong>{formatPrice(startPrice)} đ</strong>
+                  </p>
+                  <p>
+                    • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
+                  </p>
+                  {buyNowPrice && (
+                    <p>
+                      • Giá mua ngay:{" "}
+                      <strong className="text-red-600">
+                        {formatPrice(buyNowPrice)} đ
+                      </strong>
+                    </p>
+                  )}
+                  <p className="text-green-600 font-medium">
+                    ✓ Lần đấu giá đầu tiên: Có thể đặt từ{" "}
+                    {formatPrice(startPrice)} đ{" "}
+                    {buyNowPrice
+                      ? `đến ${formatPrice(buyNowPrice)} đ`
+                      : "trở lên"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    • Bước giá: <strong>{formatPrice(stepPrice)} đ</strong>
+                  </p>
+                  <p>
+                    • Giá tối thiểu tiếp theo:{" "}
+                    <strong className="text-blue-600">
+                      {formatPrice(currentPrice + stepPrice)} đ
+                    </strong>
+                  </p>
+                  {buyNowPrice && (
+                    <p>
+                      • Giá mua ngay:{" "}
+                      <strong className="text-red-600">
+                        {formatPrice(buyNowPrice)} đ
+                      </strong>
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -477,9 +529,31 @@ const ProductDetailsAuction = ({
         {/* Note */}
         <div className="mt-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
           <p className="text-xs sm:text-sm text-yellow-800">
-            <strong>Lưu ý:</strong> Giá đấu phải lớn hơn giá hiện tại ít nhất{" "}
-            {formatPrice(stepPrice)} đ. Người đấu giá cao nhất khi hết thời gian
-            sẽ được mua sản phẩm.
+            <strong>Lưu ý:</strong>{" "}
+            {isFirstBid ? (
+              <>
+                Lần đấu giá đầu tiên có thể đặt giá từ{" "}
+                <strong>{formatPrice(startPrice)} đ</strong>
+                {buyNowPrice && (
+                  <>
+                    {" "}
+                    đến <strong>{formatPrice(buyNowPrice)} đ</strong>
+                  </>
+                )}
+                . Từ lần thứ 2, giá đấu phải lớn hơn giá hiện tại ít nhất{" "}
+                <strong>{formatPrice(stepPrice)} đ</strong> và chia hết cho bước
+                giá.
+              </>
+            ) : (
+              <>
+                Giá đấu phải lớn hơn giá hiện tại ít nhất{" "}
+                <strong>{formatPrice(stepPrice)} đ</strong> và chia hết cho bước
+                giá.
+              </>
+            )}{" "}
+            Người đấu giá cao nhất khi hết thời gian sẽ được mua sản phẩm. Nếu
+            có giá mua ngay và người dùng đặt giá bằng hoặc cao hơn giá mua
+            ngay, người đó sẽ mua được sản phẩm ngay lập tức.
           </p>
         </div>
       </div>
