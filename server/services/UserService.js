@@ -498,7 +498,67 @@ class UserService {
             const ratingStats = await calculateUserRating(sellerId.toString());
 
             product.detail.sellerId.rating = ratingStats.percentage;
-          } 
+          }
+
+          return product;
+        })
+      );
+
+      return {
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalItems: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getSoldProducts(userId, { page = 1, limit = 3 }) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const query = {
+        "detail.sellerId": userId,
+        "auction.status": { $ne: "active" },
+      };
+
+      // 2. Đếm tổng
+      const totalCount = await Product.countDocuments(query);
+
+      // 3. Lấy dữ liệu
+      let products = await Product.find(query)
+        .select(
+          "detail.name detail.images auction.currentPrice auction.status auction.bidders auction.highestBidderId updatedAt"
+        )
+        .sort({ updatedAt: -1 }) // Mới nhất lên đầu
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "auction.highestBidderId", 
+          select: "fullName",
+        })
+        .lean()
+        .exec();
+
+      products = await Promise.all(
+        products.map(async (product) => {
+          const winner = product.auction.highestBidderId;
+
+          // Chỉ tính nếu có người thắng (trường hợp status = ended/pending)
+          // Nếu status = cancelled hoặc không ai bid thì winner sẽ null
+          if (winner && winner._id) {
+            const ratingStats = await calculateUserRating(
+              winner._id.toString()
+            );
+
+            // Gán rating vào object người thắng
+            product.auction.highestBidderId.rating = ratingStats.percentage;
+          }
 
           return product;
         })

@@ -171,9 +171,33 @@ export const requestSeller = async (axiosInstance) => {
  * Lấy danh sách sản phẩm người dùng đã thắng đấu giá với phân trang
  * API: GET /api/users/won-products
  */
-export const getWonProducts = async (axiosInstance, { page = 1, limit = 3 }) => {
+export const getWonProducts = async (
+  axiosInstance,
+  { page = 1, limit = 3 }
+) => {
   try {
     const response = await axiosInstance.get("/users/won-products", {
+      params: {
+        page,
+        limit,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Lấy danh sách sản phẩm người dùng đã bán đã kết thúc với phân trang
+ * API: GET /api/users/sold-products
+ */
+export const getSoldProducts = async (
+  axiosInstance,
+  { page = 1, limit = 3 }
+) => {
+  try {
+    const response = await axiosInstance.get("/users/sold-products", {
       params: {
         page,
         limit,

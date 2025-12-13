@@ -34,6 +34,7 @@ import WinAuctionsPage from "./pages/account/WinAuctionsPage";
 import WatchlistPage from "./pages/account/WatchlistPage";
 import PermissionsPage from "./pages/account/PermissionsPage";
 import MyProductsPage from "./pages/account/MyProductsPage";
+import MySoldProductsPage from "./pages/account/MySoldProductsPage.jsx";
 import CreateProductPage from "./pages/account/CreateProductPage";
 
 // Auth wrapper to protect routes
@@ -71,6 +72,7 @@ const router = createBrowserRouter(
               <Route path="auctions" element={<AuctionsPage />} />
               <Route path="win-auctions" element={<WinAuctionsPage />} />
               <Route path="my-products" element={<MyProductsPage />} />
+              <Route path="sold-products" element={<MySoldProductsPage />} />
               <Route
                 path="my-products/create-product"
                 element={<CreateProductPage />}

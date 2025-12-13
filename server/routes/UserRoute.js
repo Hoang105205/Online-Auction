@@ -13,6 +13,7 @@ const {
   getMyProducts,
   requestSeller,
   getWonProducts,
+  getSoldProducts,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -84,6 +85,13 @@ router.get(
   verifyJWT,
   verifyRoles(ROLES_LIST.Bidder),
   getWonProducts
+);
+
+router.get(
+  "/sold-products",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  getSoldProducts
 );
 
 module.exports = router;
