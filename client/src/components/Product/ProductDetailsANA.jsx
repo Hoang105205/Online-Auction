@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MessageCircle, MoreHorizontal } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
 import { addQuestion, addReply } from "../../api/productService";
 import { toast } from "react-toastify";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
@@ -9,6 +9,7 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
   const [chatList, setChatList] = useState(qaData || []);
   const [newMessage, setNewMessage] = useState("");
   const [replyTo, setReplyTo] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
   const [sending, setSending] = useState(false);
 
   const currentUserId = authUser?.id;
@@ -33,46 +34,53 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
-  const handleSendMessage = async () => {
+  const handleSendQuestion = async () => {
     if (!newMessage.trim()) return;
 
     if (!isLoggedIn) {
-      toast.error("Vui lòng đăng nhập để gửi câu hỏi hoặc trả lời.");
+      toast.error("Vui lòng đăng nhập để gửi câu hỏi.");
       return;
     }
 
     try {
       setSending(true);
-
-      if (replyTo) {
-        if (!isSeller) {
-          toast.error("Chỉ người bán mới có thể trả lời câu hỏi.");
-          return;
-        }
-
-        const response = await addReply(
-          productId,
-          replyTo,
-          newMessage.trim(),
-          axiosPrivate
-        );
-        setChatList(response.chat);
-        setReplyTo(null);
-      } else {
-        const response = await addQuestion(
-          productId,
-          newMessage.trim(),
-          "public",
-          axiosPrivate
-        );
-        setChatList(response.chat);
-      }
-
+      const response = await addQuestion(
+        productId,
+        newMessage.trim(),
+        "public",
+        axiosPrivate
+      );
+      setChatList(response.chat);
       setNewMessage("");
-      toast("Gửi thành công!");
+      toast.success("Gửi câu hỏi thành công!");
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending question:", error);
       toast.error("Gửi thất bại. Vui lòng thử lại.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendReply = async (chatId) => {
+    if (!replyMessage.trim()) return;
+
+    try {
+      setSending(true);
+      const response = await addReply(
+        productId,
+        chatId,
+        replyMessage.trim(),
+        axiosPrivate
+      );
+      setChatList(response.chat);
+      setReplyTo(null);
+      setReplyMessage("");
+      toast.success("Trả lời thành công!");
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      toast.error(
+        error.response?.data?.message || "Gửi thất bại. Vui lòng thử lại."
+      );
     } finally {
       setSending(false);
     }
@@ -117,24 +125,10 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
                   <p className="text-sm text-gray-800 mb-2">{item.message}</p>
 
                   {/* Only show reply button to seller */}
-                  {isSeller && !item.reply?.message && (
-                    <div className="flex items-center gap-4 text-xs text-gray-600">
-                      <button
-                        onClick={() => setReplyTo(item._id)}
-                        className="flex items-center gap-1 hover:text-blue-600"
-                        disabled={sending}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Trả lời</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Seller Reply */}
                   {item.reply?.message && (
-                    <div className="mt-4 border-l-2 border-blue-200 pl-4 bg-blue-50 p-3 rounded">
+                    <div className="mt-3 border-l-2 border-blue-400 pl-4 bg-blue-50 p-3 rounded">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-semibold">
                           Seller
                         </span>
                         <span className="text-xs text-gray-500">
@@ -145,6 +139,69 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
                         {item.reply.message}
                       </p>
                     </div>
+                  )}
+
+                  {/* Seller Reply */}
+                  {isSeller && !item.reply?.message && (
+                    <>
+                      {replyTo !== item._id ? (
+                        // Nút "Trả lời"
+                        <button
+                          onClick={() => {
+                            setReplyTo(item._id);
+                            setReplyMessage("");
+                          }}
+                          className="mt-2 flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors"
+                          disabled={sending}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Trả lời</span>
+                        </button>
+                      ) : (
+                        // Inline Reply Box
+                        <div className="mt-3 border-l-2 border-blue-400 pl-4 bg-blue-50 p-3 rounded">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-blue-600">
+                              Trả lời câu hỏi
+                            </span>
+                            <button
+                              onClick={() => {
+                                setReplyTo(null);
+                                setReplyMessage("");
+                              }}
+                              className="text-gray-400 hover:text-gray-600"
+                              disabled={sending}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={replyMessage}
+                              onChange={(e) => setReplyMessage(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter" && !sending) {
+                                  handleSendReply(item._id);
+                                }
+                              }}
+                              placeholder="Nhập câu trả lời..."
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                              disabled={sending}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleSendReply(item._id)}
+                              disabled={!replyMessage.trim() || sending}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {sending ? "Đang gửi..." : "Gửi"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -173,19 +230,6 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
             </div>
           )}
 
-          {isLoggedIn && replyTo && (
-            <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
-              <span>Đang trả lời câu hỏi...</span>
-              <button
-                onClick={() => setReplyTo(null)}
-                className="text-blue-600 hover:underline"
-                disabled={sending}
-              >
-                Hủy
-              </button>
-            </div>
-          )}
-
           {isLoggedIn && (
             <div className="flex gap-3">
               <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
@@ -196,17 +240,17 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && !sending && handleSendMessage()
-                  }
-                  placeholder={
-                    replyTo ? "Nhập câu trả lời..." : "Viết câu hỏi của bạn..."
-                  }
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter" && !sending) {
+                      handleSendQuestion();
+                    }
+                  }}
+                  placeholder="Viết câu hỏi của bạn..."
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500"
                   disabled={sending}
                 />
                 <button
-                  onClick={handleSendMessage}
+                  onClick={handleSendQuestion}
                   disabled={!newMessage.trim() || sending}
                   className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >

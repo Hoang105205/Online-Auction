@@ -123,7 +123,7 @@ class ProductController {
       const { id } = req.params;
       const { description } = req.body;
 
-      const sellerId = req.user; // get seller from authenticated user
+      const userId = req.user; // get seller from authenticated user
 
       if (!id || !description) {
         return res
@@ -134,7 +134,7 @@ class ProductController {
       const product = await ProductService.updateDescription(
         id,
         description,
-        sellerId
+        userId
       );
 
       return res.status(200).json({
@@ -142,6 +142,10 @@ class ProductController {
         message: "Product description updated successfully",
       });
     } catch (error) {
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({ error: error.message });
+      }
+
       return res
         .status(500)
         .json({ error: error.message || "Error updating product description" });
@@ -254,7 +258,7 @@ class ProductController {
     try {
       const { id, chatId } = req.params;
       const { message } = req.body;
-      const sellerId = req.user;
+      const userId = req.user;
 
       if (!id || !chatId || !message) {
         return res
@@ -262,13 +266,17 @@ class ProductController {
           .json({ error: "Product ID, chat ID, and message are required" });
       }
 
-      const chat = await ProductService.addReply(id, chatId, sellerId, message);
+      const chat = await ProductService.addReply(id, chatId, userId, message);
 
       return res.status(201).json({
         chat,
         message: "Reply added successfully",
       });
     } catch (error) {
+      if (error.message.includes("Unauthorized")) {
+        return res.status(403).json({ error: error.message });
+      }
+
       return res
         .status(500)
         .json({ error: error.message || "Error adding reply" });

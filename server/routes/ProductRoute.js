@@ -27,7 +27,7 @@ router.get("/description/:id", ProductController.getProductDescription); // publ
 router.put(
   "/description/:id",
   verifyJWT,
-  verifyRoles(ROLES_LIST.Seller),
+  verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
   ProductController.updateDescription
 ); // protected (seller only)
 
@@ -57,7 +57,7 @@ router.post(
 router.post(
   "/qa/:id/reply/:chatId",
   verifyJWT,
-  verifyRoles(ROLES_LIST.Seller),
+  verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
   ProductController.addReply
 ); // protected (seller only)
 

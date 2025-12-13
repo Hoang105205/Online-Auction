@@ -358,12 +358,6 @@ class ProductService {
         throw new Error("Product not found");
       }
 
-      console.log("🔍 Service addReply:", {
-        productSellerId: product.detail.sellerId._id.toString(),
-        requestSellerId: sellerId.toString(),
-        match: product.detail.sellerId._id.toString() === sellerId.toString(),
-      });
-
       // Verify seller
       if (product.detail.sellerId._id.toString() !== sellerId.toString()) {
         throw new Error("Unauthorized: Only the seller can add replies");
