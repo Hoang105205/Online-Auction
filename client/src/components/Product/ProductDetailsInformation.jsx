@@ -18,7 +18,7 @@ const ProductDetailsInformation = ({
 
   const handleSave = async () => {
     if (!editorContent.trim()) {
-      alert("Vui lòng nhập nội dung!");
+      toast.error("Vui lòng nhập nội dung!");
       return;
     }
 
@@ -54,7 +54,7 @@ const ProductDetailsInformation = ({
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating description:", error);
-      alert("Cập nhật mô tả thất bại. Vui lòng thử lại.");
+      toast.error("Cập nhật mô tả thất bại. Vui lòng thử lại.");
     } finally {
       setSaving(false);
     }

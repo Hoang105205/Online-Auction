@@ -122,7 +122,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       setError(error.message);
-      console.error("Error fetching product data:", error);
+      toast.error("Error fetching product data:" || error.message);
     } finally {
       setLoading(false);
     }
@@ -174,10 +174,10 @@ const ProductDetails = () => {
   const handleSaveDescription = async (newDescription) => {
     try {
       setProductDescData(newDescription);
-      alert("Cập nhật mô tả thành công!");
+      toast.success("Cập nhật mô tả thành công!");
     } catch (error) {
       console.error("Có lỗi xảy ra khi cập nhật", error);
-      alert("Có lỗi xảy ra khi cập nhật.");
+      toast.error("Có lỗi xảy ra khi cập nhật.");
     }
   };
 

@@ -12,8 +12,10 @@ const ProductDetailsANA = ({ productId, qaData, sellerId, authUser }) => {
   const [sending, setSending] = useState(false);
 
   const currentUserId = authUser?.id;
+
   const isSeller =
     currentUserId && sellerId?._id && currentUserId === sellerId._id;
+
   const isLoggedIn = authUser?.accessToken;
 
   const maskBidderName = (name) => {
