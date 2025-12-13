@@ -109,34 +109,86 @@ const ProductDetailsAuction = ({
     }
   };
 
-  const handleKickBidder = async (bidderId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn chặn người đấu giá này?")) {
-      return;
-    }
+  const handleKickBidder = async (bidderId, bidderName) => {
+    const toastId = toast.warn(
+      <div>
+        <p className="font-semibold mb-2">Chặn người đấu giá</p>
+        <p className="mb-3">
+          Bạn có chắc chắn muốn chặn{" "}
+          <strong>{maskBidderName(bidderName)}</strong>?
+        </p>
+        <p className="text-xs text-gray-600 mb-3">
+          Người này sẽ không thể tham gia đấu giá sản phẩm này nữa.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            onClick={async () => {
+              toast.dismiss(toastId);
 
-    try {
-      setKickingBidder(bidderId);
+              try {
+                setKickingBidder(bidderId);
 
-      await kickBidder(axiosPrivate, {
-        productId,
-        bidderId,
-      });
+                await kickBidder(axiosPrivate, {
+                  productId,
+                  bidderId,
+                });
 
-      toast.success("Đã chặn người đấu giá thành công!");
+                toast.success("Đã chặn người đấu giá thành công!");
 
-      // Refresh data (dung tam tu onBidSuccess de refresh)
-      if (onBidSuccess) {
-        await onBidSuccess();
+                if (onBidSuccess) {
+                  await onBidSuccess();
+                }
+              } catch (error) {
+                toast.error(
+                  error.response?.data?.message ||
+                    "Có lỗi xảy ra khi chặn người đấu giá!"
+                );
+              } finally {
+                setKickingBidder(null);
+              }
+            }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}
+          >
+            Xác nhận
+          </button>
+          <button
+            onClick={() => toast.dismiss(toastId)}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#6b7280",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Hủy
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
       }
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi chặn người đấu giá!"
-      );
-    } finally {
-      setKickingBidder(null);
-    }
+    );
   };
-
   const { numberOfBids, historyList } = localHistoryData ||
     auctionHistoryData || { numberOfBids: 0, historyList: [] };
 
@@ -520,7 +572,7 @@ const ProductDetailsAuction = ({
                   </th>
                   {isSeller && productStatus === "active" && (
                     <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 w-[15%]">
-                      Chặn người đấu giá
+                      Chặn
                     </th>
                   )}
                 </tr>
@@ -558,10 +610,15 @@ const ProductDetailsAuction = ({
                         {isSeller && productStatus === "active" && (
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-center w-[15%]">
                             <button
-                              onClick={() => handleKickBidder(bid.bidderId._id)}
+                              onClick={() =>
+                                handleKickBidder(
+                                  bid.bidderId._id,
+                                  bid.bidderId?.fullName
+                                )
+                              }
                               disabled={kickingBidder === bid.bidderId._id}
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Chặn người đấu giá"
+                              title="Chặn"
                             >
                               <Ban className="w-3 h-3" />
                               {kickingBidder === bid.bidderId._id
