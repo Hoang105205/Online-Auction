@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Star, User, Clock, RotateCcw } from "lucide-react";
+import { Star, User, Clock, RotateCcw, Ban } from "lucide-react";
 import { HiHeart } from "react-icons/hi";
 import { toast } from "react-toastify";
 
@@ -205,6 +205,7 @@ const ProductDetails = () => {
   let sellerId = "";
   let timeRemaining = "";
   let timesOut = false;
+  let isBanned = false;
 
   if (productInfoData && productAuctionData) {
     images = productInfoData.detail?.images || [];
@@ -214,6 +215,8 @@ const ProductDetails = () => {
         ? true
         : false;
     timeRemaining = calculateTimeRemaining(productAuctionData.auction.endTime);
+
+    isBanned = productAuctionData.auction.bannedBidders?.includes(auth?.id);
   }
 
   const isOwner = currentUserId === sellerId;
@@ -430,7 +433,18 @@ const ProductDetails = () => {
                 </div>
 
                 {/* Bid Button */}
-                {productAuctionData.auction.status === "active" && !timesOut ? (
+                {isBanned ? (
+                  // Nút cho user bị ban
+                  <button
+                    disabled
+                    className="w-full bg-red-500 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8 opacity-90 flex items-center justify-center gap-2"
+                  >
+                    <Ban className="w-5 h-5" />
+                    Bạn đã bị từ chối đấu giá!
+                  </button>
+                ) : productAuctionData.auction.status === "active" &&
+                  !timesOut ? (
+                  // Nút bình thường
                   <button
                     className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
                     onClick={() => setActiveTab("auction")}
@@ -438,6 +452,7 @@ const ProductDetails = () => {
                     Đấu Giá Ngay!
                   </button>
                 ) : (
+                  // Nút khi đấu giá đã kết thúc
                   <button
                     disabled
                     className="w-full bg-gray-400 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8"
@@ -502,6 +517,7 @@ const ProductDetails = () => {
                     authUser={auth}
                     productStatus={productAuctionData.auction.status}
                     onBidSuccess={fetchProductData}
+                    isSeller={isOwner}
                   />
                 )}
                 {activeTab === "qa" && (

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Clock, Crown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, Crown, ChevronLeft, ChevronRight, Ban } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { toast } from "react-toastify";
 
-import { placeBid } from "../../api/auctionService";
+import { placeBid, kickBidder } from "../../api/auctionService";
 import { getAuctionHistory } from "../../api/productService";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
@@ -15,16 +15,20 @@ const ProductDetailsAuction = ({
   authUser,
   productStatus,
   onBidSuccess,
+  isSeller,
 }) => {
   const axiosPrivate = useAxiosPrivate();
   const [bidAmount, setBidAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [kickingBidder, setKickingBidder] = useState(null);
 
   const [localHistoryData, setLocalHistoryData] = useState(auctionHistoryData);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const itemsPerPage = 10;
+
+  const isBanned = auctionData?.auction?.bannedBidders?.includes(authUser?.id);
 
   if (!authUser?.accessToken) {
     return (
@@ -40,6 +44,22 @@ const ProductDetailsAuction = ({
           >
             Đăng nhập ngay
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isBanned) {
+    return (
+      <div className="py-12 text-center">
+        <div className="max-w-md mx-auto bg-red-50 p-8 rounded-lg shadow-md border border-red-200">
+          <Ban className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-xl font-semibold text-red-800 mb-2">
+            Bạn đã bị seller từ chối đấu giá
+          </h3>
+          <p className="text-gray-600">
+            Bạn không thể tham gia đấu giá sản phẩm này nữa.
+          </p>
         </div>
       </div>
     );
@@ -86,6 +106,34 @@ const ProductDetailsAuction = ({
       toast.error("Có lỗi xảy ra khi tải trang!");
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleKickBidder = async (bidderId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn chặn người đấu giá này?")) {
+      return;
+    }
+
+    try {
+      setKickingBidder(bidderId);
+
+      await kickBidder(axiosPrivate, {
+        productId,
+        bidderId,
+      });
+
+      toast.success("Đã chặn người đấu giá thành công!");
+
+      // Refresh data (dung tam tu onBidSuccess de refresh)
+      if (onBidSuccess) {
+        await onBidSuccess();
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi chặn người đấu giá!"
+      );
+    } finally {
+      setKickingBidder(null);
     }
   };
 
@@ -470,6 +518,11 @@ const ProductDetailsAuction = ({
                   <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 w-[30%]">
                     Giá
                   </th>
+                  {isSeller && productStatus === "active" && (
+                    <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 w-[15%]">
+                      Chặn người đấu giá
+                    </th>
+                  )}
                 </tr>
               </thead>
             </table>
@@ -502,6 +555,21 @@ const ProductDetailsAuction = ({
                             {formatPrice(bid.bidPrice)} đ
                           </span>
                         </td>
+                        {isSeller && productStatus === "active" && (
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-center w-[15%]">
+                            <button
+                              onClick={() => handleKickBidder(bid.bidderId._id)}
+                              disabled={kickingBidder === bid.bidderId._id}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Chặn người đấu giá"
+                            >
+                              <Ban className="w-3 h-3" />
+                              {kickingBidder === bid.bidderId._id
+                                ? "Đang chặn..."
+                                : "Chặn"}
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))
                   ) : (
