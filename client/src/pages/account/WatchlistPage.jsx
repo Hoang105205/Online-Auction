@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import ProductCard from "../../components/ProductCard";
+import ProductCard from "../../components/Account/ProductCard";
 import { HiTrash } from "react-icons/hi";
 
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";

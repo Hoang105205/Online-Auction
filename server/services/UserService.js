@@ -4,6 +4,7 @@ const SystemSetting = require("../models/System");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 const ROLES_LIST = require("../config/roles_list");
+const { calculateUserRating } = require("../utils/userUtils");
 
 class UserService {
   static async checkAndDemoteSeller(user) {
@@ -199,7 +200,9 @@ class UserService {
     }
 
     if (product.detail.sellerId.toString() === userId) {
-      const error = new Error("Bạn không thể thêm sản phẩm của chính mình vào danh sách theo dõi.");
+      const error = new Error(
+        "Bạn không thể thêm sản phẩm của chính mình vào danh sách theo dõi."
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -448,16 +451,71 @@ class UserService {
           sellerRequests: {
             bidderId: userId,
             dateStart: new Date(),
-          }
+          },
         },
         // Đảm bảo các field khác không bị null nếu tạo mới (optional)
-        $setOnInsert: { autoExtendBefore: 0, autoExtendDuration: 0 }
+        $setOnInsert: { autoExtendBefore: 0, autoExtendDuration: 0 },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
-    )
-    .exec();
+    ).exec();
 
     return { message: "Gửi yêu cầu thành công. Vui lòng chờ Admin duyệt." };
+  }
+
+  static async getWonProducts(userId, { page = 1, limit = 3 }) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Điều kiện Query
+      const query = {
+        "auction.highestBidderId": userId,
+        "auction.status": { $ne: "active" }, // Lấy tất cả status: pending, ended, cancelled
+      };
+
+      // 1. Đếm tổng số lượng (để phân trang)
+      const totalCount = await Product.countDocuments(query);
+
+      // 2. Lấy dữ liệu
+      let products = await Product.find(query)
+        .select(
+          "detail.name detail.images detail.sellerId auction.currentPrice auction.status auction.bidders updatedAt"
+        ) // Chỉ lấy field cần thiết
+        .sort({ updatedAt: -1 }) // Mặc định sort theo thời gian cập nhật mới nhất (lúc chuyển status)
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "detail.sellerId",
+          select: "fullName",
+        })
+        .lean() // Tăng tốc độ query vì chỉ cần đọc
+        .exec();
+
+      products = await Promise.all(
+        products.map(async (product) => {
+          const sellerId = product.detail.sellerId?._id;
+
+          if (sellerId) {
+            const ratingStats = await calculateUserRating(sellerId.toString());
+
+            product.detail.sellerId.rating = ratingStats.percentage;
+          } 
+
+          return product;
+        })
+      );
+
+      return {
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalItems: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

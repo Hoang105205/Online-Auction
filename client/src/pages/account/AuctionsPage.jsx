@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import ProductCard from "../../components/ProductCard";
+import ProductCard from "../../components/Account/ProductCard";
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { getParticipatingAuctions } from "../../api/userService";

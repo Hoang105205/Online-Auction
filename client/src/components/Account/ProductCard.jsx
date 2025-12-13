@@ -1,6 +1,6 @@
 import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
 import { Link } from "react-router-dom";
-import ProductImage from "./ProductImage";
+import ProductImage from "../ProductImage";
 
 const ProductCard = ({ product, isWon = false }) => {
   // Calculate time remaining
