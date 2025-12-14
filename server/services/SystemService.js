@@ -4,6 +4,7 @@ const Product = require("../models/Product");
 const mongoose = require("mongoose");
 const ROLES_LIST = require("../config/roles_list");
 const sendEmail = require("../utils/sendEmail");
+const { recalculateAuctionAfterRemovingBidder } = require("../utils/userUtils");
 
 // Helpers for email formatting
 const formatDateVN = (date) =>
@@ -787,6 +788,60 @@ class SystemService {
       const err = new Error("Error getting dashboard stats: " + error.message);
       err.statusCode = 500;
       throw err;
+    }
+  }
+
+  // ===== Hoang - Cleanup user auction activity when user is deleted =====
+  /** === NOTE Cách xài ===
+   *  1. Gọi service này trong service xóa User
+   *  2. Truyền vào userId của user bị xóa và BẮT BUỘC phải chạy trong Transaction (Session) để đảm bảo an toàn dữ liệu.
+   *  3. Ví dụ Code tích hợp:
+   * const session = await mongoose.startSession();
+   * try {
+   * await session.withTransaction(async () => {
+   * // BƯỚC 1: Gọi hàm dọn dẹp này TRƯỚC
+   * await cleanupUserAuctionActivity(userId, session);
+   * * // BƯỚC 2: Sau đó mới thực hiện xóa User VÀ CÁC TÁC VỤ KHÁC
+   * await User.findByIdAndDelete(userId).session(session);
+   * ... các tác vụ xóa liên quan khác ...
+   * });
+   * } finally {
+   * session.endSession();
+   * }
+   *  =====================
+   */ 
+  /**
+   * ADMIN TASK: Dọn dẹp toàn bộ hoạt động đấu giá của một User khi User bị xóa
+   * @param {String} userIdToRemove - ID của user bị xóa
+   * @param {Object} session - Mongoose Session (để đảm bảo Transaction với task xóa user)
+   */
+  static async cleanupUserAuctionActivity(userIdToRemove, session) {
+    // 1. Tìm tất cả sản phẩm mà user này từng bid và đang active (hoặc pending)
+    // Lưu ý: Chỉ cần tìm trong historyList có bidderId là user này
+    const affectedProducts = await Product.find({
+      "auctionHistory.historyList.bidderId": userIdToRemove,
+      "auction.status": "active", 
+    }).session(session);
+
+    console.log(
+      `🧹 Tìm thấy ${affectedProducts.length} phiên đấu giá cần dọn dẹp cho user ${userIdToRemove}`
+    );
+
+    // 2. Lặp qua từng sản phẩm và tính toán lại
+    for (const product of affectedProducts) {
+      recalculateAuctionAfterRemovingBidder(
+        product,
+        userIdToRemove
+      );
+
+      // Xóa user khỏi danh sách bị ban (nếu có) - vì user đã bay màu rồi ko cần ban nữa
+      if (product.auction.bannedBidders.includes(userIdToRemove)) {
+        product.auction.bannedBidders = product.auction.bannedBidders.filter(
+          (id) => id.toString() !== userIdToRemove.toString()
+        );
+      }
+
+      await product.save({ session });
     }
   }
 }

@@ -92,4 +92,71 @@ const calculateUserRating = async (userId) => {
   }
 };
 
-module.exports = { calculateUserRating };
+const recalculateAuctionAfterRemovingBidder = (product, bidderIdToRemove) => {
+  // 1. Lọc bỏ lịch sử đấu giá của người này
+  const originalCount = product.auctionHistory.historyList.length;
+  product.auctionHistory.historyList =
+    product.auctionHistory.historyList.filter(
+      (h) => h.bidderId.toString() !== bidderIdToRemove.toString()
+    );
+
+  // Nếu không có gì thay đổi (user chưa từng bid), return luôn
+  if (product.auctionHistory.historyList.length === originalCount) return;
+
+  // Cập nhật số lượng bid
+  product.auctionHistory.numberOfBids =
+    product.auctionHistory.historyList.length;
+
+  // 2. Tính toán lại Leader và Current Price
+  const remainingBids = product.auctionHistory.historyList;
+
+  if (remainingBids.length === 0) {
+    // Reset về trạng thái ban đầu
+    product.auction.currentPrice = product.auction.startPrice;
+    product.auction.highestBidderId = null;
+    product.auction.bidders = 0;
+  } else {
+    // Group by User để tìm Max Bid của từng người còn lại
+    const bidderMap = {};
+
+    remainingBids.forEach((bid) => {
+      const bId = bid.bidderId.toString();
+      if (!bidderMap[bId]) {
+        bidderMap[bId] = { price: bid.bidPrice, time: bid.bidTime };
+      } else {
+        if (bid.bidPrice > bidderMap[bId].price) {
+          bidderMap[bId] = { price: bid.bidPrice, time: bid.bidTime };
+        }
+      }
+    });
+
+    // Sắp xếp: Giá giảm dần -> Thời gian tăng dần (đến sớm xếp trước)
+    const sortedBidders = Object.keys(bidderMap)
+      .map((id) => ({
+        id,
+        price: bidderMap[id].price,
+        time: bidderMap[id].time,
+      }))
+      .sort((a, b) => {
+        if (b.price !== a.price) return b.price - a.price;
+        return new Date(a.time) - new Date(b.time);
+      });
+
+    // Người đứng đầu (Leader mới)
+    const newLeader = sortedBidders[0];
+    product.auction.highestBidderId = newLeader.id;
+
+    // Tính lại số người tham gia (Unique)
+    product.auction.bidders = sortedBidders.length;
+
+    // Tính giá hiện tại (Current Price) theo luật Second-Price
+    if (sortedBidders.length === 1) {
+      product.auction.currentPrice = product.auction.startPrice;
+    } else {
+      const runnerUp = sortedBidders[1]; // Người về nhì
+      product.auction.currentPrice = runnerUp.price;
+    }
+  }
+};
+
+module.exports = { calculateUserRating, recalculateAuctionAfterRemovingBidder };
