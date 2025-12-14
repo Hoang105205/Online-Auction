@@ -4,6 +4,7 @@ const User = require("../models/User");
 const mongoose = require("mongoose");
 const { calculateUserRating } = require("../utils/userUtils");
 const sendEmail = require("../utils/sendEmail");
+const OrderService = require("./OrderService");
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("vi-VN", {
@@ -252,6 +253,30 @@ class AuctionService {
 
           isBuyNowSuccess = true;
           isNewWinner = true;
+          newHighestBidderId = userId;
+
+          // =================================================================
+          // TÍCH HỢP: KHỞI TẠO ORDER
+          // =================================================================
+          // Lấy ảnh đầu tiên của sản phẩm làm thumbnail đơn hàng
+          const productImage =
+            product.detail.images && product.detail.images.length > 0
+              ? product.detail.images[0]
+              : "";
+
+          await OrderService.createInitialOrder(
+            {
+              productId: product._id,
+              productName: product.detail.name,
+              productImage: productImage,
+              price: newCurrentPrice,
+              sellerId: product.detail.sellerId._id,
+              buyerId: userId,
+            },
+            session
+          ); // <--- QUAN TRỌNG: Truyền session để đảm bảo Transaction
+
+          console.log(`✅ Order created for Product ${product._id}`);
         } else {
           if (
             product.auction.buyNowPrice > 0 &&
@@ -264,6 +289,23 @@ class AuctionService {
 
             isBuyNowSuccess = true;
             isNewWinner = true;
+
+            // Tạo Order tương tự ở trên
+            const productImage =
+              product.detail.images && product.detail.images.length > 0
+                ? product.detail.images[0]
+                : "";
+            await OrderService.createInitialOrder(
+              {
+                productId: product._id,
+                productName: product.detail.name,
+                productImage: productImage,
+                price: newCurrentPrice,
+                sellerId: product.detail.sellerId._id,
+                buyerId: newHighestBidderId, // Lưu ý dùng ID người thắng hiện tại
+              },
+              session
+            );
           } else {
             product.auction.currentPrice = newCurrentPrice;
           }
