@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Package,
   Truck,
@@ -11,92 +12,148 @@ import {
   ThumbsUp,
   ThumbsDown,
   Edit2,
+  Ban,
 } from "lucide-react";
 
+import { toast } from "react-toastify";
+
 import PrivateChat from "./PrivateChat.jsx";
+import ProductImage from "../ProductImage";
+import { getOrderByProductId } from "../../api/orderService";
+
+import useAuth from "../../hooks/useAuth";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const OrderProduct = () => {
   // MOCK DATA
-  const [order] = useState({
-    _id: "674d398d27f90dc33a992494",
-    product: {
-      id: "674d398d27f90dc33a992494",
-      name: "iPhone 15 Pro Max 256GB - Xanh Titan",
-      image:
-        "https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-1.jpg",
-      price: 28500000,
-    },
-    sellerId: {
-      _id: "seller123",
-      fullName: "Nguyễn Văn Seller",
-    },
-    buyerId: {
-      _id: "buyer456",
-      fullName: "Trần Thị Buyer",
-    },
-    status: "cancelled", // Test: pending_payment, pending_confirmation, shipping, delivered, completed, cancelled
-    fulfillmentInfo: {
-      fullName: "Trần Thị Buyer",
-      address: "123 Đường ABC, Phường XYZ, Quận 1, TP.HCM",
-      paymentProofImage:
-        "https://via.placeholder.com/400x300?text=Payment+Proof",
-      shippingProofImage:
-        "https://via.placeholder.com/400x300?text=Shipping+Proof",
-    },
-    reviews: {
-      bySeller: {
-        isGood: true,
-        content: "Người mua rất tốt, giao dịch nhanh chóng!",
-        lastUpdated: "2025-12-15T10:00:00.000Z",
-        isSynced: false,
-      },
-      byBuyer: {
-        isGood: false,
-        content: "Giao hàng hơi chậm",
-        lastUpdated: "2025-12-15T11:00:00.000Z",
-        isSynced: false,
-      },
-    },
-    timelines: {
-      paymentSubmitted: "2025-12-14T10:30:00.000Z",
-      sellerConfirmed: "2025-12-14T11:00:00.000Z",
-      buyerReceived: "2025-12-15T14:00:00.000Z",
-      finished: null,
-    },
-    createdAt: "2025-12-14T10:00:00.000Z",
-  });
+  // const [order] = useState({
+  //   _id: "674d398d27f90dc33a992494",
+  //   product: {
+  //     id: "674d398d27f90dc33a992494",
+  //     name: "iPhone 15 Pro Max 256GB - Xanh Titan",
+  //     image:
+  //       "https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-1.jpg",
+  //     price: 28500000,
+  //   },
+  //   sellerId: {
+  //     _id: "seller123",
+  //     fullName: "Nguyễn Văn Seller",
+  //   },
+  //   buyerId: {
+  //     _id: "buyer456",
+  //     fullName: "Trần Thị Buyer",
+  //   },
+  //   status: "pending_payment", // Test: pending_payment, pending_confirmation, shipping, delivered, completed, cancelled
+  //   fulfillmentInfo: {
+  //     fullName: "Trần Thị Buyer",
+  //     address: "123 Đường ABC, Phường XYZ, Quận 1, TP.HCM",
+  //     paymentProofImage:
+  //       "https://via.placeholder.com/400x300?text=Payment+Proof",
+  //     shippingProofImage:
+  //       "https://via.placeholder.com/400x300?text=Shipping+Proof",
+  //   },
+  //   reviews: {
+  //     bySeller: {
+  //       isGood: true,
+  //       content: "Người mua rất tốt, giao dịch nhanh chóng!",
+  //       lastUpdated: "2025-12-15T10:00:00.000Z",
+  //       isSynced: false,
+  //     },
+  //     byBuyer: {
+  //       isGood: false,
+  //       content: "Giao hàng hơi chậm",
+  //       lastUpdated: "2025-12-15T11:00:00.000Z",
+  //       isSynced: false,
+  //     },
+  //   },
+  //   timelines: {
+  //     paymentSubmitted: "2025-12-14T10:30:00.000Z",
+  //     sellerConfirmed: "2025-12-14T11:00:00.000Z",
+  //     buyerReceived: "2025-12-15T14:00:00.000Z",
+  //     finished: null,
+  //   },
+  //   createdAt: "2025-12-14T10:00:00.000Z",
+  // });
+
+  const { productId } = useParams();
+  const navigate = useNavigate();
+  const { auth } = useAuth();
+  const axiosPrivate = useAxiosPrivate();
+
+  // state
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Form states
-  const [fullName, setFullName] = useState(
-    order.fulfillmentInfo?.fullName || ""
-  );
-  const [address, setAddress] = useState(order.fulfillmentInfo?.address || "");
+  const [fullName, setFullName] = useState("");
+  const [address, setAddress] = useState("");
   const [paymentProof, setPaymentProof] = useState(null);
   const [shippingProof, setShippingProof] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Review states - Riêng cho từng role
-  const [buyerReviewType, setBuyerReviewType] = useState(
-    order.reviews?.byBuyer?.isGood ? "good" : "bad"
-  );
-  const [buyerReviewContent, setBuyerReviewContent] = useState(
-    order.reviews?.byBuyer?.content || ""
-  );
+  const [buyerReviewType, setBuyerReviewType] = useState("good");
+  const [buyerReviewContent, setBuyerReviewContent] = useState("");
   const [buyerEditingReview, setBuyerEditingReview] = useState(false);
 
-  const [sellerReviewType, setSellerReviewType] = useState(
-    order.reviews?.bySeller?.isGood ? "good" : "bad"
-  );
-  const [sellerReviewContent, setSellerReviewContent] = useState(
-    order.reviews?.bySeller?.content || ""
-  );
+  const [sellerReviewType, setSellerReviewType] = useState("good");
+  const [sellerReviewContent, setSellerReviewContent] = useState("");
   const [sellerEditingReview, setSellerEditingReview] = useState(false);
 
+  // current userId
+  useEffect(() => {
+    if (auth?.id) {
+      setCurrentUserId(auth.id);
+    }
+  }, [auth]);
+
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      if (!productId) {
+        setError("Product ID is missing");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await getOrderByProductId(productId, axiosPrivate);
+        setOrder(data);
+
+        // pre-fill form data
+        if (data.fulfillmentInfo) {
+          setFullName(data.fulfillmentInfo.fullName || "");
+          setAddress(data.fulfillmentInfo.address || "");
+        }
+
+        if (data.reviews?.byBuyer) {
+          setBuyerReviewType(data.reviews.byBuyer.isGood ? "good" : "bad");
+          setBuyerReviewContent(data.reviews.byBuyer.content || "");
+        }
+
+        if (data.reviews?.bySeller) {
+          setSellerReviewType(data.reviews.bySeller.isGood ? "good" : "bad");
+          setSellerReviewContent(data.reviews.bySeller.content || "");
+        }
+      } catch (err) {
+        console.error("Error fetching order data:", err);
+        setError(err.response?.data?.error || "Failed to load order data");
+        toast.error("Không thể tải dữ liệu đơn hàng");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderData();
+  }, [productId, axiosPrivate]);
+
   // Test role
-  // const isBuyer = true;
-  // const isSeller = false;
-  const isBuyer = false;
-  const isSeller = true;
+  const isBuyer = currentUserId === order?.buyerId?._id;
+  const isSeller = currentUserId === order?.sellerId?._id;
 
   const formatPrice = (price) => {
     return price?.toLocaleString("vi-VN") || "0";
@@ -151,6 +208,78 @@ const OrderProduct = () => {
         <Icon className="w-4 h-4" />
         {config.text}
       </span>
+    );
+  };
+
+  // Handle Cancel Order
+  const handleCancelOrder = () => {
+    const toastId = toast.warn(
+      <div>
+        <p className="font-semibold mb-2">Hủy đơn hàng</p>
+        <p className="mb-3">Bạn có chắc chắn muốn hủy đơn hàng này?</p>
+        <p className="text-xs text-gray-600 mb-3">
+          Bạn sẽ không thể hoàn tác hành động này.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            onClick={async () => {
+              toast.dismiss(toastId);
+
+              try {
+                // cancel api
+
+                toast.success("Đã hủy đơn hàng thành công!");
+
+                // Cập nhật trạng thái đơn hàng trong UI
+              } catch (error) {
+                toast.error(
+                  error.response?.data?.message ||
+                    "Có lỗi xảy ra khi hủy đơn hàng!"
+                );
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}
+          >
+            Xác nhận
+          </button>
+          <button
+            onClick={() => toast.dismiss(toastId)}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#6b7280",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Hủy
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
+      }
     );
   };
 
@@ -388,6 +517,37 @@ const OrderProduct = () => {
     );
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-800 font-semibold text-lg mb-2">
+            Có lỗi xảy ra
+          </p>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">Không tìm thấy đơn hàng</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 py-8">
@@ -407,7 +567,7 @@ const OrderProduct = () => {
                 <p className="font-semibold">{order._id}</p>
               </div>
               <div>
-                <p className="text-gray-600">Ngày tạo:</p>
+                <p className="text-gray-600">Ngày chốt giá:</p>
                 <p className="font-semibold">
                   {formatDateTime(order.createdAt)}
                 </p>
@@ -418,28 +578,38 @@ const OrderProduct = () => {
           {/* Product Info */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-bold mb-4">Thông tin sản phẩm</h2>
-            <div className="flex gap-4">
-              <img
-                src={order.product.image}
-                alt={order.product.name}
-                className="w-24 h-24 object-cover rounded-lg"
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{order.product.name}</h3>
-                <p className="text-2xl font-bold text-blue-600 mt-2">
+
+            {/* Grid responsive: 1 cột trên mobile, 2 cột trên desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Ảnh chiếm 1/3 trên màn hình lớn, full width trên mobile */}
+              <div className="lg:col-span-1">
+                <ProductImage
+                  url={order.product.image}
+                  alt={order.product.name}
+                  defaultWidth="100%"
+                  defaultHeight="auto"
+                />
+              </div>
+
+              {/* Thông tin chiếm 2/3 trên màn hình lớn */}
+              <div className="lg:col-span-2">
+                <h3 className="font-semibold text-lg mb-2">
+                  {order.product.name}
+                </h3>
+                <p className="text-2xl font-bold text-blue-600 mb-4">
                   {formatPrice(order.product.price)} đ
                 </p>
-              </div>
-            </div>
 
-            <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600 text-sm">Người bán:</p>
-                <p className="font-semibold">{order.sellerId?.fullName}</p>
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Người mua:</p>
-                <p className="font-semibold">{order.buyerId?.fullName}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
+                  <div>
+                    <p className="text-gray-600 text-sm">Người bán:</p>
+                    <p className="font-semibold">{order.sellerId?.fullName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Người mua:</p>
+                    <p className="font-semibold">{order.buyerId?.fullName}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -667,6 +837,19 @@ const OrderProduct = () => {
 
               {/* Review Section - Hiển thị ở MỌI STEP (trừ cancelled) */}
               {order.status !== "cancelled" && <SellerReviewSection />}
+
+              {order.status !== "completed" && order.status !== "cancelled" && (
+                <div className="mb-6">
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={submitting}
+                    className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Ban className="w-5 h-5" />
+                    {submitting ? "Đang hủy..." : "Hủy đơn hàng"}
+                  </button>
+                </div>
+              )}
             </>
           )}
 

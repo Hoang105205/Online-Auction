@@ -66,7 +66,7 @@ const router = createBrowserRouter(
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>
-            <Route path="details/:id/order" element={<OrderPage />} />
+            <Route path="order/:productId" element={<OrderPage />} />
             {/* Account pages */}
             <Route path="account" element={<AccountLayout />}>
               <Route index element={<ProfilePage />} />

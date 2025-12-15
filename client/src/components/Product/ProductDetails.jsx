@@ -227,7 +227,7 @@ const ProductDetails = () => {
   const isOwner = currentUserId === sellerId;
 
   const handleGoToOrder = () => {
-    navigate(`/details/${productId}/order`);
+    navigate(`/order/${productId}`);
   };
 
   return (
