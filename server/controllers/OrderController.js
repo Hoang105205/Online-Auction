@@ -26,6 +26,43 @@ const updateRatingDraft = async (req, res) => {
   }
 };
 
+const finalizeOrder = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const sellerId = req.user;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    const result = await OrderService.finalizeOrder(productId, sellerId);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const cancelOrder = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const sellerId = req.user;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+    const result = await OrderService.cancelOrder(productId, sellerId);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   updateRatingDraft,
+  finalizeOrder,
+  cancelOrder,
 };
