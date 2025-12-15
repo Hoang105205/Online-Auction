@@ -36,6 +36,7 @@ import PermissionsPage from "./pages/account/PermissionsPage";
 import MyProductsPage from "./pages/account/MyProductsPage";
 import MySoldProductsPage from "./pages/account/MySoldProductsPage.jsx";
 import CreateProductPage from "./pages/account/CreateProductPage";
+import OrderPage from "./pages/OrderPage";
 
 // Auth wrapper to protect routes
 import RequireAuth from "./components/Auth/RequireAuth";
@@ -65,6 +66,7 @@ const router = createBrowserRouter(
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>
+            <Route path="order/:productId" element={<OrderPage />} />
             {/* Account pages */}
             <Route path="account" element={<AccountLayout />}>
               <Route index element={<ProfilePage />} />

@@ -6,10 +6,13 @@ const verifyRoles = require("../middleware/verifyRoles");
 const ROLES_LIST = require("../config/roles_list");
 
 const {
+  getOrderByProductId,
   updateRatingDraft,
   finalizeOrder,
   cancelOrder,
 } = require("../controllers/OrderController");
+
+// ===== Hoang's routes =====
 
 router.put(
   "/:productId/rating-draft",
@@ -32,4 +35,17 @@ router.post(
   cancelOrder
 );
 
+// ====================================
+
+// ==== Thuan's routes =====
+
+// GET /api/orders/product/:productId - Get order details by product ID
+router.get(
+  "/product/:productId",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
+  getOrderByProductId
+);
+
+// ==========================
 module.exports = router;

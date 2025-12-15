@@ -30,6 +30,7 @@ const startAuctionStatusJob = require("./jobs/auctionStatusJob");
 // --- Routes ---
 app.use("/api/auth", require("./routes/AuthRoute"));
 app.use("/api/products", require("./routes/ProductRoute"));
+app.use("/api/orders", require("./routes/OrderRoute"));
 app.use("/api/users", require("./routes/UserRoute"));
 app.use("/api/auction", require("./routes/AuctionRoute"));
 app.use("/api/orders", require("./routes/OrderRoute"));
