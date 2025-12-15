@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Star, User, Clock, RotateCcw, Ban } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Star, User, Clock, RotateCcw, Ban, Package } from "lucide-react";
 import { HiHeart } from "react-icons/hi";
 import { toast } from "react-toastify";
 
@@ -28,6 +28,7 @@ import {
 const ProductDetails = () => {
   const { auth } = useAuth();
   const [currentUserId, setCurrentUserId] = useState(null);
+  const navigate = useNavigate();
 
   const axiosPrivate = useAxiosPrivate();
 
@@ -206,6 +207,7 @@ const ProductDetails = () => {
   let timeRemaining = "";
   let timesOut = false;
   let isBanned = false;
+  let isHighestBidder = false;
 
   if (productInfoData && productAuctionData) {
     images = productInfoData.detail?.images || [];
@@ -217,9 +219,16 @@ const ProductDetails = () => {
     timeRemaining = calculateTimeRemaining(productAuctionData.auction.endTime);
 
     isBanned = productAuctionData.auction.bannedBidders?.includes(auth?.id);
+
+    isHighestBidder =
+      currentUserId === productAuctionData.auction.highestBidderId?._id;
   }
 
   const isOwner = currentUserId === sellerId;
+
+  const handleGoToOrder = () => {
+    navigate(`/details/${productId}/order`);
+  };
 
   return (
     <>
@@ -451,6 +460,15 @@ const ProductDetails = () => {
                   >
                     Đấu Giá Ngay!
                   </button>
+                ) : isOwner || isHighestBidder ? (
+                  // Đấu giá kết thúc + User là seller hoặc highest bidder
+                  <button
+                    onClick={handleGoToOrder}
+                    className="w-full bg-green-600 text-white py-4 rounded-full text-lg font-semibold hover:bg-green-700 transition-colors mb-8 flex items-center justify-center gap-2"
+                  >
+                    <Package className="w-5 h-5" />
+                    Hoàn tất đơn hàng
+                  </button>
                 ) : (
                   // Nút khi đấu giá đã kết thúc
                   <button
@@ -600,7 +618,7 @@ const ProductDetails = () => {
           </>
 
           {/* Private Chat - Only show when auction ended and user is seller or highest bidder */}
-          {productAuctionData &&
+          {/* {productAuctionData &&
             productAuctionData.auction.status !== "active" &&
             (isOwner ||
               currentUserId ===
@@ -613,7 +631,7 @@ const ProductDetails = () => {
                   productAuctionData.auction.highestBidderId?._id
                 }
               />
-            )}
+            )} */}
         </>
       )}
     </>
