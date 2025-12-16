@@ -8,3 +8,12 @@ export const getOrderByProductId = async (productId, axiosInstance) => {
     throw error;
   }
 };
+
+export const cancelOrder = async (productId, axiosInstance) => {
+  try {
+    const response = await axiosInstance.post(`/orders/${productId}/cancel`);
+    return response.data; // Tra ve message
+  } catch (error) {
+    throw error;
+  }
+};

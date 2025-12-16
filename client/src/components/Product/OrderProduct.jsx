@@ -19,62 +19,12 @@ import { toast } from "react-toastify";
 
 import PrivateChat from "./PrivateChat.jsx";
 import ProductImage from "../ProductImage";
-import { getOrderByProductId } from "../../api/orderService";
+import { getOrderByProductId, cancelOrder } from "../../api/orderService";
 
 import useAuth from "../../hooks/useAuth";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const OrderProduct = () => {
-  // MOCK DATA
-  // const [order] = useState({
-  //   _id: "674d398d27f90dc33a992494",
-  //   product: {
-  //     id: "674d398d27f90dc33a992494",
-  //     name: "iPhone 15 Pro Max 256GB - Xanh Titan",
-  //     image:
-  //       "https://cdn.tgdd.vn/Products/Images/42/305658/iphone-15-pro-max-blue-1.jpg",
-  //     price: 28500000,
-  //   },
-  //   sellerId: {
-  //     _id: "seller123",
-  //     fullName: "Nguyễn Văn Seller",
-  //   },
-  //   buyerId: {
-  //     _id: "buyer456",
-  //     fullName: "Trần Thị Buyer",
-  //   },
-  //   status: "pending_payment", // Test: pending_payment, pending_confirmation, shipping, delivered, completed, cancelled
-  //   fulfillmentInfo: {
-  //     fullName: "Trần Thị Buyer",
-  //     address: "123 Đường ABC, Phường XYZ, Quận 1, TP.HCM",
-  //     paymentProofImage:
-  //       "https://via.placeholder.com/400x300?text=Payment+Proof",
-  //     shippingProofImage:
-  //       "https://via.placeholder.com/400x300?text=Shipping+Proof",
-  //   },
-  //   reviews: {
-  //     bySeller: {
-  //       isGood: true,
-  //       content: "Người mua rất tốt, giao dịch nhanh chóng!",
-  //       lastUpdated: "2025-12-15T10:00:00.000Z",
-  //       isSynced: false,
-  //     },
-  //     byBuyer: {
-  //       isGood: false,
-  //       content: "Giao hàng hơi chậm",
-  //       lastUpdated: "2025-12-15T11:00:00.000Z",
-  //       isSynced: false,
-  //     },
-  //   },
-  //   timelines: {
-  //     paymentSubmitted: "2025-12-14T10:30:00.000Z",
-  //     sellerConfirmed: "2025-12-14T11:00:00.000Z",
-  //     buyerReceived: "2025-12-15T14:00:00.000Z",
-  //     finished: null,
-  //   },
-  //   createdAt: "2025-12-14T10:00:00.000Z",
-  // });
-
   const { productId } = useParams();
   const navigate = useNavigate();
   const { auth } = useAuth();
@@ -151,7 +101,7 @@ const OrderProduct = () => {
     fetchOrderData();
   }, [productId, axiosPrivate]);
 
-  // Test role
+  // role
   const isBuyer = currentUserId === order?.buyerId?._id;
   const isSeller = currentUserId === order?.sellerId?._id;
 
@@ -233,7 +183,7 @@ const OrderProduct = () => {
 
               try {
                 // cancel api
-
+                await cancelOrder(productId, axiosPrivate);
                 toast.success("Đã hủy đơn hàng thành công!");
 
                 // Cập nhật trạng thái đơn hàng trong UI
