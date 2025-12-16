@@ -176,7 +176,7 @@ export default function RatingsTab() {
                 <div className="flex items-end gap-3 mb-3">
                   <span className="text-5xl font-extrabold text-sky-600">
                     {derivedStats.total === 0
-                      ? 0
+                      ? 100
                       : Math.round(derivedStats.avg * 100)}
                     %
                   </span>
