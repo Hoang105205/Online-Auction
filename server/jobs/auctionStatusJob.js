@@ -1,6 +1,8 @@
 const cron = require("node-cron");
 const Product = require("../models/Product");
 const sendEmail = require("../utils/sendEmail");
+const OrderService = require("../services/OrderService");
+const mongoose = require("mongoose");
 
 const formatDateVN = (date) =>
   new Date(date).toLocaleDateString("vi-VN", {
@@ -114,6 +116,39 @@ const startAuctionStatusJob = () => {
           resultNoWinner.modifiedCount
         } ended, ${resultWithWinner.modifiedCount} pending)`
       );
+
+      // Create orders for products with winners
+      const orderPromises = expiredProducts
+        .filter((product) => product.auction.highestBidderId)
+        .map(async (product) => {
+          const session = await mongoose.startSession();
+          session.startTransaction();
+          try {
+            await OrderService.createInitialOrder(
+              {
+                productId: product._id,
+                productName: product.detail.name,
+                productImage: product.detail.images?.[0] || null,
+                price: product.auction.currentPrice,
+                sellerId: product.detail.sellerId._id,
+                buyerId: product.auction.highestBidderId._id,
+              },
+              session
+            );
+            await session.commitTransaction();
+            console.log(`Created order for product ${product._id}`);
+          } catch (error) {
+            await session.abortTransaction();
+            console.error(
+              `Error creating order for product ${product._id}:`,
+              error.message
+            );
+          } finally {
+            session.endSession();
+          }
+        });
+
+      await Promise.allSettled(orderPromises);
 
       // Send emails for each expired product (non-blocking parallel execution)
       const emailPromises = expiredProducts.map(async (product) => {
