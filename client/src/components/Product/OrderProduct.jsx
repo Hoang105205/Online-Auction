@@ -13,6 +13,8 @@ import {
   ThumbsDown,
   Edit2,
   Ban,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { toast } from "react-toastify";
@@ -43,6 +45,9 @@ const OrderProduct = () => {
   const [shippingProof, setShippingProof] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Dropdown states
+  const [expandedSteps, setExpandedSteps] = useState({});
+
   // Review states - Riêng cho từng role
   const [buyerReviewType, setBuyerReviewType] = useState("good");
   const [buyerReviewContent, setBuyerReviewContent] = useState("");
@@ -59,6 +64,7 @@ const OrderProduct = () => {
     }
   }, [auth]);
 
+  // fetch order data
   useEffect(() => {
     const fetchOrderData = async () => {
       if (!productId) {
@@ -101,7 +107,7 @@ const OrderProduct = () => {
     fetchOrderData();
   }, [productId, axiosPrivate]);
 
-  // role
+  // determine role
   const isBuyer = currentUserId === order?.buyerId?._id;
   const isSeller = currentUserId === order?.sellerId?._id;
 
@@ -112,6 +118,36 @@ const OrderProduct = () => {
   const formatDateTime = (date) => {
     if (!date) return "Chưa có";
     return new Date(date).toLocaleString("vi-VN");
+  };
+
+  const toggleStep = (step) => {
+    setExpandedSteps((prev) => ({
+      ...prev,
+      [step]: !prev[step],
+    }));
+  };
+
+  // Get step status
+  const getStepStatus = (step) => {
+    const statusOrder = [
+      "pending_payment",
+      "pending_confirmation",
+      "shipping",
+      "delivered",
+      "completed",
+      "cancelled",
+    ];
+
+    const currentIndex = statusOrder.indexOf(order.status);
+    const stepIndex = statusOrder.indexOf(step);
+
+    if (order.status === "cancelled") {
+      return stepIndex <= currentIndex ? "completed" : "pending";
+    }
+
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "current";
+    return "pending";
   };
 
   const getStatusBadge = (status) => {
@@ -230,6 +266,488 @@ const OrderProduct = () => {
         draggable: false,
         closeButton: false,
       }
+    );
+  };
+
+  // ==================== STEP 1: PENDING PAYMENT ====================
+  const StepPendingPayment = () => {
+    const status = getStepStatus("pending_payment");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("pending_payment")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-yellow-500 bg-yellow-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Clock className="w-6 h-6 text-yellow-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">
+                Bước 1: Thanh toán & Gửi thông tin
+              </h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.paymentSubmitted
+                    )}`
+                  : "Đang chờ người mua gửi thông tin"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.pending_payment ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ✅ Hiển thị content khi current HOẶC khi completed + expanded */}
+        {(isCurrent || (isCompleted && expandedSteps.pending_payment)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              // Completed - Hiển thị info
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold">Họ và tên: </span>
+                  <span>{order.fulfillmentInfo?.fullName}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Địa chỉ: </span>
+                  <span>{order.fulfillmentInfo?.address}</span>
+                </div>
+                {order.fulfillmentInfo?.paymentProofImage && (
+                  <div>
+                    <p className="font-semibold mb-2">Ảnh chuyển khoản:</p>
+                    <img
+                      src={order.fulfillmentInfo.paymentProofImage}
+                      alt="Payment proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : isCurrent && isBuyer ? (
+              // Current + Buyer - Form
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Địa chỉ nhận hàng <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
+                    rows="3"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Ảnh chuyển khoản <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setPaymentProof(e.target.files[0])}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                  {paymentProof && (
+                    <p className="text-sm text-green-600 mt-2">
+                      ✓ Đã chọn: {paymentProof.name}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => alert("Gửi thông tin (Chưa implement)")}
+                  disabled={submitting}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang gửi..." : "Gửi thông tin thanh toán"}
+                </button>
+              </div>
+            ) : isCurrent && isSeller ? (
+              // Current + Seller - Waiting
+              <div className="text-center py-6">
+                <Clock className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người mua gửi thông tin thanh toán...
+                </p>
+              </div>
+            ) : (
+              // Fallback
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  isBuyer: {isBuyer.toString()} | isSeller:{" "}
+                  {isSeller.toString()}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==================== STEP 2: PENDING CONFIRMATION ====================
+  const StepPendingConfirmation = () => {
+    const status = getStepStatus("pending_confirmation");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("pending_confirmation")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-blue-500 bg-blue-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <AlertCircle className="w-6 h-6 text-blue-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 2: Xác nhận & Gửi hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.sellerConfirmed
+                    )}`
+                  : "Đang chờ người bán xác nhận"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.pending_confirmation ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.pending_confirmation)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="space-y-2">
+                {order.fulfillmentInfo?.shippingProofImage && (
+                  <div>
+                    <p className="font-semibold mb-2">Ảnh vận chuyển:</p>
+                    <img
+                      src={order.fulfillmentInfo.shippingProofImage}
+                      alt="Shipping proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">
+                    Thông tin người mua:
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Tên:</strong> {order.fulfillmentInfo?.fullName}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Địa chỉ:</strong> {order.fulfillmentInfo?.address}
+                  </p>
+                  {order.fulfillmentInfo?.paymentProofImage && (
+                    <div className="mt-3">
+                      <p className="text-sm font-semibold mb-2">
+                        Ảnh chuyển khoản:
+                      </p>
+                      <img
+                        src={order.fulfillmentInfo.paymentProofImage}
+                        alt="Payment proof"
+                        className="w-full max-w-md rounded-lg border"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Upload ảnh vận chuyển{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setShippingProof(e.target.files[0])}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                  {shippingProof && (
+                    <p className="text-sm text-green-600 mt-2">
+                      ✓ Đã chọn: {shippingProof.name}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => alert("Xác nhận gửi hàng (Chưa implement)")}
+                  disabled={submitting || !shippingProof}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xác nhận..." : "Xác nhận đã gửi hàng"}
+                </button>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="text-center py-6">
+                <Clock className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người bán xác nhận và gửi hàng...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==================== STEP 3: SHIPPING ====================
+  const StepShipping = () => {
+    const status = getStepStatus("shipping");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("shipping")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-purple-500 bg-purple-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Truck className="w-6 h-6 text-purple-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 3: Đang giao hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.buyerReceived
+                    )}`
+                  : "Đang chờ người mua xác nhận đã nhận hàng"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.shipping ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.shipping)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="text-center py-4">
+                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="font-semibold text-green-700">
+                  Đã giao hàng thành công
+                </p>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  Đơn hàng đang được vận chuyển. Vui lòng xác nhận khi đã nhận
+                  hàng.
+                </p>
+                {order.fulfillmentInfo?.shippingProofImage && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2">
+                      Ảnh vận chuyển từ người bán:
+                    </p>
+                    <img
+                      src={order.fulfillmentInfo.shippingProofImage}
+                      alt="Shipping proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={() => alert("Xác nhận nhận hàng (Chưa implement)")}
+                  disabled={submitting}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xử lý..." : "Xác nhận đã nhận hàng"}
+                </button>
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="text-center py-6">
+                <Truck className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người mua xác nhận đã nhận hàng...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==================== STEP 4: DELIVERED ====================
+  const StepDelivered = () => {
+    const status = getStepStatus("delivered");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("delivered")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+            isCompleted ? "cursor-pointer hover:bg-green-100" : "cursor-default"
+          } transition-colors ${
+            isCurrent
+              ? "border-green-500 bg-green-50"
+              : "border-green-500 bg-green-50"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Package className="w-6 h-6 text-green-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 4: Đã nhận hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.finished
+                    )}`
+                  : "Đang chờ người bán xác nhận hoàn tất"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.delivered ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.delivered)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="text-center py-4">
+                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="font-semibold text-green-700">
+                  Giao dịch thành công
+                </p>
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  Người mua đã xác nhận nhận hàng. Vui lòng xác nhận hoàn tất
+                  giao dịch.
+                </p>
+                <button
+                  onClick={() => alert("Xác nhận hoàn tất (Chưa implement)")}
+                  disabled={submitting}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xử lý..." : "Xác nhận hoàn tất giao dịch"}
+                </button>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="text-center py-6">
+                <Package className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người bán xác nhận hoàn tất giao dịch...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -467,6 +985,17 @@ const OrderProduct = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -564,279 +1093,86 @@ const OrderProduct = () => {
             </div>
           </div>
 
-          {/* BUYER VIEW */}
-          {isBuyer && (
-            <>
-              {/* Step 1: Payment Info */}
-              {order.status === "pending_payment" && (
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Upload className="w-5 h-5" />
-                    Bước 1: Thanh toán & Gửi thông tin
-                  </h2>
+          {/* Order Progress Steps */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-bold mb-4">Tiến trình đơn hàng</h2>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">
-                        Họ và tên <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Nguyễn Văn A"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">
-                        Địa chỉ nhận hàng{" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
-                        rows="3"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">
-                        Ảnh chuyển khoản <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setPaymentProof(e.target.files[0])}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                      {paymentProof && (
-                        <p className="text-sm text-green-600 mt-2">
-                          ✓ Đã chọn: {paymentProof.name}
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => alert("Gửi thông tin (Chưa implement)")}
-                      disabled={submitting}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                    >
-                      {submitting ? "Đang gửi..." : "Gửi thông tin thanh toán"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Waiting */}
-              {order.status === "pending_confirmation" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Clock className="w-6 h-6 text-blue-600" />
-                    <h2 className="text-xl font-bold text-blue-800">
-                      Chờ người bán xác nhận
-                    </h2>
-                  </div>
-                  <p className="text-gray-700">
-                    Thông tin của bạn đã được gửi. Vui lòng chờ người bán xác
-                    nhận.
-                  </p>
-                </div>
-              )}
-
-              {/* Step 3: Shipping */}
-              {order.status === "shipping" && (
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    Đang giao hàng
-                  </h2>
-                  <p className="text-gray-700 mb-4">
-                    Đơn hàng đang được vận chuyển. Vui lòng xác nhận khi đã nhận
-                    hàng.
-                  </p>
-
-                  {order.fulfillmentInfo?.shippingProofImage && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold mb-2">
-                        Ảnh vận chuyển từ người bán:
-                      </p>
-                      <img
-                        src={order.fulfillmentInfo.shippingProofImage}
-                        alt="Shipping proof"
-                        className="w-full max-w-md rounded-lg border"
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => alert("Xác nhận nhận hàng (Chưa implement)")}
-                    disabled={submitting}
-                    className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    {submitting ? "Đang xử lý..." : "Xác nhận đã nhận hàng"}
-                  </button>
-                </div>
-              )}
-
-              {/* Review Section - Hiển thị ở MỌI STEP (trừ cancelled) */}
-              {order.status !== "cancelled" && <BuyerReviewSection />}
-            </>
-          )}
-
-          {/* SELLER VIEW */}
-          {isSeller && (
-            <>
-              {/* Waiting for payment */}
-              {order.status === "pending_payment" && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Clock className="w-6 h-6 text-yellow-600" />
-                    <h2 className="text-xl font-bold text-yellow-800">
-                      Chờ người mua thanh toán
-                    </h2>
-                  </div>
-                  <p className="text-gray-700">
-                    Đang chờ người mua gửi thông tin thanh toán và địa chỉ.
-                  </p>
-                </div>
-              )}
-
-              {/* Confirm shipping */}
-              {order.status === "pending_confirmation" && (
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    Xác nhận gửi hàng
-                  </h2>
-
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <p className="text-sm font-semibold mb-2">
-                      Thông tin người mua:
+            {order.status === "cancelled" ? (
+              <div className="bg-red-50 border-2 border-red-500 rounded-lg p-6">
+                <div className="flex items-center gap-3">
+                  <XCircle className="w-8 h-8 text-red-600" />
+                  <div>
+                    <h3 className="font-bold text-xl text-red-800">
+                      Đơn hàng đã bị hủy
+                    </h3>
+                    <p className="text-sm text-red-700 mt-1">
+                      Hủy lúc: {formatDateTime(order.timelines?.finished)}
                     </p>
-                    <p className="text-gray-700">
-                      <strong>Tên:</strong> {order.fulfillmentInfo?.fullName}
-                    </p>
-                    <p className="text-gray-700">
-                      <strong>Địa chỉ:</strong> {order.fulfillmentInfo?.address}
-                    </p>
-
-                    {order.fulfillmentInfo?.paymentProofImage && (
-                      <div className="mt-3">
-                        <p className="text-sm font-semibold mb-2">
-                          Ảnh chuyển khoản:
-                        </p>
-                        <img
-                          src={order.fulfillmentInfo.paymentProofImage}
-                          alt="Payment proof"
-                          className="w-full max-w-md rounded-lg border"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">
-                        Upload ảnh vận chuyển{" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setShippingProof(e.target.files[0])}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                      {shippingProof && (
-                        <p className="text-sm text-green-600 mt-2">
-                          ✓ Đã chọn: {shippingProof.name}
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() =>
-                        alert("Xác nhận gửi hàng (Chưa implement)")
-                      }
-                      disabled={submitting || !shippingProof}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                    >
-                      {submitting ? "Đang xác nhận..." : "Xác nhận đã gửi hàng"}
-                    </button>
                   </div>
                 </div>
-              )}
-
-              {/* Waiting for buyer */}
-              {order.status === "shipping" && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Truck className="w-6 h-6 text-purple-600" />
-                    <h2 className="text-xl font-bold text-purple-800">
-                      Đang giao hàng
-                    </h2>
-                  </div>
-                  <p className="text-gray-700">
-                    Đang chờ người mua xác nhận đã nhận hàng.
-                  </p>
-                </div>
-              )}
-
-              {/* Review Section - Hiển thị ở MỌI STEP (trừ cancelled) */}
-              {order.status !== "cancelled" && <SellerReviewSection />}
-
-              {order.status !== "completed" && order.status !== "cancelled" && (
-                <div className="mb-6">
-                  <button
-                    onClick={handleCancelOrder}
-                    disabled={submitting}
-                    className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Ban className="w-5 h-5" />
-                    {submitting ? "Đang hủy..." : "Hủy đơn hàng"}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Completed/Cancelled */}
-          {(order.status === "completed" || order.status === "cancelled") && (
-            <div
-              className={`rounded-lg p-6 mb-6 ${
-                order.status === "completed"
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-red-50 border border-red-200"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {order.status === "completed" ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                ) : (
-                  <XCircle className="w-6 h-6 text-red-600" />
-                )}
-                <h2
-                  className={`text-xl font-bold ${
-                    order.status === "completed"
-                      ? "text-green-800"
-                      : "text-red-800"
-                  }`}
-                >
-                  {order.status === "completed"
-                    ? "Đơn hàng hoàn thành"
-                    : "Đơn hàng đã hủy"}
-                </h2>
               </div>
-            </div>
+            ) : (
+              <>
+                <StepPendingPayment />
+                <StepPendingConfirmation />
+                <StepShipping />
+                <StepDelivered />
+
+                {order.status === "completed" && (
+                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <div>
+                        <h3 className="font-bold text-xl text-green-800">
+                          Giao dịch hoàn tất
+                        </h3>
+                        <p className="text-sm text-green-700 mt-1">
+                          Hoàn thành lúc:{" "}
+                          {formatDateTime(order.timelines?.finished)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Cancel Button - Only for Seller */}
+          {isSeller &&
+            order.status !== "completed" &&
+            order.status !== "cancelled" && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={submitting}
+                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Ban className="w-5 h-5" />
+                  {submitting ? "Đang hủy..." : "Hủy đơn hàng"}
+                </button>
+              </div>
+            )}
+
+          {/* Reviews Section - Only show when completed */}
+          {order.status === "completed" && (
+            <>
+              {isBuyer && <BuyerReviewSection />}
+              {isSeller && <SellerReviewSection />}
+            </>
           )}
 
           {/* Timeline */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold mb-4">Lịch sử đơn hàng</h2>
             <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <p>
+                  <strong>Tạo đơn hàng:</strong>{" "}
+                  {formatDateTime(order.createdAt)}
+                </p>
+              </div>
               {order.timelines?.paymentSubmitted && (
                 <div className="flex items-center gap-3 text-sm">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
@@ -866,9 +1202,17 @@ const OrderProduct = () => {
               )}
               {order.timelines?.finished && (
                 <div className="flex items-center gap-3 text-sm">
-                  <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      order.status === "cancelled"
+                        ? "bg-red-600"
+                        : "bg-gray-600"
+                    }`}
+                  ></div>
                   <p>
-                    <strong>Hoàn thành:</strong>{" "}
+                    <strong>
+                      {order.status === "cancelled" ? "Đã hủy:" : "Hoàn thành:"}
+                    </strong>{" "}
                     {formatDateTime(order.timelines.finished)}
                   </p>
                 </div>
