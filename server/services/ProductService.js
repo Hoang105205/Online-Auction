@@ -6,6 +6,43 @@ const mongoose = require("mongoose");
 const { calculateUserRating } = require("../utils/userUtils");
 const sendEmail = require("../utils/sendEmail");
 
+// Utility function to extract publicId from Cloudinary URL
+function getPublicIdFromUrl(url) {
+  const parts = url.split("products/");
+  if (parts.length < 2) return null;
+  return "products/" + parts[1].replace(/\.[^/.]+$/, ""); // Remove extension
+}
+
+// Utility function to upload single image to Cloudinary
+async function uploadImageToCloudinary(file, productId, index) {
+  // If already uploaded (has path/location/url)
+  if (file.path || file.location || file.url) {
+    return file.path || file.location || file.url;
+  }
+
+  // Upload buffer to Cloudinary
+  if (file.buffer) {
+    const dataUri = `data:${file.mimetype};base64,${file.buffer.toString(
+      "base64"
+    )}`;
+
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder: `products/${productId}`,
+      public_id: `${Date.now()}_${index}`,
+      quality: "auto",
+      fetch_format: "auto",
+      transformation: [{ width: 1800, height: 1800, crop: "limit" }],
+    });
+
+    if (result?.secure_url || result?.url) {
+      const fullUrl = result.secure_url || result.url;
+      return getPublicIdFromUrl(fullUrl);
+    }
+  }
+
+  return null;
+}
+
 class ProductService {
   // get product basic details (for above information)
   static async getProductBasicDetails(productId) {
@@ -744,43 +781,15 @@ class ProductService {
 
     // --- HANDLE IMAGES ---
     if (Array.isArray(files) && files.length > 0) {
-      const urls = [];
+      const uploadPromises = files.map((file, index) =>
+        uploadImageToCloudinary(file, newProduct._id, index).catch((err) => {
+          console.error(`Error uploading image ${index}:`, err);
+          return null;
+        })
+      );
 
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-
-        // If multer already uploaded
-        if (f.path || f.location || f.url) {
-          urls.push(f.path || f.location || f.url);
-          continue;
-        }
-
-        // Upload buffer → Cloudinary
-        if (f.buffer) {
-          const dataUri = `data:${f.mimetype};base64,${f.buffer.toString(
-            "base64"
-          )}`;
-
-          try {
-            const result = await cloudinary.uploader.upload(dataUri, {
-              folder: `products/${newProduct._id}`,
-              public_id: `${Date.now()}_${i}`,
-              quality: "auto",
-              fetch_format: "auto",
-              transformation: [{ width: 1800, height: 1800, crop: "limit" }],
-            });
-
-            if (result?.secure_url || result?.url) {
-              const full = result.secure_url || result.url;
-              urls.push(getPublicId(full));
-            }
-          } catch (err) {
-            console.error("Cloudinary upload error:", err);
-          }
-        }
-      }
-
-      newProduct.detail.images = urls.filter(Boolean);
+      const uploadedUrls = await Promise.all(uploadPromises);
+      newProduct.detail.images = uploadedUrls.filter(Boolean);
       await newProduct.save();
     }
 
@@ -1137,7 +1146,79 @@ class ProductService {
     }
   }
 
-  static async;
+  // Utility function to upload single image to Cloudinary with custom folder
+  static async uploadImageToCloudinaryCustomFolder({
+    file,
+    baseFolder,
+    orderId = null,
+    index = 0,
+  }) {
+    // Build folder path: baseFolder/orderId or just baseFolder
+    const folderPath = orderId ? `${baseFolder}/${orderId}` : baseFolder;
+
+    // If already uploaded (has path/location/url)
+    if (file.path || file.location || file.url) {
+      return file.path || file.location || file.url;
+    }
+
+    // Upload buffer to Cloudinary
+    if (file.buffer) {
+      const dataUri = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
+
+      const result = await cloudinary.uploader.upload(dataUri, {
+        folder: folderPath,
+        public_id: `${Date.now()}_${index}`,
+        quality: "auto",
+        fetch_format: "auto",
+        transformation: [{ width: 1800, height: 1800, crop: "limit" }],
+      });
+
+      if (result?.secure_url || result?.url) {
+        return result.secure_url || result.url;
+      }
+    }
+
+    return null;
+  }
+
+  // Cách dùng:
+  // Gọi 4 dòng dưới đây trong mấy chỗ cần xóa folder trên Cloudinary
+  // const folder = 'folder_name_to_delete';
+  // const result = await ProductService.deleteCloudinaryFolder(
+  //   `products/${folder}`
+  // );
+
+  // Utility function to delete a folder on Cloudinary
+  static async deleteCloudinaryFolder(folderPath) {
+    try {
+      // Delete all resources in the folder
+      const deleteResult = await cloudinary.api.delete_resources_by_prefix(
+        folderPath,
+        {
+          resource_type: "image",
+        }
+      );
+
+      // Delete the folder itself
+      await cloudinary.api.delete_folder(folderPath);
+
+      return {
+        success: true,
+        deletedCount: deleteResult.deleted
+          ? Object.keys(deleteResult.deleted).length
+          : 0,
+        message: `Folder '${folderPath}' deleted successfully`,
+      };
+    } catch (error) {
+      console.error(`Error deleting folder ${folderPath}:`, error);
+      return {
+        success: false,
+        message: `Failed to delete folder: ${error.message}`,
+      };
+    }
+  }
 }
 
 module.exports = ProductService;
