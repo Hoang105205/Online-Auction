@@ -25,7 +25,60 @@ export default function ProductsPage() {
   const axiosPrivate = useAxiosPrivate();
 
   // server-side pagination/search
-  const paginated = products;
+  // We still sort the current page items client-side based on sortBy
+  const paginated = useMemo(() => {
+    const data = (products || []).slice();
+    // helper: normalize price-like values to Number
+    const parsePrice = (val) => {
+      if (val === undefined || val === null) return 0;
+      if (typeof val === "number") return val;
+      // handle strings like "1.000.000", "1,000,000", "1000000₫"
+      if (typeof val === "string") {
+        // remove any non-digit, non-dot, non-minus characters
+        const cleaned = val
+          .replace(/[^0-9.-]+/g, "")
+          .replace(/\.(?=.*\.)/g, "");
+        const n = parseFloat(cleaned);
+        return Number.isFinite(n) ? n : 0;
+      }
+      return 0;
+    };
+    if (sortBy === "name") {
+      data.sort((a, b) => {
+        const an = (a.detail && a.detail.name) || "";
+        const bn = (b.detail && b.detail.name) || "";
+        return String(an).localeCompare(String(bn), "vi", {
+          sensitivity: "base",
+        });
+      });
+    } else if (sortBy === "price") {
+      data.sort((a, b) => {
+        const aRaw =
+          (a.auction && (a.auction.currentPrice || a.auction.buyNowPrice)) || 0;
+        const bRaw =
+          (b.auction && (b.auction.currentPrice || b.auction.buyNowPrice)) || 0;
+        const aPrice = parsePrice(aRaw);
+        const bPrice = parsePrice(bRaw);
+        if (aPrice === bPrice) {
+          // fallback to name for stable ordering
+          const an = (a.detail && a.detail.name) || "";
+          const bn = (b.detail && b.detail.name) || "";
+          return String(an).localeCompare(String(bn));
+        }
+        return aPrice - bPrice;
+      });
+    } else {
+      // date (default): show newest first
+      data.sort((a, b) => {
+        const ad = a.createdAt || a.createdAtAt || null;
+        const bd = b.createdAt || b.createdAtAt || null;
+        const at = ad ? new Date(ad).getTime() : 0;
+        const bt = bd ? new Date(bd).getTime() : 0;
+        return bt - at;
+      });
+    }
+    return data;
+  }, [products, sortBy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,6 +91,7 @@ export default function ProductsPage() {
           page,
           limit: pageSize,
           q: query,
+          sortBy,
         });
         console.log("listProducts response:", res);
         if (!isMounted) return;
@@ -59,7 +113,7 @@ export default function ProductsPage() {
       isMounted = false;
       controller.abort();
     };
-  }, [page, query]);
+  }, [page, query, sortBy]);
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -109,9 +163,6 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Sản phẩm</h2>
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-2 bg-white border rounded">Export</button>
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-lg ring-1 ring-blue-100/60">
@@ -134,7 +185,10 @@ export default function ProductsPage() {
           <div className="flex items-center gap-3">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(1);
+              }}
               className="px-3 py-2 border rounded-full text-sm bg-white"
             >
               <option value="date">Sort by Date</option>
@@ -174,44 +228,40 @@ export default function ProductsPage() {
                       }`}
                     >
                       <td className="py-4 px-4">{p._id || p.id}</td>
-                      <>
-                        <td className="py-4 px-4 flex items-center gap-3">
-                          {p.detail &&
-                          p.detail.images &&
-                          p.detail.images.length > 0 ? (
-                            <ProductImage
-                              url={p.detail.images[0]}
-                              defaultWidth="40px"
-                              defaultHeight="40px"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-md bg-gray-200" />
-                          )}
-                          <div className="font-medium">
-                            {(p.detail && p.detail.name) || "—"}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          {(p.detail && p.detail.category) || "—"}
-                        </td>
-                        <td className="py-4 px-4">
-                          {(p.auction &&
-                            (p.auction.currentPrice ||
-                              p.auction.buyNowPrice)) ||
-                            "—"}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleDeleteClick(p._id || p.id)}
-                              className="p-2 rounded-full bg-red-50 text-red-500"
-                            >
-                              <HiTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </>
-
+                      <td className="py-4 px-4 flex items-center gap-3">
+                        {p.detail &&
+                        p.detail.images &&
+                        p.detail.images.length > 0 ? (
+                          <ProductImage
+                            url={p.detail.images[0]}
+                            defaultWidth="40px"
+                            defaultHeight="40px"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-md bg-gray-200" />
+                        )}
+                        <div className="font-medium">
+                          {(p.detail && p.detail.name) || "—"}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        {(p.detail && p.detail.category) || "—"}
+                      </td>
+                      <td className="py-4 px-4">
+                        {(p.auction &&
+                          (p.auction.currentPrice || p.auction.buyNowPrice)) ||
+                          "—"}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDeleteClick(p._id || p.id)}
+                            className="p-2 rounded-full bg-red-50 text-red-500"
+                          >
+                            <HiTrash />
+                          </button>
+                        </div>
+                      </td>
                       <td className="py-4 px-4 text-right">
                         <button
                           onClick={() => toggleRow(p._id || p.id)}
@@ -236,63 +286,67 @@ export default function ProductsPage() {
                       <tr className="text-sm text-gray-600 bg-gray-50">
                         <td className="py-3 px-4">&nbsp;</td>
                         <td colSpan={4} className="py-3 px-4">
-                          <div className="space-y-3">
-                            {/* Product Image */}
-                            {p.detail &&
-                              p.detail.images &&
-                              p.detail.images.length > 0 && (
-                                <div className="flex gap-3 mb-3">
-                                  {p.detail.images
-                                    .slice(0, 3)
-                                    .map((img, idx) => (
-                                      <ProductImage
-                                        key={idx}
-                                        url={img}
-                                        defaultWidth="64px"
-                                        defaultHeight="64px"
-                                      />
-                                    ))}
-                                </div>
-                              )}
-
-                            {/* Description */}
-                            <div>
-                              <span className="font-semibold text-gray-600">
-                                Mô tả:
-                              </span>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {(p.detail && p.detail.description) ||
-                                  "Không có mô tả."}
-                              </p>
+                          <div className="grid grid-cols-12 gap-3 items-start">
+                            <div className="col-span-7">
+                              {p.detail &&
+                                p.detail.images &&
+                                p.detail.images.length > 0 && (
+                                  <div className="flex gap-3 mb-3">
+                                    {p.detail.images
+                                      .slice(0, 3)
+                                      .map((img, idx) => (
+                                        <ProductImage
+                                          key={idx}
+                                          url={img}
+                                          defaultWidth="64px"
+                                          defaultHeight="64px"
+                                        />
+                                      ))}
+                                  </div>
+                                )}
+                              <div className="font-medium">
+                                {(p.detail && p.detail.name) || "—"}
+                              </div>
                             </div>
-
-                            {/* SubCategory */}
-                            {p.detail && p.detail.subCategory && (
-                              <div>
-                                <span className="font-semibold text-gray-600">
-                                  Danh mục con:
-                                </span>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {p.detail.subCategory}
-                                </p>
+                            <div className="col-span-3">
+                              <div className="font-semibold text-gray-600">
+                                Danh mục con:
                               </div>
-                            )}
-
-                            {/* Auction Status */}
-                            {p.auction && (
-                              <div>
-                                <span className="font-semibold text-gray-600">
-                                  Trạng thái:
-                                </span>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  Hiện tại:{" "}
-                                  {p.auction.currentPrice ||
-                                    p.auction.startPrice ||
-                                    "—"}{" "}
+                              <div className="text-sm text-gray-500 mt-1">
+                                {p.detail && p.detail.subCategory
+                                  ? p.detail.subCategory
+                                  : "—"}
+                              </div>
+                            </div>
+                            <div className="col-span-2">
+                              <div className="font-semibold text-gray-600">
+                                Giá cao nhất:
+                              </div>
+                              <div className="text-sm mt-1">
+                                <span className="inline-block text-gray-600 px-2 py-1 rounded">
+                                  {p.auction &&
+                                  (p.auction.currentPrice ||
+                                    p.auction.startPrice)
+                                    ? p.auction.currentPrice ||
+                                      p.auction.startPrice
+                                    : "—"}{" "}
                                   ₫
-                                </p>
+                                </span>
                               </div>
-                            )}
+                            </div>
+                            <div className="col-span-7 mt-2">
+                              <div className="font-semibold text-gray-600">
+                                Người đang giữ giá cao nhất:
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {p.auction && p.auction.highestBidderId
+                                  ? p.auction.highestBidderId.fullName ||
+                                    p.auction.highestBidderId.email ||
+                                    "—"
+                                  : "—"}
+                              </div>
+                            </div>
+                            <div className="col-span-5" />
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right">&nbsp;</td>

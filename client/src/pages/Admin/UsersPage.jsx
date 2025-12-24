@@ -1,14 +1,14 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
   HiSearch,
-  HiPencilAlt,
   HiTrash,
   HiChevronDown,
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
+import { toast } from "react-toastify";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import systemService from "../../api/systemService";
+import systemService, { removeUser } from "../../api/systemService";
 
 export default function UsersPage() {
   const [query, setQuery] = useState("");
@@ -16,9 +16,6 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
-  const [editingId, setEditingId] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState("");
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const pageSize = 6;
@@ -51,7 +48,27 @@ export default function UsersPage() {
   };
 
   // server-side pagination/search
-  const paginated = users;
+  // We sort the current page items client-side based on sortBy
+  const paginated = useMemo(() => {
+    const data = (users || []).slice();
+    if (sortBy === "name") {
+      data.sort((a, b) => {
+        const an = a.fullName || a.email || "";
+        const bn = b.fullName || b.email || "";
+        return String(an).localeCompare(String(bn), "vi", {
+          sensitivity: "base",
+        });
+      });
+    } else {
+      // date (default): show newest first
+      data.sort((a, b) => {
+        const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bt - at;
+      });
+    }
+    return data;
+  }, [users, sortBy]);
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -69,6 +86,7 @@ export default function UsersPage() {
           page,
           limit: pageSize,
           q: query,
+          sortBy,
         });
         if (!isMounted) return;
         setUsers(res.data || []);
@@ -99,41 +117,6 @@ export default function UsersPage() {
     setOpenRows(s);
   }
 
-  function startEdit(id) {
-    const u = users.find((x) => (x._id || x.id) === id);
-    if (!u) return;
-    setEditingId(id);
-    setEditName(u.fullName || u.email || "");
-    const firstRole = Array.isArray(u.roles) ? u.roles[0] : u.role;
-    setEditRole(
-      firstRole !== undefined && firstRole !== null ? String(firstRole) : ""
-    );
-  }
-
-  function submitEdit() {
-    if (!editingId) return;
-    setUsers((prev) =>
-      prev.map((u) =>
-        (u._id || u.id) === editingId
-          ? {
-              ...u,
-              fullName: editName.trim(),
-              roles: editRole ? [Number(editRole) || editRole] : [],
-            }
-          : u
-      )
-    );
-    setEditingId("");
-    setEditName("");
-    setEditRole("");
-  }
-
-  function cancelEdit() {
-    setEditingId("");
-    setEditName("");
-    setEditRole("");
-  }
-
   function handleDeleteClick(id) {
     setDeleteTarget(id);
     setShowDeleteModal(true);
@@ -141,25 +124,34 @@ export default function UsersPage() {
 
   function performDelete(id) {
     if (!id) return;
-    // remove by _id or id and recalc pagination based on remaining items
-    setUsers((prev) => {
-      const next = prev.filter((u) => (u._id || u.id) !== id);
-      setTotalCount((c) => Math.max(0, c - 1));
-      const newTotal = Math.max(1, Math.ceil(next.length / pageSize));
-      if (page > newTotal) setPage(newTotal);
-      return next;
-    });
-    setShowDeleteModal(false);
-    setDeleteTarget("");
+    (async () => {
+      try {
+        setLoading(true);
+        await removeUser(axiosPrivate, id);
+        // on success, remove from UI
+        setUsers((prev) => {
+          const next = prev.filter((u) => (u._id || u.id) !== id);
+          setTotalCount((c) => Math.max(0, c - 1));
+          const newTotal = Math.max(1, Math.ceil(next.length / pageSize));
+          if (page > newTotal) setPage(newTotal);
+          return next;
+        });
+        toast.success("Xóa người dùng thành công");
+      } catch (err) {
+        console.error("Delete user failed", err);
+        toast.error(err.response?.data?.message || "Xóa người dùng thất bại");
+      } finally {
+        setShowDeleteModal(false);
+        setDeleteTarget("");
+        setLoading(false);
+      }
+    })();
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Người dùng</h2>
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-2 bg-white border rounded">Export</button>
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-lg ring-1 ring-blue-100/60">
@@ -182,7 +174,10 @@ export default function UsersPage() {
           <div className="flex items-center gap-3">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(1);
+              }}
               className="px-3 py-2 border rounded-full text-sm bg-white"
             >
               <option value="date">Sort by Date</option>
@@ -221,80 +216,28 @@ export default function UsersPage() {
                     >
                       <td className="py-4 px-4">{u._id || u.id}</td>
 
-                      {editingId === (u._id || u.id) ? (
-                        <>
-                          <td className="py-4 px-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-50 text-purple-600 font-semibold">
-                              {u.fullName
-                                ? u.fullName.split(" ")[0][0] || "U"
-                                : "U"}
-                            </div>
-                            <input
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="w-full px-2 py-1 border rounded"
-                            />
-                          </td>
-                          <td className="py-4 px-4">
-                            <select
-                              value={editRole}
-                              onChange={(e) => setEditRole(e.target.value)}
-                              className="px-2 py-1 border rounded"
-                            >
-                              <option value="2001">Người đấu giá</option>
-                              <option value="1984">Người bán</option>
-                              <option value="5150">Admin</option>
-                            </select>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={submitEdit}
-                                className="px-3 py-1 bg-green-600 text-white rounded"
-                              >
-                                Lưu
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="px-3 py-1 bg-gray-100 rounded"
-                              >
-                                Hủy
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="py-4 px-4 flex items-center gap-3">
-                            <div className="flex flex-col">
-                              <div className="font-medium">
-                                {u.fullName || u.email}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            {Array.isArray(u.roles)
-                              ? u.roles.map((r) => ROLE_LABEL(r)).join(", ")
-                              : ROLE_LABEL(u.role) || ""}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => startEdit(u._id || u.id)}
-                                className="p-2 rounded-full bg-purple-50 text-purple-600"
-                              >
-                                <HiPencilAlt />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(u._id || u.id)}
-                                className="p-2 rounded-full bg-red-50 text-red-500"
-                              >
-                                <HiTrash />
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
+                      <td className="py-4 px-4 flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <div className="font-medium">
+                            {u.fullName || u.email}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        {Array.isArray(u.roles)
+                          ? u.roles.map((r) => ROLE_LABEL(r)).join(", ")
+                          : ROLE_LABEL(u.role) || ""}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDeleteClick(u._id || u.id)}
+                            className="p-2 rounded-full bg-red-50 text-red-500"
+                          >
+                            <HiTrash />
+                          </button>
+                        </div>
+                      </td>
 
                       <td className="py-4 px-4 text-right">
                         <button

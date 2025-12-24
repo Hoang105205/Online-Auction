@@ -1,4 +1,6 @@
 const SystemService = require("../services/SystemService");
+const mongoose = require("mongoose");
+const User = require("../models/User");
 
 const getSystemConfig = async (req, res) => {
   try {
@@ -155,17 +157,17 @@ const rejectSellerRequest = async (req, res) => {
 // Categories
 
 // ===== Duc =====
-// const getCategories = async (req, res) => {
-//   try {
-//     const params = req.query || {};
-//     const cats = await SystemService.getCategories(params);
-//     return res.status(200).json(cats);
-//   } catch (err) {
-//     return res
-//       .status(err.statusCode || 500)
-//       .json({ message: err.message || "Server error" });
-//   }
-// };
+const getCategoriesAdmin = async (req, res) => {
+  try {
+    const params = req.query || {};
+    const cats = await SystemService.getCategoriesAdmin(params);
+    return res.status(200).json(cats);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
 
 // ===== Huy =====
 // Categories
@@ -320,6 +322,50 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+const removeUserAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params || {};
+    if (!userId)
+      return res.status(400).json({ message: "userId không được để trống." });
+
+    const session = await mongoose.startSession();
+    let cleanupResult = {};
+    try {
+      await session.withTransaction(async () => {
+        // Step 1: cleanup auction activity related to this user
+        cleanupResult = await SystemService.cleanupUserAuctionActivity(
+          userId,
+          session
+        );
+
+        // Step 2: delete the user
+        await User.findByIdAndDelete(userId).session(session);
+      });
+    } finally {
+      session.endSession();
+    }
+
+    console.log(`✅ User ${userId} deleted successfully. Cleanup result:`, {
+      productsDeleted: cleanupResult.prodIds?.length || 0,
+      cloudinaryFoldersDeleted:
+        cleanupResult.cloudinaryFoldersDeleted?.length || 0,
+    });
+
+    return res.status(200).json({
+      message: "Xóa người dùng thành công.",
+      cleanup: {
+        productsDeleted: cleanupResult.prodIds?.length || 0,
+        cloudinaryFoldersDeleted:
+          cleanupResult.cloudinaryFoldersDeleted?.length || 0,
+      },
+    });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getSystemConfig,
   getTimeConfigs,
@@ -332,9 +378,11 @@ module.exports = {
   approveSellerRequest,
   rejectSellerRequest,
   getCategories,
+  getCategoriesAdmin,
   addCategory,
   updateCategory,
   removeCategory,
+  removeUserAdmin,
   getDashboardStats,
   removeSubCategory,
   listUsers,

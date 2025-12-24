@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const ROLES_LIST = require("../config/roles_list");
 const sendEmail = require("../utils/sendEmail");
 const { recalculateAuctionAfterRemovingBidder } = require("../utils/userUtils");
+const ProductService = require("./ProductService");
 
 // Helpers for email formatting
 const formatDateVN = (date) =>
@@ -345,42 +346,42 @@ class SystemService {
   // ===== Hoang =====
 
   // Categories management
-  // static async getCategories({ page = 1, limit = 20, q = "" } = {}) {
-  //   page = Math.max(1, Number(page) || 1);
-  //   limit = Math.min(100, Number(limit) || 20);
-  //   q = (q || "").trim();
+  static async getCategoriesAdmin({ page = 1, limit = 20, q = "" } = {}) {
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(100, Number(limit) || 20);
+    q = (q || "").trim();
 
-  //   const sys = await SystemSetting.findOne().lean().exec();
-  //   const all = sys && Array.isArray(sys.categories) ? sys.categories : [];
+    const sys = await SystemSetting.findOne().lean().exec();
+    const all = sys && Array.isArray(sys.categories) ? sys.categories : [];
 
-  //   let filtered = all;
-  //   if (q) {
-  //     const re = new RegExp(q, "i");
-  //     filtered = all.filter((c) => {
-  //       if (re.test(c.categoryName || "")) return true;
-  //       if (re.test(c.slug || "")) return true;
-  //       if (Array.isArray(c.subCategories)) {
-  //         for (const s of c.subCategories) {
-  //           if (re.test(s.subCategoryName || s.name || "")) return true;
-  //         }
-  //       }
-  //       return false;
-  //     });
-  //   }
+    let filtered = all;
+    if (q) {
+      const re = new RegExp(q, "i");
+      filtered = all.filter((c) => {
+        if (re.test(c.categoryName || "")) return true;
+        if (re.test(c.slug || "")) return true;
+        if (Array.isArray(c.subCategories)) {
+          for (const s of c.subCategories) {
+            if (re.test(s.subCategoryName || s.name || "")) return true;
+          }
+        }
+        return false;
+      });
+    }
 
-  //   const total = filtered.length;
-  //   const totalPages = Math.max(1, Math.ceil(total / limit));
-  //   const start = (page - 1) * limit;
-  //   const pageItems = filtered.slice(start, start + limit);
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const pageItems = filtered.slice(start, start + limit);
 
-  //   return {
-  //     total,
-  //     page,
-  //     limit,
-  //     totalPages,
-  //     categories: pageItems,
-  //   };
-  // }
+    return {
+      total,
+      page,
+      limit,
+      totalPages,
+      categories: pageItems,
+    };
+  }
 
   // Categories management
   static async getCategories() {
@@ -529,7 +530,13 @@ class SystemService {
     };
   }
 
-  static async listProducts({ page = 1, limit = 20, q = "", status } = {}) {
+  static async listProducts({
+    page = 1,
+    limit = 20,
+    q = "",
+    status,
+    sortBy,
+  } = {}) {
     page = Math.max(1, Number(page) || 1);
     limit = Math.min(100, Number(limit) || 20);
     q = (q || "").trim();
@@ -552,15 +559,105 @@ class SystemService {
       (await SystemSetting.findOne().select("categories").lean().exec())
         ?.categories || [];
 
-    const products = await Product.find(filter)
-      .select(
-        "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
-      )
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("detail.sellerId", "fullName email")
-      .lean()
-      .exec();
+    // If sortBy is provided and equals 'price' or 'name' or 'date', perform a query with sorting
+    let products = [];
+    if (sortBy === "price") {
+      // Use aggregation to compute a 'sortPrice' field: prefer currentPrice, fallback to buyNowPrice, fallback 0
+      const pipeline = [
+        { $match: filter },
+        {
+          $addFields: {
+            sortPrice: {
+              $ifNull: [
+                "$auction.currentPrice",
+                { $ifNull: ["$auction.buyNowPrice", 0] },
+              ],
+            },
+          },
+        },
+        { $sort: { sortPrice: 1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        {
+          $project: {
+            "detail.name": 1,
+            "detail.description": 1,
+            "detail.category": 1,
+            "detail.subCategory": 1,
+            "detail.images": 1,
+            "detail.sellerId": 1,
+            auction: 1,
+            auctionHistory: 1,
+          },
+        },
+      ];
+
+      products = await Product.aggregate(pipeline).exec();
+      // populate sellerId and highestBidderId manually for aggregation result
+      const sellerIds = products
+        .map((p) => p.detail && p.detail.sellerId)
+        .filter(Boolean);
+      const bidderIds = products
+        .map((p) => p.auction && p.auction.highestBidderId)
+        .filter(Boolean);
+      const userIds = Array.from(
+        new Set([...sellerIds, ...bidderIds].map(String))
+      );
+      if (userIds.length) {
+        const users = await User.find({ _id: { $in: userIds } })
+          .select("fullName email")
+          .lean()
+          .exec();
+        const userMap = new Map(users.map((s) => [String(s._id), s]));
+        for (const p of products) {
+          if (p.detail && p.detail.sellerId) {
+            const s = userMap.get(String(p.detail.sellerId));
+            if (s) p.detail.sellerId = s;
+          }
+          if (p.auction && p.auction.highestBidderId) {
+            const b = userMap.get(String(p.auction.highestBidderId));
+            if (b) p.auction.highestBidderId = b;
+          }
+        }
+      }
+    } else if (sortBy === "name") {
+      // Use collation for proper alphabetical order (Vietnamese-aware)
+      products = await Product.find(filter)
+        .select(
+          "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
+        )
+        .populate("auction.highestBidderId", "fullName email")
+        .sort({ "detail.name": 1 })
+        .collation({ locale: "vi", strength: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("detail.sellerId", "fullName email")
+        .lean()
+        .exec();
+    } else if (sortBy === "date") {
+      products = await Product.find(filter)
+        .select(
+          "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
+        )
+        .populate("auction.highestBidderId", "fullName email")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("detail.sellerId", "fullName email")
+        .lean()
+        .exec();
+    } else {
+      products = await Product.find(filter)
+        .select(
+          "detail.name detail.description detail.category detail.subCategory detail.images detail.sellerId auction auctionHistory"
+        )
+        .populate("auction.highestBidderId", "fullName email")
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("detail.sellerId", "fullName email")
+        .lean()
+        .exec();
+    }
 
     // build map for quick lookup
     const categoryMap = new Map();
@@ -705,19 +802,19 @@ class SystemService {
         createdAt: { $gte: oneDayAgo },
       }).exec();
 
-      // Ongoing auctions (status === "ongoing")
+      // Ongoing auctions (status === "active")
       const ongoingAuctions = await Product.countDocuments({
-        "auction.status": "ongoing",
+        "auction.status": "active",
       }).exec();
 
-      // Completed auctions (status === "completed")
+      // Completed auctions (status === "ended")
       const completedAuctions = await Product.countDocuments({
-        "auction.status": "completed",
+        "auction.status": "ended",
       }).exec();
 
       // Total revenue (sum of all completed auction prices)
       const revenueResult = await Product.aggregate([
-        { $match: { "auction.status": "completed" } },
+        { $match: { "auction.status": "ended" } },
         {
           $group: {
             _id: null,
@@ -729,7 +826,7 @@ class SystemService {
 
       // Recent completed auctions (last 5 with images)
       const recentAuctions = await Product.find({
-        "auction.status": "completed",
+        "auction.status": "ended",
       })
         .select("detail auction createdAt")
         .sort({ "auction.endTime": -1 })
@@ -809,7 +906,7 @@ class SystemService {
    * session.endSession();
    * }
    *  =====================
-   */ 
+   */
   /**
    * ADMIN TASK: Dọn dẹp toàn bộ hoạt động đấu giá của một User khi User bị xóa
    * @param {String} userIdToRemove - ID của user bị xóa
@@ -820,7 +917,7 @@ class SystemService {
     // Lưu ý: Chỉ cần tìm trong historyList có bidderId là user này
     const affectedProducts = await Product.find({
       "auctionHistory.historyList.bidderId": userIdToRemove,
-      "auction.status": "active", 
+      "auction.status": "active",
     }).session(session);
 
     console.log(
@@ -829,10 +926,7 @@ class SystemService {
 
     // 2. Lặp qua từng sản phẩm và tính toán lại
     for (const product of affectedProducts) {
-      recalculateAuctionAfterRemovingBidder(
-        product,
-        userIdToRemove
-      );
+      recalculateAuctionAfterRemovingBidder(product, userIdToRemove);
 
       // Xóa user khỏi danh sách bị ban (nếu có) - vì user đã bay màu rồi ko cần ban nữa
       if (product.auction.bannedBidders.includes(userIdToRemove)) {
@@ -843,6 +937,51 @@ class SystemService {
 
       await product.save({ session });
     }
+
+    // 3. Nếu user là seller của sản phẩm nào đó, xóa toàn bộ (bao gồm Cloudinary folders)
+    //    - tìm các product do user là seller (bất kỳ trạng thái active hay ended)
+    //    - xóa products trong transaction TRƯỚC (để đảm bảo an toàn dữ liệu)
+    //    - sau đó xóa Cloudinary folders TRONG vòng lặp (NGOÀI transaction)
+    const sellerProducts = await Product.find({
+      "detail.sellerId": userIdToRemove,
+    }).session(session);
+
+    const prodIds = sellerProducts.map((p) => p._id);
+
+    // Xóa products trong transaction TRƯỚC (để đảm bảo an toàn dữ liệu)
+    if (prodIds.length > 0) {
+      await Product.deleteMany({ _id: { $in: prodIds } }).session(session);
+      console.log(`🗑️ Deleted ${prodIds.length} seller products from database`);
+    }
+
+    // Xóa Cloudinary folders TRONG vòng lặp (NGOÀI transaction)
+    // Vì Cloudinary API ko support transaction - xóa sau khi transaction commit
+    const cloudinaryFoldersDeleted = [];
+    for (const p of sellerProducts) {
+      const folderPath = `products/${p._id}`;
+      console.log(`🗑️ Deleting Cloudinary folder: ${folderPath}`);
+      try {
+        const result = await ProductService.deleteCloudinaryFolder(folderPath);
+        if (result.success) {
+          cloudinaryFoldersDeleted.push({
+            folder: folderPath,
+            deletedCount: result.deletedCount,
+          });
+          console.log(
+            `✅ Successfully deleted ${result.deletedCount} images from ${folderPath}`
+          );
+        } else {
+          console.warn(
+            `⚠️ Failed to delete folder ${folderPath}: ${result.message}`
+          );
+        }
+      } catch (error) {
+        console.error(`❌ Error deleting folder ${folderPath}:`, error.message);
+      }
+    }
+
+    // Trả về kết quả xóa
+    return { cloudinaryFoldersDeleted, prodIds };
   }
 }
 
