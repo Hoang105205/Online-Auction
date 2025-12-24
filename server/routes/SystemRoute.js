@@ -87,6 +87,7 @@ router.delete(
 // Categories (Admin)
 
 // GET /system/categories - Get product description by ID
+router.get("/categoriesadmin", SystemController.getCategoriesAdmin);
 router.get("/categories", SystemController.getCategories);
 
 router.post(
@@ -120,6 +121,13 @@ router.get(
   verifyJWT,
   verifyRoles(ROLES_LIST.Admin),
   SystemController.listUsers
+);
+
+router.delete(
+  "/users/:userId",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.removeUserAdmin
 );
 
 router.get(

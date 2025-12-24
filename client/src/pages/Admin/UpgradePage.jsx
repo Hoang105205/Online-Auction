@@ -6,7 +6,11 @@ import {
   HiChevronRight,
 } from "react-icons/hi";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { listSellerRequests, approveSellerRequest, rejectSellerRequest } from "../../api/systemService";
+import {
+  listSellerRequests,
+  approveSellerRequest,
+  rejectSellerRequest,
+} from "../../api/systemService";
 import { toast } from "react-toastify";
 
 export default function UpgradePage() {
@@ -75,8 +79,7 @@ export default function UpgradePage() {
       toast.success(res.message || "Phê duyệt yêu cầu thành công.");
       setShowAcceptModal(false);
       setReloadToken(Date.now());
-    }
-    catch (err){
+    } catch (err) {
       toast.error(err.response?.data?.message || "Phê duyệt yêu cầu thất bại.");
     }
   }
@@ -87,8 +90,7 @@ export default function UpgradePage() {
       const res = await rejectSellerRequest(axiosPrivate, id);
       toast.success(res.message || "Từ chối yêu cầu thành công.");
       setReloadToken(Date.now());
-    }
-    catch (err){
+    } catch (err) {
       toast.error(err.response?.data?.message || "Từ chối yêu cầu thất bại.");
     }
   }
@@ -112,9 +114,6 @@ export default function UpgradePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Nâng cấp</h2>
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-2 bg-white border rounded">Export</button>
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-lg ring-1 ring-blue-100/60">

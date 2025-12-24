@@ -133,6 +133,20 @@ export const getCategories = async (
     throw error;
   }
 };
+export const getCategoriesAdmin = async (
+  axiosInstance,
+  { page = 1, limit = 20, q = "" } = {}
+) => {
+  try {
+    const params = { page, limit, q };
+    const res = await axiosInstance.get(`/app_settings/categoriesadmin`, {
+      params,
+    });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const addCategory = async (axiosInstance, payload) => {
   try {
@@ -183,12 +197,21 @@ export const removeSubCategory = async (
 
 export const listUsers = async (
   axiosInstance,
-  { page = 1, limit = 20, q = "" } = {}
+  { page = 1, limit = 20, q = "", sortBy } = {}
 ) => {
   try {
-    const res = await axiosInstance.get("/app_settings/users", {
-      params: { page, limit, q },
-    });
+    const params = { page, limit, q };
+    if (sortBy) params.sortBy = sortBy;
+    const res = await axiosInstance.get("/app_settings/users", { params });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeUser = async (axiosInstance, userId) => {
+  try {
+    const res = await axiosInstance.delete(`/app_settings/users/${userId}`);
     return res.data;
   } catch (error) {
     throw error;
@@ -197,11 +220,12 @@ export const listUsers = async (
 
 export const listProducts = async (
   axiosInstance,
-  { page = 1, limit = 20, q = "", status } = {}
+  { page = 1, limit = 20, q = "", status, sortBy } = {}
 ) => {
   try {
     const params = { page, limit, q };
     if (status) params.status = status;
+    if (sortBy) params.sortBy = sortBy;
     const res = await axiosInstance.get("/app_settings/products", { params });
     return res.data;
   } catch (error) {
@@ -239,10 +263,12 @@ export default {
   listSellerRequests,
   approveSellerRequest,
   getCategories,
+  getCategoriesAdmin,
   addCategory,
   updateCategory,
   removeCategory,
   removeSubCategory,
+  removeUser,
   listUsers,
   listProducts,
   getCategoryBySlug,

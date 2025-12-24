@@ -12,7 +12,7 @@ import {
 import { toast } from "react-toastify";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import {
-  getCategories,
+  getCategoriesAdmin as getCategories,
   addCategory,
   updateCategory,
   removeCategory as apiRemoveCategory,
@@ -31,6 +31,7 @@ export default function CategoriesPage() {
   const [newParent, setNewParent] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [editCount, setEditCount] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(false);
