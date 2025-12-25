@@ -21,7 +21,14 @@ import { toast } from "react-toastify";
 
 import PrivateChat from "./PrivateChat.jsx";
 import ProductImage from "../ProductImage";
-import { getOrderByProductId, cancelOrder } from "../../api/orderService";
+import {
+  getOrderByProductId,
+  cancelOrder,
+  submitPaymentInfo,
+  submitShippingInfo,
+  confirmDelivery,
+  closeOrder,
+} from "../../api/orderService";
 
 import useAuth from "../../hooks/useAuth";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
@@ -189,8 +196,7 @@ const OrderProduct = () => {
 
     return (
       <span
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${config.color}`}
-      >
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${config.color}`}>
         <Icon className="w-4 h-4" />
         {config.text}
       </span>
@@ -211,25 +217,29 @@ const OrderProduct = () => {
             display: "flex",
             gap: "10px",
             justifyContent: "center",
-          }}
-        >
+          }}>
           <button
             onClick={async () => {
-              toast.dismiss(toastId);
-
               try {
-                // cancel api
+                toast.dismiss(toastId);
+                toast.info("Đang hủy đơn hàng...");
+
                 await cancelOrder(productId, axiosPrivate);
+
                 toast.success("Đã hủy đơn hàng thành công!");
 
-                // Cập nhật trạng thái đơn hàng trong UI
+                // Reload order data
+                const updatedOrder = await getOrderByProductId(
+                  productId,
+                  axiosPrivate
+                );
+                setOrder(updatedOrder);
               } catch (error) {
+                console.error("Error cancelling order:", error);
                 toast.error(
                   error.response?.data?.message ||
-                    "Có lỗi xảy ra khi hủy đơn hàng!"
+                    "Có lỗi xảy ra khi hủy đơn hàng"
                 );
-              } finally {
-                setSubmitting(false);
               }
             }}
             style={{
@@ -240,8 +250,7 @@ const OrderProduct = () => {
               borderRadius: "6px",
               cursor: "pointer",
               fontWeight: "600",
-            }}
-          >
+            }}>
             Xác nhận
           </button>
           <button
@@ -253,8 +262,7 @@ const OrderProduct = () => {
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
-            }}
-          >
+            }}>
             Hủy
           </button>
         </div>
@@ -267,6 +275,137 @@ const OrderProduct = () => {
         closeButton: false,
       }
     );
+  };
+
+  // Handle Submit Payment Info
+  const handleSubmitPayment = async () => {
+    try {
+      // Validation
+      if (!fullName.trim()) {
+        toast.error("Vui lòng nhập họ và tên");
+        return;
+      }
+      if (!address.trim()) {
+        toast.error("Vui lòng nhập địa chỉ nhận hàng");
+        return;
+      }
+      if (!paymentProof) {
+        toast.error("Vui lòng chọn ảnh chuyển khoản");
+        return;
+      }
+
+      setSubmitting(true);
+
+      const paymentData = {
+        fullName: fullName.trim(),
+        address: address.trim(),
+        paymentProof: paymentProof,
+      };
+
+      const response = await submitPaymentInfo(
+        productId,
+        paymentData,
+        axiosPrivate
+      );
+
+      toast.success("Gửi thông tin thanh toán thành công!");
+
+      // Reload order data
+      const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
+      setOrder(updatedOrder);
+
+      // Reset form
+      setFullName("");
+      setAddress("");
+      setPaymentProof(null);
+    } catch (error) {
+      console.error("Error submitting payment:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi gửi thông tin thanh toán"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle Submit Shipping Info
+  const handleSubmitShipping = async () => {
+    try {
+      if (!shippingProof) {
+        toast.error("Vui lòng chọn ảnh vận chuyển");
+        return;
+      }
+
+      setSubmitting(true);
+
+      const response = await submitShippingInfo(
+        productId,
+        shippingProof,
+        axiosPrivate
+      );
+
+      toast.success("Đã xác nhận gửi hàng thành công!");
+
+      // Reload order data
+      const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
+      setOrder(updatedOrder);
+
+      // Reset form
+      setShippingProof(null);
+    } catch (error) {
+      console.error("Error submitting shipping:", error);
+      toast.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi xác nhận gửi hàng"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle Confirm Delivery
+  const handleConfirmDelivery = async () => {
+    try {
+      setSubmitting(true);
+
+      const response = await confirmDelivery(productId, axiosPrivate);
+
+      toast.success("Đã xác nhận nhận hàng thành công!");
+
+      // Reload order data
+      const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
+      setOrder(updatedOrder);
+    } catch (error) {
+      console.error("Error confirming delivery:", error);
+      toast.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi xác nhận nhận hàng"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle Close Order
+  const handleCloseOrder = async () => {
+    try {
+      setSubmitting(true);
+
+      const response = await closeOrder(productId, axiosPrivate);
+
+      toast.success("Đã xác nhận đóng đơn hàng thành công!");
+
+      // Reload order data
+      const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
+      setOrder(updatedOrder);
+    } catch (error) {
+      console.error("Error closing order:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi xác nhận đóng đơn hàng"
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ==================== STEP 1: PENDING PAYMENT ====================
@@ -285,8 +424,7 @@ const OrderProduct = () => {
             isCurrent
               ? "border-yellow-500 bg-yellow-50"
               : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}
-        >
+          }`}>
           <div className="flex items-center gap-3">
             {isCompleted ? (
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -389,10 +527,9 @@ const OrderProduct = () => {
                 </div>
 
                 <button
-                  onClick={() => alert("Gửi thông tin (Chưa implement)")}
+                  onClick={handleSubmitPayment}
                   disabled={submitting}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                >
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
                   {submitting ? "Đang gửi..." : "Gửi thông tin thanh toán"}
                 </button>
               </div>
@@ -439,8 +576,7 @@ const OrderProduct = () => {
             isCurrent
               ? "border-blue-500 bg-blue-50"
               : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}
-        >
+          }`}>
           <div className="flex items-center gap-3">
             {isCompleted ? (
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -529,10 +665,9 @@ const OrderProduct = () => {
                 </div>
 
                 <button
-                  onClick={() => alert("Xác nhận gửi hàng (Chưa implement)")}
+                  onClick={handleSubmitShipping}
                   disabled={submitting || !shippingProof}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                >
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
                   {submitting ? "Đang xác nhận..." : "Xác nhận đã gửi hàng"}
                 </button>
               </div>
@@ -573,8 +708,7 @@ const OrderProduct = () => {
             isCurrent
               ? "border-purple-500 bg-purple-50"
               : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}
-        >
+          }`}>
           <div className="flex items-center gap-3">
             {isCompleted ? (
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -631,10 +765,9 @@ const OrderProduct = () => {
                   </div>
                 )}
                 <button
-                  onClick={() => alert("Xác nhận nhận hàng (Chưa implement)")}
+                  onClick={handleConfirmDelivery}
                   disabled={submitting}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                >
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors">
                   {submitting ? "Đang xử lý..." : "Xác nhận đã nhận hàng"}
                 </button>
               </div>
@@ -677,8 +810,7 @@ const OrderProduct = () => {
             isCurrent
               ? "border-green-500 bg-green-50"
               : "border-green-500 bg-green-50"
-          }`}
-        >
+          }`}>
           <div className="flex items-center gap-3">
             {isCompleted ? (
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -723,10 +855,9 @@ const OrderProduct = () => {
                   giao dịch.
                 </p>
                 <button
-                  onClick={() => alert("Xác nhận hoàn tất (Chưa implement)")}
+                  onClick={handleCloseOrder}
                   disabled={submitting}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                >
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors">
                   {submitting ? "Đang xử lý..." : "Xác nhận hoàn tất giao dịch"}
                 </button>
               </div>
@@ -766,8 +897,7 @@ const OrderProduct = () => {
           {hasReview && !isEditing && (
             <button
               onClick={() => setBuyerEditingReview(true)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
               <Edit2 className="w-4 h-4" />
               Chỉnh sửa
             </button>
@@ -784,8 +914,7 @@ const OrderProduct = () => {
                   buyerReviewType === "good"
                     ? "border-green-500 bg-green-50 text-green-700"
                     : "border-gray-300 hover:border-green-300"
-                }`}
-              >
+                }`}>
                 <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
                 Tốt
               </button>
@@ -795,8 +924,7 @@ const OrderProduct = () => {
                   buyerReviewType === "bad"
                     ? "border-red-500 bg-red-50 text-red-700"
                     : "border-gray-300 hover:border-red-300"
-                }`}
-              >
+                }`}>
                 <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
                 Không tốt
               </button>
@@ -817,8 +945,7 @@ const OrderProduct = () => {
                   setBuyerEditingReview(false);
                 }}
                 disabled={submitting || !buyerReviewContent.trim()}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-              >
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
                 {submitting
                   ? "Đang lưu..."
                   : hasReview
@@ -836,8 +963,7 @@ const OrderProduct = () => {
                     );
                     setBuyerEditingReview(false);
                   }}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                >
+                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
                   Hủy
                 </button>
               )}
@@ -884,8 +1010,7 @@ const OrderProduct = () => {
           {hasReview && !isEditing && (
             <button
               onClick={() => setSellerEditingReview(true)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
               <Edit2 className="w-4 h-4" />
               Chỉnh sửa
             </button>
@@ -901,8 +1026,7 @@ const OrderProduct = () => {
                   sellerReviewType === "good"
                     ? "border-green-500 bg-green-50 text-green-700"
                     : "border-gray-300 hover:border-green-300"
-                }`}
-              >
+                }`}>
                 <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
                 Tốt
               </button>
@@ -912,8 +1036,7 @@ const OrderProduct = () => {
                   sellerReviewType === "bad"
                     ? "border-red-500 bg-red-50 text-red-700"
                     : "border-gray-300 hover:border-red-300"
-                }`}
-              >
+                }`}>
                 <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
                 Không tốt
               </button>
@@ -934,8 +1057,7 @@ const OrderProduct = () => {
                   setSellerEditingReview(false);
                 }}
                 disabled={submitting || !sellerReviewContent.trim()}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-              >
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
                 {submitting
                   ? "Đang lưu..."
                   : hasReview
@@ -953,8 +1075,7 @@ const OrderProduct = () => {
                     );
                     setSellerEditingReview(false);
                   }}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                >
+                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
                   Hủy
                 </button>
               )}
@@ -1007,8 +1128,7 @@ const OrderProduct = () => {
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate(-1)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             Quay lại
           </button>
         </div>
@@ -1146,8 +1266,7 @@ const OrderProduct = () => {
                 <button
                   onClick={handleCancelOrder}
                   disabled={submitting}
-                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
-                >
+                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2">
                   <Ban className="w-5 h-5" />
                   {submitting ? "Đang hủy..." : "Hủy đơn hàng"}
                 </button>
@@ -1207,8 +1326,7 @@ const OrderProduct = () => {
                       order.status === "cancelled"
                         ? "bg-red-600"
                         : "bg-gray-600"
-                    }`}
-                  ></div>
+                    }`}></div>
                   <p>
                     <strong>
                       {order.status === "cancelled" ? "Đã hủy:" : "Hoàn thành:"}
