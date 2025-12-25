@@ -255,6 +255,178 @@ class OrderService {
       throw new Error("Error retrieving order: " + error.message);
     }
   }
+
+  static async submitPaymentInfo(productId, userId, paymentInfo) {
+    try {
+      const order = await Order.findOne({ "product.id": productId });
+
+      if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Check if user is the buyer
+      if (order.buyerId.toString() !== userId) {
+        const error = new Error(
+          "Chỉ người mua mới có thể gửi thông tin thanh toán"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Check if status is pending_payment
+      if (order.status !== "pending_payment") {
+        const error = new Error("Đơn hàng không ở trạng thái chờ thanh toán");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Update fulfillment info
+      order.fulfillmentInfo.fullName = paymentInfo.fullName;
+      order.fulfillmentInfo.address = paymentInfo.address;
+      order.fulfillmentInfo.paymentProofImage = paymentInfo.paymentProofImage;
+
+      // Update status and timeline
+      order.status = "pending_confirmation";
+      order.timelines.paymentSubmitted = new Date();
+
+      await order.save();
+
+      return {
+        message: "Gửi thông tin thanh toán thành công",
+        order,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async submitShippingInfo(productId, userId, shippingProofImage) {
+    try {
+      const order = await Order.findOne({ "product.id": productId });
+
+      if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Check if user is the seller
+      if (order.sellerId.toString() !== userId) {
+        const error = new Error(
+          "Chỉ người bán mới có thể gửi thông tin vận chuyển"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Check if status is pending_confirmation
+      if (order.status !== "pending_confirmation") {
+        const error = new Error("Đơn hàng không ở trạng thái chờ xác nhận");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Update fulfillment info
+      order.fulfillmentInfo.shippingProofImage = shippingProofImage;
+
+      // Update status and timeline
+      order.status = "shipping";
+      order.timelines.sellerConfirmed = new Date();
+
+      await order.save();
+
+      return {
+        message: "Xác nhận gửi hàng thành công",
+        order,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async confirmDelivery(productId, userId) {
+    try {
+      const order = await Order.findOne({ "product.id": productId });
+
+      if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Check if user is the buyer
+      if (order.buyerId.toString() !== userId) {
+        const error = new Error(
+          "Chỉ người mua mới có thể xác nhận đã nhận hàng"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Check if status is shipping
+      if (order.status !== "shipping") {
+        const error = new Error("Đơn hàng không ở trạng thái đang giao hàng");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Update status and timeline
+      order.status = "delivered";
+      order.timelines.buyerReceived = new Date();
+
+      await order.save();
+
+      return {
+        message: "Xác nhận đã nhận hàng thành công",
+        order,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async closeOrder(productId, userId) {
+    try {
+      const order = await Order.findOne({ "product.id": productId });
+
+      if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Check if user is the buyer
+      if (order.buyerId.toString() !== userId) {
+        const error = new Error(
+          "Chỉ người mua mới có thể xác nhận đã nhận hàng"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Check if status is shipping
+      if (order.status !== "delivered") {
+        const error = new Error("Đơn hàng không ở trạng thái đã giao hàng");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Update status and timeline
+      order.status = "completed";
+      order.timelines.finished = new Date();
+
+      await order.save();
+
+      return {
+        message: "Xác nhận đã đóng đơn hàng thành công",
+        order,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = OrderService;
