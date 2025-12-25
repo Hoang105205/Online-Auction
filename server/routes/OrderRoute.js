@@ -10,6 +10,10 @@ const {
   updateRatingDraft,
   finalizeOrder,
   cancelOrder,
+  submitPaymentInfo,
+  submitShippingInfo,
+  confirmDelivery,
+  upload,
 } = require("../controllers/OrderController");
 
 // ===== Hoang's routes =====
@@ -45,6 +49,40 @@ router.get(
   verifyJWT,
   verifyRoles(ROLES_LIST.Bidder, ROLES_LIST.Seller),
   getOrderByProductId
+);
+
+// POST /api/orders/:productId/payment - Submit payment info with image
+router.post(
+  "/:productId/payment",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  upload.single("paymentProof"),
+  submitPaymentInfo
+);
+
+// POST /api/orders/:productId/shipping - Submit shipping info with image
+router.post(
+  "/:productId/shipping",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  upload.single("shippingProof"),
+  submitShippingInfo
+);
+
+// POST /api/orders/:productId/confirm-delivery - Confirm delivery received
+router.post(
+  "/:productId/confirm-delivery",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  confirmDelivery
+);
+
+// POST /api/orders/:productId/close - Close order by seller
+router.post(
+  "/:productId/close",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Bidder),
+  finalizeOrder
 );
 
 // ==========================
