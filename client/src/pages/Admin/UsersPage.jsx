@@ -165,7 +165,7 @@ export default function UsersPage() {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search player..."
+                placeholder="Tìm kiếm người dùng..."
                 className="w-full pl-10 pr-4 py-2 border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
             </div>

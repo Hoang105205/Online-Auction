@@ -1,4 +1,10 @@
 const OrderService = require("../services/OrderService");
+const ProductService = require("../services/ProductService");
+const multer = require("multer");
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const getOrderByProductId = async (req, res) => {
   try {
@@ -88,9 +94,125 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+const submitPaymentInfo = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user;
+    const { fullName, address } = req.body;
+    const file = req.file;
+
+    if (!productId || !fullName || !address || !file) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    // Upload image to Cloudinary
+    const imageUrl = await ProductService.uploadImageToCloudinaryCustomFolder({
+      file,
+      baseFolder: "orders",
+      orderId: productId,
+      index: 0,
+    });
+
+    if (!imageUrl) {
+      return res.status(500).json({ message: "Upload ảnh thất bại" });
+    }
+
+    // Update order with payment info
+    const result = await OrderService.submitPaymentInfo(productId, userId, {
+      fullName,
+      address,
+      paymentProofImage: imageUrl,
+    });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const submitShippingInfo = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user;
+    const file = req.file;
+
+    if (!productId || !file) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    // Upload image to Cloudinary
+    const imageUrl = await ProductService.uploadImageToCloudinaryCustomFolder({
+      file,
+      baseFolder: "orders",
+      orderId: productId,
+      index: 1,
+    });
+
+    if (!imageUrl) {
+      return res.status(500).json({ message: "Upload ảnh thất bại" });
+    }
+
+    // Update order with shipping info
+    const result = await OrderService.submitShippingInfo(
+      productId,
+      userId,
+      imageUrl
+    );
+
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const confirmDelivery = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    const result = await OrderService.confirmDelivery(productId, userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
+const closeOrder = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    }
+
+    const result = await OrderService.closeOrder(productId, userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getOrderByProductId,
   updateRatingDraft,
   finalizeOrder,
   cancelOrder,
+  submitPaymentInfo,
+  submitShippingInfo,
+  confirmDelivery,
+  closeOrder,
+  upload,
 };
