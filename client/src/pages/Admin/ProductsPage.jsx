@@ -6,6 +6,7 @@ import {
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
+import { toast } from "react-toastify";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { listProducts, removeProduct } from "../../api/systemService";
 import ProductImage from "../../components/ProductImage";
@@ -22,6 +23,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const axiosPrivate = useAxiosPrivate();
 
   // server-side pagination/search
@@ -147,7 +149,7 @@ export default function ProductsPage() {
     // call API to remove product, then update UI
     (async () => {
       try {
-        setLoading(true);
+        setDeleting(true);
         await removeProduct(axiosPrivate, id);
         setProducts((prev) => {
           const next = prev.filter((p) => (p._id || p.id) !== id);
@@ -156,13 +158,14 @@ export default function ProductsPage() {
           return next;
         });
         setTotalCount((c) => Math.max(0, c - 1));
+        toast.success("Xóa sản phẩm thành công");
       } catch (err) {
         console.error("Delete product failed", err);
-        // optionally show error to user
+        toast.error(err.response?.data?.message || "Xóa sản phẩm thất bại");
       } finally {
         setShowDeleteModal(false);
         setDeleteTarget("");
-        setLoading(false);
+        setDeleting(false);
       }
     })();
   }
@@ -350,7 +353,7 @@ export default function ProductsPage() {
                                   ? p.auction.highestBidderId.fullName ||
                                     p.auction.highestBidderId.email ||
                                     "—"
-                                  : "—"}
+                                  : "Chưa có"}
                               </div>
                             </div>
                             <div className="col-span-5" />
@@ -379,28 +382,35 @@ export default function ProductsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div
               className="absolute inset-0 bg-black/40"
-              onClick={() => setShowDeleteModal(false)}
+              onClick={() => !deleting && setShowDeleteModal(false)}
             />
             <div className="bg-white rounded-lg p-6 z-10 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-2">Xác nhận xóa</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Bạn có chắc muốn xóa sản phẩm "
-                {products.find((p) => p.id === deleteTarget)?.name ||
-                  deleteTarget}
+                {products.find((p) => (p._id || p.id) === deleteTarget)?.detail
+                  ?.name || deleteTarget}
                 "?
               </p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded"
+                  disabled={deleting}
+                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={() => performDelete(deleteTarget)}
-                  className="px-4 py-2 bg-red-600 text-white rounded"
+                  disabled={deleting}
+                  className={`px-4 py-2 bg-red-600 text-white rounded flex items-center gap-2 ${
+                    deleting ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
                 >
-                  Xóa
+                  {deleting && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {deleting ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
             </div>
