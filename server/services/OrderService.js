@@ -147,7 +147,9 @@ class OrderService {
         // 5. Chuyển status product
         await Product.findByIdAndUpdate(
           productId,
-          { status: "ended" },
+          {
+            $set: { "auction.status": "ended" },
+          },
           { session }
         );
 
@@ -232,7 +234,9 @@ class OrderService {
         // 5. Chuyển status product
         await Product.findByIdAndUpdate(
           productId,
-          { status: "cancelled" },
+          {
+            $set: { "auction.status": "cancelled" },
+          },
           { session }
         );
 
@@ -395,47 +399,6 @@ class OrderService {
 
       return {
         message: "Xác nhận đã nhận hàng thành công",
-        order,
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  static async closeOrder(productId, userId) {
-    try {
-      const order = await Order.findOne({ "product.id": productId });
-
-      if (!order) {
-        const error = new Error("Không tìm thấy đơn hàng");
-        error.statusCode = 404;
-        throw error;
-      }
-
-      // Check if user is the buyer
-      if (order.buyerId.toString() !== userId) {
-        const error = new Error(
-          "Chỉ người mua mới có thể xác nhận đã nhận hàng"
-        );
-        error.statusCode = 403;
-        throw error;
-      }
-
-      // Check if status is shipping
-      if (order.status !== "delivered") {
-        const error = new Error("Đơn hàng không ở trạng thái đã giao hàng");
-        error.statusCode = 400;
-        throw error;
-      }
-
-      // Update status and timeline
-      order.status = "completed";
-      order.timelines.finished = new Date();
-
-      await order.save();
-
-      return {
-        message: "Xác nhận đã đóng đơn hàng thành công",
         order,
       };
     } catch (error) {
