@@ -21,7 +21,7 @@ import {
 
 export default function CategoriesPage() {
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("asc");
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -93,7 +93,11 @@ export default function CategoriesPage() {
   const filtered = useMemo(() => {
     // server already applied filtering by query; here we only sort the page items
     let data = categories.slice();
-    if (sortBy === "name") data.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === "asc") {
+      data.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "desc") {
+      data.sort((a, b) => b.name.localeCompare(a.name));
+    }
     return data;
   }, [sortBy, categories]);
 
@@ -450,21 +454,19 @@ export default function CategoriesPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border rounded-full text-sm bg-white"
+              className="px-3 py-2 border rounded-full text-sm bg-white w-full sm:w-auto"
             >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
+              <option value="asc">Sắp xếp A-Z</option>
+              <option value="desc">Sắp xếp Z-A</option>
             </select>
-
-            {/* removed unused chevron-only button (no action/label) */}
 
             <button
               onClick={() => setShowAddForm((s) => !s)}
-              className="ml-2 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm"
             >
               <HiPlus />
               <span>Thêm danh mục</span>
@@ -633,14 +635,6 @@ export default function CategoriesPage() {
                               />
                             </td>
                             <td className="py-3 px-4">
-                              <input
-                                type="number"
-                                value={editCount}
-                                onChange={(e) => setEditCount(e.target.value)}
-                                className="w-24 px-2 py-1 border rounded"
-                              />
-                            </td>
-                            <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={submitEdit}
@@ -662,7 +656,6 @@ export default function CategoriesPage() {
                           <>
                             <td className="py-3 px-4">{ch.id}</td>
                             <td className="py-3 px-4 pl-12">↳ {ch.name}</td>
-                            <td className="py-3 px-4">{ch.count}</td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <button

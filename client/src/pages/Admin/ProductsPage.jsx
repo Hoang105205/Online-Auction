@@ -12,7 +12,7 @@ import ProductImage from "../../components/ProductImage";
 
 export default function ProductsPage() {
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("name");
   const [page, setPage] = useState(1);
   const [products, setProducts] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
@@ -27,7 +27,13 @@ export default function ProductsPage() {
   // server-side pagination/search
   // We still sort the current page items client-side based on sortBy
   const paginated = useMemo(() => {
-    const data = (products || []).slice();
+    // Filter by product name locally for better search experience
+    let data = (products || []).filter((p) => {
+      if (!query.trim()) return true;
+      const productName = (p.detail && p.detail.name) || "";
+      return productName.toLowerCase().includes(query.toLowerCase());
+    });
+
     // helper: normalize price-like values to Number
     const parsePrice = (val) => {
       if (val === undefined || val === null) return 0;
@@ -67,18 +73,24 @@ export default function ProductsPage() {
         }
         return aPrice - bPrice;
       });
-    } else {
-      // date (default): show newest first
-      data.sort((a, b) => {
-        const ad = a.createdAt || a.createdAtAt || null;
-        const bd = b.createdAt || b.createdAtAt || null;
-        const at = ad ? new Date(ad).getTime() : 0;
-        const bt = bd ? new Date(bd).getTime() : 0;
-        return bt - at;
-      });
     }
-    return data;
-  }, [products, sortBy]);
+
+    // Update total pages and count based on filtered results
+    const filteredCount = data.length;
+    const newTotalPages = Math.ceil(filteredCount / pageSize);
+    setTotalCount(filteredCount);
+    setTotalPages(newTotalPages);
+
+    // Reset to page 1 if current page exceeds total pages
+    if (page > newTotalPages && newTotalPages > 0) {
+      setPage(1);
+    }
+
+    // Paginate the filtered and sorted data
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return data.slice(start, end);
+  }, [products, sortBy, query, page, pageSize]);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,19 +99,15 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
+        // Fetch without query parameter - we'll filter client-side
         const res = await listProducts(axiosPrivate, {
-          page,
-          limit: pageSize,
-          q: query,
-          sortBy,
+          page: 1,
+          limit: 100,
         });
         console.log("listProducts response:", res);
         if (!isMounted) return;
         setProducts(res.data || []);
-        setTotalPages(res.totalPages || 1);
-        setTotalCount(
-          typeof res.total === "number" ? res.total : (res.data || []).length
-        );
+        setPage(1);
       } catch (err) {
         console.error("Fetch products failed", err);
       } finally {
@@ -113,7 +121,7 @@ export default function ProductsPage() {
       isMounted = false;
       controller.abort();
     };
-  }, [page, query, sortBy]);
+  }, [axiosPrivate]);
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -191,9 +199,8 @@ export default function ProductsPage() {
               }}
               className="px-3 py-2 border rounded-full text-sm bg-white"
             >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
-              <option value="price">Sort by Price</option>
+              <option value="name">Sắp xếp theo tên</option>
+              <option value="price">Sắp xếp theo giá</option>
             </select>
 
             {/* Add product button removed per request */}

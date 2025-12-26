@@ -710,6 +710,10 @@ class SystemService {
       throw error;
     }
 
+    // Delete product images folder from Cloudinary
+    const ProductService = require("./ProductService");
+    await ProductService.deleteCloudinaryFolder(`products/${productId}`);
+
     await Product.deleteOne({ _id: productId }).exec();
     return prod;
   }
@@ -920,10 +924,6 @@ class SystemService {
       "auction.status": "active",
     }).session(session);
 
-    console.log(
-      `🧹 Tìm thấy ${affectedProducts.length} phiên đấu giá cần dọn dẹp cho user ${userIdToRemove}`
-    );
-
     // 2. Lặp qua từng sản phẩm và tính toán lại
     for (const product of affectedProducts) {
       recalculateAuctionAfterRemovingBidder(product, userIdToRemove);
@@ -938,20 +938,14 @@ class SystemService {
       await product.save({ session });
     }
 
-    // 3. Nếu user là seller của sản phẩm nào đó, xóa toàn bộ (bao gồm Cloudinary folders)
-    //    - tìm các product do user là seller (bất kỳ trạng thái active hay ended)
-    //    - xóa products trong transaction TRƯỚC (để đảm bảo an toàn dữ liệu)
-    //    - sau đó xóa Cloudinary folders TRONG vòng lặp (NGOÀI transaction)
     const sellerProducts = await Product.find({
       "detail.sellerId": userIdToRemove,
     }).session(session);
 
     const prodIds = sellerProducts.map((p) => p._id);
 
-    // Xóa products trong transaction TRƯỚC (để đảm bảo an toàn dữ liệu)
     if (prodIds.length > 0) {
       await Product.deleteMany({ _id: { $in: prodIds } }).session(session);
-      console.log(`🗑️ Deleted ${prodIds.length} seller products from database`);
     }
 
     // Xóa Cloudinary folders TRONG vòng lặp (NGOÀI transaction)
@@ -959,7 +953,6 @@ class SystemService {
     const cloudinaryFoldersDeleted = [];
     for (const p of sellerProducts) {
       const folderPath = `products/${p._id}`;
-      console.log(`🗑️ Deleting Cloudinary folder: ${folderPath}`);
       try {
         const result = await ProductService.deleteCloudinaryFolder(folderPath);
         if (result.success) {
@@ -967,16 +960,10 @@ class SystemService {
             folder: folderPath,
             deletedCount: result.deletedCount,
           });
-          console.log(
-            `✅ Successfully deleted ${result.deletedCount} images from ${folderPath}`
-          );
         } else {
-          console.warn(
-            `⚠️ Failed to delete folder ${folderPath}: ${result.message}`
-          );
         }
       } catch (error) {
-        console.error(`❌ Error deleting folder ${folderPath}:`, error.message);
+        // Silent catch - continue cleanup even if folder deletion fails
       }
     }
 
