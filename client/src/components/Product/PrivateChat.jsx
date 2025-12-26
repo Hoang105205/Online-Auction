@@ -13,7 +13,7 @@ const PrivateChat = ({ productId, authUser, sellerId, highestBidderId }) => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const currentUserId = authUser?.id;
+  const currentUserId = authUser?.id || authUser?._id;
   const isSeller = currentUserId === sellerId;
   const isHighestBidder = currentUserId === highestBidderId;
 

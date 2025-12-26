@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Package,
   Truck,
   CheckCircle,
   XCircle,
-  Upload,
   Clock,
   AlertCircle,
   Star,
@@ -28,10 +27,878 @@ import {
   submitShippingInfo,
   confirmDelivery,
   closeOrder,
+  updateReviewDraft,
 } from "../../api/orderService";
 
 import useAuth from "../../hooks/useAuth";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
+
+// Utility functions
+const formatPrice = (price) => {
+  return price?.toLocaleString("vi-VN") || "0";
+};
+
+const formatDateTime = (date) => {
+  if (!date) return "Chưa có";
+  return new Date(date).toLocaleString("vi-VN");
+};
+
+// Get step status
+const getStepStatus = (orderStatus, step) => {
+  const statusOrder = [
+    "pending_payment",
+    "pending_confirmation",
+    "shipping",
+    "delivered",
+    "completed",
+    "cancelled",
+  ];
+
+  const currentIndex = statusOrder.indexOf(orderStatus);
+  const stepIndex = statusOrder.indexOf(step);
+
+  if (orderStatus === "cancelled") {
+    return stepIndex <= currentIndex ? "completed" : "pending";
+  }
+
+  if (stepIndex < currentIndex) return "completed";
+  if (stepIndex === currentIndex) return "current";
+  return "pending";
+};
+
+// ==================== IMAGE UPLOAD COMPONENT ====================
+const ImageUploadPreview = React.memo(({ image, onRemove, label }) => {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold">{label}</label>
+      <div className="grid grid-cols-3 gap-4">
+        {/* Upload Button */}
+        <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  onRemove({
+                    id: Date.now(),
+                    url: reader.result,
+                    file: file,
+                    name: file.name,
+                  });
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+            className="hidden"
+          />
+          <div className="text-center">
+            <svg
+              className="w-8 h-8 text-gray-400 mx-auto mb-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <p className="text-xs text-gray-500">Tải ảnh lên</p>
+          </div>
+        </label>
+
+        {/* Preview Image */}
+        {image && (
+          <div className="relative aspect-square border border-gray-300 rounded-lg overflow-hidden group">
+            <img
+              src={image.url}
+              alt="Preview"
+              className="w-full h-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(null)}
+              className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+              {image.name}
+            </div>
+          </div>
+        )}
+      </div>
+      {image && (
+        <p className="text-sm text-green-600 flex items-center gap-1">
+          <CheckCircle className="w-4 h-4" />
+          Đã chọn: {image.name}
+        </p>
+      )}
+    </div>
+  );
+});
+
+// ==================== STEP 1: PENDING PAYMENT ====================
+const StepPendingPayment = React.memo(
+  ({
+    order,
+    isBuyer,
+    isSeller,
+    expandedSteps,
+    toggleStep,
+    fullName,
+    setFullName,
+    address,
+    setAddress,
+    paymentProof,
+    setPaymentProof,
+    submitting,
+    handleSubmitPayment,
+  }) => {
+    const status = getStepStatus(order.status, "pending_payment");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("pending_payment")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-yellow-500 bg-yellow-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Clock className="w-6 h-6 text-yellow-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">
+                Bước 1: Thanh toán & Gửi thông tin
+              </h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.paymentSubmitted
+                    )}`
+                  : "Đang chờ người mua gửi thông tin"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.pending_payment ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.pending_payment)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold">Họ và tên: </span>
+                  <span>{order.fulfillmentInfo?.fullName}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Địa chỉ: </span>
+                  <span>{order.fulfillmentInfo?.address}</span>
+                </div>
+                {order.fulfillmentInfo?.paymentProofImage && (
+                  <div>
+                    <p className="font-semibold mb-2">Ảnh chuyển khoản:</p>
+                    <img
+                      src={order.fulfillmentInfo.paymentProofImage}
+                      alt="Payment proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Địa chỉ nhận hàng <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
+                    rows="3"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <ImageUploadPreview
+                  image={paymentProof}
+                  onRemove={setPaymentProof}
+                  label={
+                    <>
+                      Ảnh chuyển khoản <span className="text-red-500">*</span>
+                    </>
+                  }
+                />
+
+                <button
+                  onClick={handleSubmitPayment}
+                  disabled={submitting}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang gửi..." : "Gửi thông tin thanh toán"}
+                </button>
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="text-center py-6">
+                <Clock className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người mua gửi thông tin thanh toán...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// ==================== STEP 2: PENDING CONFIRMATION ====================
+const StepPendingConfirmation = React.memo(
+  ({
+    order,
+    isBuyer,
+    isSeller,
+    expandedSteps,
+    toggleStep,
+    shippingProof,
+    setShippingProof,
+    submitting,
+    handleSubmitShipping,
+  }) => {
+    const status = getStepStatus(order.status, "pending_confirmation");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("pending_confirmation")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-blue-500 bg-blue-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <AlertCircle className="w-6 h-6 text-blue-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 2: Xác nhận & Gửi hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.sellerConfirmed
+                    )}`
+                  : "Đang chờ người bán xác nhận"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.pending_confirmation ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.pending_confirmation)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="space-y-2">
+                {order.fulfillmentInfo?.shippingProofImage && (
+                  <div>
+                    <p className="font-semibold mb-2">Ảnh vận chuyển:</p>
+                    <img
+                      src={order.fulfillmentInfo.shippingProofImage}
+                      alt="Shipping proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">
+                    Thông tin người mua:
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Tên:</strong> {order.fulfillmentInfo?.fullName}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Địa chỉ:</strong> {order.fulfillmentInfo?.address}
+                  </p>
+                  {order.fulfillmentInfo?.paymentProofImage && (
+                    <div className="mt-3">
+                      <p className="text-sm font-semibold mb-2">
+                        Ảnh chuyển khoản:
+                      </p>
+                      <img
+                        src={order.fulfillmentInfo.paymentProofImage}
+                        alt="Payment proof"
+                        className="w-full max-w-md rounded-lg border"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <ImageUploadPreview
+                  image={shippingProof}
+                  onRemove={setShippingProof}
+                  label={
+                    <>
+                      Upload ảnh vận chuyển{" "}
+                      <span className="text-red-500">*</span>
+                    </>
+                  }
+                />
+
+                <button
+                  onClick={handleSubmitShipping}
+                  disabled={submitting || !shippingProof}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xác nhận..." : "Xác nhận đã gửi hàng"}
+                </button>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="text-center py-6">
+                <Clock className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người bán xác nhận và gửi hàng...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// ==================== STEP 3: SHIPPING ====================
+const StepShipping = React.memo(
+  ({
+    order,
+    isBuyer,
+    isSeller,
+    expandedSteps,
+    toggleStep,
+    submitting,
+    handleConfirmDelivery,
+  }) => {
+    const status = getStepStatus(order.status, "shipping");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("shipping")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+            isCurrent
+              ? "border-purple-500 bg-purple-50"
+              : "border-green-500 bg-green-50 hover:bg-green-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Truck className="w-6 h-6 text-purple-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 3: Đang giao hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.buyerReceived
+                    )}`
+                  : "Đang chờ người mua xác nhận đã nhận hàng"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.shipping ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.shipping)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="text-center py-4">
+                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="font-semibold text-green-700">
+                  Đã giao hàng thành công
+                </p>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  Đơn hàng đang được vận chuyển. Vui lòng xác nhận khi đã nhận
+                  hàng.
+                </p>
+                {order.fulfillmentInfo?.shippingProofImage && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2">
+                      Ảnh vận chuyển từ người bán:
+                    </p>
+                    <img
+                      src={order.fulfillmentInfo.shippingProofImage}
+                      alt="Shipping proof"
+                      className="w-full max-w-md rounded-lg border"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={handleConfirmDelivery}
+                  disabled={submitting}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xử lý..." : "Xác nhận đã nhận hàng"}
+                </button>
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="text-center py-6">
+                <Truck className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người mua xác nhận đã nhận hàng...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// ==================== STEP 4: DELIVERED ====================
+const StepDelivered = React.memo(
+  ({
+    order,
+    isBuyer,
+    isSeller,
+    expandedSteps,
+    toggleStep,
+    submitting,
+    handleCloseOrder,
+  }) => {
+    const status = getStepStatus(order.status, "delivered");
+    if (status === "pending") return null;
+
+    const isCompleted = status === "completed";
+    const isCurrent = status === "current";
+
+    return (
+      <div className="mb-4">
+        <div
+          onClick={() => isCompleted && toggleStep("delivered")}
+          className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+            isCompleted ? "cursor-pointer hover:bg-green-100" : "cursor-default"
+          } transition-colors ${
+            isCurrent
+              ? "border-green-500 bg-green-50"
+              : "border-green-500 bg-green-50"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {isCompleted ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <Package className="w-6 h-6 text-green-600" />
+            )}
+            <div>
+              <h3 className="font-bold text-lg">Bước 4: Đã nhận hàng</h3>
+              <p className="text-sm text-gray-600">
+                {isCompleted
+                  ? `Đã hoàn thành - ${formatDateTime(
+                      order.timelines?.finished
+                    )}`
+                  : "Đang chờ người bán xác nhận hoàn tất"}
+              </p>
+            </div>
+          </div>
+          {isCompleted && (
+            <div>
+              {expandedSteps.delivered ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {(isCurrent || (isCompleted && expandedSteps.delivered)) && (
+          <div className="mt-4 p-4 bg-white rounded-lg border">
+            {isCompleted ? (
+              <div className="text-center py-4">
+                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="font-semibold text-green-700">
+                  Giao dịch thành công
+                </p>
+              </div>
+            ) : isCurrent && isSeller ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  Người mua đã xác nhận nhận hàng. Vui lòng xác nhận hoàn tất
+                  giao dịch.
+                </p>
+                <button
+                  onClick={handleCloseOrder}
+                  disabled={submitting}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? "Đang xử lý..." : "Xác nhận hoàn tất giao dịch"}
+                </button>
+              </div>
+            ) : isCurrent && isBuyer ? (
+              <div className="text-center py-6">
+                <Package className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="text-gray-700">
+                  Đang chờ người bán xác nhận hoàn tất giao dịch...
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold">
+                  Không thể xác định vai trò
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// ==================== BUYER REVIEW SECTION ====================
+const BuyerReviewSection = React.memo(
+  ({
+    order,
+    buyerReviewType,
+    setBuyerReviewType,
+    buyerReviewContent,
+    setBuyerReviewContent,
+    buyerEditingReview,
+    setBuyerEditingReview,
+    submitting,
+    handleSaveReview,
+  }) => {
+    const hasReview = order.reviews?.byBuyer?.content;
+    const isEditing = buyerEditingReview || !hasReview;
+
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Star className="w-5 h-5" />
+            Đánh giá người bán
+          </h2>
+          {hasReview && !isEditing && (
+            <button
+              onClick={() => setBuyerEditingReview(true)}
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Edit2 className="w-4 h-4" />
+              Chỉnh sửa
+            </button>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <button
+                onClick={() => setBuyerReviewType("good")}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
+                  buyerReviewType === "good"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-300 hover:border-green-300"
+                }`}
+              >
+                <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
+                Tốt
+              </button>
+              <button
+                onClick={() => setBuyerReviewType("bad")}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
+                  buyerReviewType === "bad"
+                    ? "border-red-500 bg-red-50 text-red-700"
+                    : "border-gray-300 hover:border-red-300"
+                }`}
+              >
+                <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
+                Không tốt
+              </button>
+            </div>
+
+            <textarea
+              value={buyerReviewContent}
+              onChange={(e) => setBuyerReviewContent(e.target.value)}
+              placeholder="Chia sẻ trải nghiệm của bạn về người bán..."
+              rows="4"
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleSaveReview("buyer")}
+                disabled={submitting || !buyerReviewContent.trim()}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                {submitting
+                  ? "Đang lưu..."
+                  : hasReview
+                  ? "Cập nhật đánh giá"
+                  : "Gửi đánh giá"}
+              </button>
+              {hasReview && (
+                <button
+                  onClick={() => {
+                    setBuyerReviewType(
+                      order.reviews?.byBuyer?.isGood ? "good" : "bad"
+                    );
+                    setBuyerReviewContent(
+                      order.reviews?.byBuyer?.content || ""
+                    );
+                    setBuyerEditingReview(false);
+                  }}
+                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Hủy
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              {order.reviews?.byBuyer?.isGood ? (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                  <ThumbsUp className="w-4 h-4" />
+                  Tốt
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                  <ThumbsDown className="w-4 h-4" />
+                  Không tốt
+                </span>
+              )}
+              <span className="text-xs text-gray-500">
+                • {formatDateTime(order.reviews?.byBuyer?.lastUpdated)}
+              </span>
+            </div>
+            <p className="text-gray-700">{order.reviews?.byBuyer?.content}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// ==================== SELLER REVIEW SECTION ====================
+const SellerReviewSection = React.memo(
+  ({
+    order,
+    sellerReviewType,
+    setSellerReviewType,
+    sellerReviewContent,
+    setSellerReviewContent,
+    sellerEditingReview,
+    setSellerEditingReview,
+    submitting,
+    handleSaveReview,
+  }) => {
+    const hasReview = order.reviews?.bySeller?.content;
+    const isEditing = sellerEditingReview || !hasReview;
+
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Star className="w-5 h-5" />
+            Đánh giá người mua
+          </h2>
+          {hasReview && !isEditing && (
+            <button
+              onClick={() => setSellerEditingReview(true)}
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Edit2 className="w-4 h-4" />
+              Chỉnh sửa
+            </button>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <button
+                onClick={() => setSellerReviewType("good")}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
+                  sellerReviewType === "good"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-300 hover:border-green-300"
+                }`}
+              >
+                <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
+                Tốt
+              </button>
+              <button
+                onClick={() => setSellerReviewType("bad")}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
+                  sellerReviewType === "bad"
+                    ? "border-red-500 bg-red-50 text-red-700"
+                    : "border-gray-300 hover:border-red-300"
+                }`}
+              >
+                <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
+                Không tốt
+              </button>
+            </div>
+
+            <textarea
+              value={sellerReviewContent}
+              onChange={(e) => setSellerReviewContent(e.target.value)}
+              placeholder="Đánh giá về người mua..."
+              rows="4"
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleSaveReview("seller")}
+                disabled={submitting || !sellerReviewContent.trim()}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                {submitting
+                  ? "Đang lưu..."
+                  : hasReview
+                  ? "Cập nhật đánh giá"
+                  : "Gửi đánh giá"}
+              </button>
+              {hasReview && (
+                <button
+                  onClick={() => {
+                    setSellerReviewType(
+                      order.reviews?.bySeller?.isGood ? "good" : "bad"
+                    );
+                    setSellerReviewContent(
+                      order.reviews?.bySeller?.content || ""
+                    );
+                    setSellerEditingReview(false);
+                  }}
+                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Hủy
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              {order.reviews?.bySeller?.isGood ? (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                  <ThumbsUp className="w-4 h-4" />
+                  Tốt
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                  <ThumbsDown className="w-4 h-4" />
+                  Không tốt
+                </span>
+              )}
+              <span className="text-xs text-gray-500">
+                • {formatDateTime(order.reviews?.bySeller?.lastUpdated)}
+              </span>
+            </div>
+            <p className="text-gray-700">{order.reviews?.bySeller?.content}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 const OrderProduct = () => {
   const { productId } = useParams();
@@ -118,44 +985,12 @@ const OrderProduct = () => {
   const isBuyer = currentUserId === order?.buyerId?._id;
   const isSeller = currentUserId === order?.sellerId?._id;
 
-  const formatPrice = (price) => {
-    return price?.toLocaleString("vi-VN") || "0";
-  };
-
-  const formatDateTime = (date) => {
-    if (!date) return "Chưa có";
-    return new Date(date).toLocaleString("vi-VN");
-  };
-
-  const toggleStep = (step) => {
+  const toggleStep = useCallback((step) => {
     setExpandedSteps((prev) => ({
       ...prev,
       [step]: !prev[step],
     }));
-  };
-
-  // Get step status
-  const getStepStatus = (step) => {
-    const statusOrder = [
-      "pending_payment",
-      "pending_confirmation",
-      "shipping",
-      "delivered",
-      "completed",
-      "cancelled",
-    ];
-
-    const currentIndex = statusOrder.indexOf(order.status);
-    const stepIndex = statusOrder.indexOf(step);
-
-    if (order.status === "cancelled") {
-      return stepIndex <= currentIndex ? "completed" : "pending";
-    }
-
-    if (stepIndex < currentIndex) return "completed";
-    if (stepIndex === currentIndex) return "current";
-    return "pending";
-  };
+  }, []);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -196,7 +1031,8 @@ const OrderProduct = () => {
 
     return (
       <span
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${config.color}`}>
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${config.color}`}
+      >
         <Icon className="w-4 h-4" />
         {config.text}
       </span>
@@ -204,7 +1040,7 @@ const OrderProduct = () => {
   };
 
   // Handle Cancel Order
-  const handleCancelOrder = () => {
+  const handleCancelOrder = useCallback(() => {
     const toastId = toast.warn(
       <div>
         <p className="font-semibold mb-2">Hủy đơn hàng</p>
@@ -217,7 +1053,8 @@ const OrderProduct = () => {
             display: "flex",
             gap: "10px",
             justifyContent: "center",
-          }}>
+          }}
+        >
           <button
             onClick={async () => {
               try {
@@ -250,7 +1087,8 @@ const OrderProduct = () => {
               borderRadius: "6px",
               cursor: "pointer",
               fontWeight: "600",
-            }}>
+            }}
+          >
             Xác nhận
           </button>
           <button
@@ -262,7 +1100,8 @@ const OrderProduct = () => {
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
-            }}>
+            }}
+          >
             Hủy
           </button>
         </div>
@@ -275,10 +1114,10 @@ const OrderProduct = () => {
         closeButton: false,
       }
     );
-  };
+  }, [productId, axiosPrivate]);
 
   // Handle Submit Payment Info
-  const handleSubmitPayment = async () => {
+  const handleSubmitPayment = useCallback(async () => {
     try {
       // Validation
       if (!fullName.trim()) {
@@ -299,7 +1138,7 @@ const OrderProduct = () => {
       const paymentData = {
         fullName: fullName.trim(),
         address: address.trim(),
-        paymentProof: paymentProof,
+        paymentProof: paymentProof.file,
       };
 
       const response = await submitPaymentInfo(
@@ -314,9 +1153,6 @@ const OrderProduct = () => {
       const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
       setOrder(updatedOrder);
 
-      // Reset form
-      setFullName("");
-      setAddress("");
       setPaymentProof(null);
     } catch (error) {
       console.error("Error submitting payment:", error);
@@ -327,10 +1163,10 @@ const OrderProduct = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [fullName, address, paymentProof, productId, axiosPrivate]);
 
   // Handle Submit Shipping Info
-  const handleSubmitShipping = async () => {
+  const handleSubmitShipping = useCallback(async () => {
     try {
       if (!shippingProof) {
         toast.error("Vui lòng chọn ảnh vận chuyển");
@@ -341,7 +1177,7 @@ const OrderProduct = () => {
 
       const response = await submitShippingInfo(
         productId,
-        shippingProof,
+        shippingProof.file,
         axiosPrivate
       );
 
@@ -361,10 +1197,10 @@ const OrderProduct = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [shippingProof, productId, axiosPrivate]);
 
   // Handle Confirm Delivery
-  const handleConfirmDelivery = async () => {
+  const handleConfirmDelivery = useCallback(async () => {
     try {
       setSubmitting(true);
 
@@ -383,10 +1219,10 @@ const OrderProduct = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [productId, axiosPrivate]);
 
   // Handle Close Order
-  const handleCloseOrder = async () => {
+  const handleCloseOrder = useCallback(async () => {
     try {
       setSubmitting(true);
 
@@ -406,705 +1242,57 @@ const OrderProduct = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [productId, axiosPrivate]);
 
-  // ==================== STEP 1: PENDING PAYMENT ====================
-  const StepPendingPayment = () => {
-    const status = getStepStatus("pending_payment");
-    if (status === "pending") return null;
+  // Handler to save review
+  const handleSaveReview = useCallback(
+    async (reviewerRole) => {
+      try {
+        setSubmitting(true);
 
-    const isCompleted = status === "completed";
-    const isCurrent = status === "current";
+        const reviewData = {
+          isGood:
+            reviewerRole === "buyer"
+              ? buyerReviewType === "good"
+              : sellerReviewType === "good",
+          content:
+            reviewerRole === "buyer"
+              ? buyerReviewContent.trim()
+              : sellerReviewContent.trim(),
+        };
 
-    return (
-      <div className="mb-4">
-        <div
-          onClick={() => isCompleted && toggleStep("pending_payment")}
-          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-            isCurrent
-              ? "border-yellow-500 bg-yellow-50"
-              : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}>
-          <div className="flex items-center gap-3">
-            {isCompleted ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            ) : (
-              <Clock className="w-6 h-6 text-yellow-600" />
-            )}
-            <div>
-              <h3 className="font-bold text-lg">
-                Bước 1: Thanh toán & Gửi thông tin
-              </h3>
-              <p className="text-sm text-gray-600">
-                {isCompleted
-                  ? `Đã hoàn thành - ${formatDateTime(
-                      order.timelines?.paymentSubmitted
-                    )}`
-                  : "Đang chờ người mua gửi thông tin"}
-              </p>
-            </div>
-          </div>
-          {isCompleted && (
-            <div>
-              {expandedSteps.pending_payment ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </div>
-          )}
-        </div>
+        await updateReviewDraft(productId, reviewData, axiosPrivate);
 
-        {/* ✅ Hiển thị content khi current HOẶC khi completed + expanded */}
-        {(isCurrent || (isCompleted && expandedSteps.pending_payment)) && (
-          <div className="mt-4 p-4 bg-white rounded-lg border">
-            {isCompleted ? (
-              // Completed - Hiển thị info
-              <div className="space-y-2">
-                <div>
-                  <span className="font-semibold">Họ và tên: </span>
-                  <span>{order.fulfillmentInfo?.fullName}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Địa chỉ: </span>
-                  <span>{order.fulfillmentInfo?.address}</span>
-                </div>
-                {order.fulfillmentInfo?.paymentProofImage && (
-                  <div>
-                    <p className="font-semibold mb-2">Ảnh chuyển khoản:</p>
-                    <img
-                      src={order.fulfillmentInfo.paymentProofImage}
-                      alt="Payment proof"
-                      className="w-full max-w-md rounded-lg border"
-                    />
-                  </div>
-                )}
-              </div>
-            ) : isCurrent && isBuyer ? (
-              // Current + Buyer - Form
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Họ và tên <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Nguyễn Văn A"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+        toast.success("Đã lưu đánh giá thành công!");
 
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Địa chỉ nhận hàng <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
-                    rows="3"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+        // Reload order to get updated review
+        const updatedOrder = await getOrderByProductId(productId, axiosPrivate);
+        setOrder(updatedOrder);
 
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Ảnh chuyển khoản <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setPaymentProof(e.target.files[0])}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                  {paymentProof && (
-                    <p className="text-sm text-green-600 mt-2">
-                      ✓ Đã chọn: {paymentProof.name}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleSubmitPayment}
-                  disabled={submitting}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
-                  {submitting ? "Đang gửi..." : "Gửi thông tin thanh toán"}
-                </button>
-              </div>
-            ) : isCurrent && isSeller ? (
-              // Current + Seller - Waiting
-              <div className="text-center py-6">
-                <Clock className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-                <p className="text-gray-700">
-                  Đang chờ người mua gửi thông tin thanh toán...
-                </p>
-              </div>
-            ) : (
-              // Fallback
-              <div className="text-center py-6">
-                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-                <p className="text-red-700 font-semibold">
-                  Không thể xác định vai trò
-                </p>
-                <p className="text-sm text-gray-600 mt-2">
-                  isBuyer: {isBuyer.toString()} | isSeller:{" "}
-                  {isSeller.toString()}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ==================== STEP 2: PENDING CONFIRMATION ====================
-  const StepPendingConfirmation = () => {
-    const status = getStepStatus("pending_confirmation");
-    if (status === "pending") return null;
-
-    const isCompleted = status === "completed";
-    const isCurrent = status === "current";
-
-    return (
-      <div className="mb-4">
-        <div
-          onClick={() => isCompleted && toggleStep("pending_confirmation")}
-          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-            isCurrent
-              ? "border-blue-500 bg-blue-50"
-              : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}>
-          <div className="flex items-center gap-3">
-            {isCompleted ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            ) : (
-              <AlertCircle className="w-6 h-6 text-blue-600" />
-            )}
-            <div>
-              <h3 className="font-bold text-lg">Bước 2: Xác nhận & Gửi hàng</h3>
-              <p className="text-sm text-gray-600">
-                {isCompleted
-                  ? `Đã hoàn thành - ${formatDateTime(
-                      order.timelines?.sellerConfirmed
-                    )}`
-                  : "Đang chờ người bán xác nhận"}
-              </p>
-            </div>
-          </div>
-          {isCompleted && (
-            <div>
-              {expandedSteps.pending_confirmation ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </div>
-          )}
-        </div>
-
-        {(isCurrent || (isCompleted && expandedSteps.pending_confirmation)) && (
-          <div className="mt-4 p-4 bg-white rounded-lg border">
-            {isCompleted ? (
-              <div className="space-y-2">
-                {order.fulfillmentInfo?.shippingProofImage && (
-                  <div>
-                    <p className="font-semibold mb-2">Ảnh vận chuyển:</p>
-                    <img
-                      src={order.fulfillmentInfo.shippingProofImage}
-                      alt="Shipping proof"
-                      className="w-full max-w-md rounded-lg border"
-                    />
-                  </div>
-                )}
-              </div>
-            ) : isCurrent && isSeller ? (
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <p className="text-sm font-semibold mb-2">
-                    Thông tin người mua:
-                  </p>
-                  <p className="text-gray-700">
-                    <strong>Tên:</strong> {order.fulfillmentInfo?.fullName}
-                  </p>
-                  <p className="text-gray-700">
-                    <strong>Địa chỉ:</strong> {order.fulfillmentInfo?.address}
-                  </p>
-                  {order.fulfillmentInfo?.paymentProofImage && (
-                    <div className="mt-3">
-                      <p className="text-sm font-semibold mb-2">
-                        Ảnh chuyển khoản:
-                      </p>
-                      <img
-                        src={order.fulfillmentInfo.paymentProofImage}
-                        alt="Payment proof"
-                        className="w-full max-w-md rounded-lg border"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Upload ảnh vận chuyển{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setShippingProof(e.target.files[0])}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                  {shippingProof && (
-                    <p className="text-sm text-green-600 mt-2">
-                      ✓ Đã chọn: {shippingProof.name}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleSubmitShipping}
-                  disabled={submitting || !shippingProof}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
-                  {submitting ? "Đang xác nhận..." : "Xác nhận đã gửi hàng"}
-                </button>
-              </div>
-            ) : isCurrent && isBuyer ? (
-              <div className="text-center py-6">
-                <Clock className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-                <p className="text-gray-700">
-                  Đang chờ người bán xác nhận và gửi hàng...
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-                <p className="text-red-700 font-semibold">
-                  Không thể xác định vai trò
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ==================== STEP 3: SHIPPING ====================
-  const StepShipping = () => {
-    const status = getStepStatus("shipping");
-    if (status === "pending") return null;
-
-    const isCompleted = status === "completed";
-    const isCurrent = status === "current";
-
-    return (
-      <div className="mb-4">
-        <div
-          onClick={() => isCompleted && toggleStep("shipping")}
-          className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-            isCurrent
-              ? "border-purple-500 bg-purple-50"
-              : "border-green-500 bg-green-50 hover:bg-green-100"
-          }`}>
-          <div className="flex items-center gap-3">
-            {isCompleted ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            ) : (
-              <Truck className="w-6 h-6 text-purple-600" />
-            )}
-            <div>
-              <h3 className="font-bold text-lg">Bước 3: Đang giao hàng</h3>
-              <p className="text-sm text-gray-600">
-                {isCompleted
-                  ? `Đã hoàn thành - ${formatDateTime(
-                      order.timelines?.buyerReceived
-                    )}`
-                  : "Đang chờ người mua xác nhận đã nhận hàng"}
-              </p>
-            </div>
-          </div>
-          {isCompleted && (
-            <div>
-              {expandedSteps.shipping ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </div>
-          )}
-        </div>
-
-        {(isCurrent || (isCompleted && expandedSteps.shipping)) && (
-          <div className="mt-4 p-4 bg-white rounded-lg border">
-            {isCompleted ? (
-              <div className="text-center py-4">
-                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <p className="font-semibold text-green-700">
-                  Đã giao hàng thành công
-                </p>
-              </div>
-            ) : isCurrent && isBuyer ? (
-              <div className="space-y-4">
-                <p className="text-gray-700">
-                  Đơn hàng đang được vận chuyển. Vui lòng xác nhận khi đã nhận
-                  hàng.
-                </p>
-                {order.fulfillmentInfo?.shippingProofImage && (
-                  <div>
-                    <p className="text-sm font-semibold mb-2">
-                      Ảnh vận chuyển từ người bán:
-                    </p>
-                    <img
-                      src={order.fulfillmentInfo.shippingProofImage}
-                      alt="Shipping proof"
-                      className="w-full max-w-md rounded-lg border"
-                    />
-                  </div>
-                )}
-                <button
-                  onClick={handleConfirmDelivery}
-                  disabled={submitting}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors">
-                  {submitting ? "Đang xử lý..." : "Xác nhận đã nhận hàng"}
-                </button>
-              </div>
-            ) : isCurrent && isSeller ? (
-              <div className="text-center py-6">
-                <Truck className="w-12 h-12 text-purple-600 mx-auto mb-3" />
-                <p className="text-gray-700">
-                  Đang chờ người mua xác nhận đã nhận hàng...
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-                <p className="text-red-700 font-semibold">
-                  Không thể xác định vai trò
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ==================== STEP 4: DELIVERED ====================
-  const StepDelivered = () => {
-    const status = getStepStatus("delivered");
-    if (status === "pending") return null;
-
-    const isCompleted = status === "completed";
-    const isCurrent = status === "current";
-
-    return (
-      <div className="mb-4">
-        <div
-          onClick={() => isCompleted && toggleStep("delivered")}
-          className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-            isCompleted ? "cursor-pointer hover:bg-green-100" : "cursor-default"
-          } transition-colors ${
-            isCurrent
-              ? "border-green-500 bg-green-50"
-              : "border-green-500 bg-green-50"
-          }`}>
-          <div className="flex items-center gap-3">
-            {isCompleted ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            ) : (
-              <Package className="w-6 h-6 text-green-600" />
-            )}
-            <div>
-              <h3 className="font-bold text-lg">Bước 4: Đã nhận hàng</h3>
-              <p className="text-sm text-gray-600">
-                {isCompleted
-                  ? `Đã hoàn thành - ${formatDateTime(
-                      order.timelines?.finished
-                    )}`
-                  : "Đang chờ người bán xác nhận hoàn tất"}
-              </p>
-            </div>
-          </div>
-          {isCompleted && (
-            <div>
-              {expandedSteps.delivered ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </div>
-          )}
-        </div>
-
-        {(isCurrent || (isCompleted && expandedSteps.delivered)) && (
-          <div className="mt-4 p-4 bg-white rounded-lg border">
-            {isCompleted ? (
-              <div className="text-center py-4">
-                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <p className="font-semibold text-green-700">
-                  Giao dịch thành công
-                </p>
-              </div>
-            ) : isCurrent && isSeller ? (
-              <div className="space-y-4">
-                <p className="text-gray-700">
-                  Người mua đã xác nhận nhận hàng. Vui lòng xác nhận hoàn tất
-                  giao dịch.
-                </p>
-                <button
-                  onClick={handleCloseOrder}
-                  disabled={submitting}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors">
-                  {submitting ? "Đang xử lý..." : "Xác nhận hoàn tất giao dịch"}
-                </button>
-              </div>
-            ) : isCurrent && isBuyer ? (
-              <div className="text-center py-6">
-                <Package className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <p className="text-gray-700">
-                  Đang chờ người bán xác nhận hoàn tất giao dịch...
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-                <p className="text-red-700 font-semibold">
-                  Không thể xác định vai trò
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Component Review cho Buyer
-  const BuyerReviewSection = () => {
-    const hasReview = order.reviews?.byBuyer?.content;
-    const isEditing = buyerEditingReview || !hasReview;
-
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Star className="w-5 h-5" />
-            Đánh giá người bán
-          </h2>
-          {hasReview && !isEditing && (
-            <button
-              onClick={() => setBuyerEditingReview(true)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
-              <Edit2 className="w-4 h-4" />
-              Chỉnh sửa
-            </button>
-          )}
-        </div>
-
-        {isEditing ? (
-          // Form đánh giá
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setBuyerReviewType("good")}
-                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
-                  buyerReviewType === "good"
-                    ? "border-green-500 bg-green-50 text-green-700"
-                    : "border-gray-300 hover:border-green-300"
-                }`}>
-                <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
-                Tốt
-              </button>
-              <button
-                onClick={() => setBuyerReviewType("bad")}
-                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
-                  buyerReviewType === "bad"
-                    ? "border-red-500 bg-red-50 text-red-700"
-                    : "border-gray-300 hover:border-red-300"
-                }`}>
-                <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
-                Không tốt
-              </button>
-            </div>
-
-            <textarea
-              value={buyerReviewContent}
-              onChange={(e) => setBuyerReviewContent(e.target.value)}
-              placeholder="Chia sẻ trải nghiệm của bạn về người bán..."
-              rows="4"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
-            />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  alert("Lưu đánh giá (Chưa implement)");
-                  setBuyerEditingReview(false);
-                }}
-                disabled={submitting || !buyerReviewContent.trim()}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
-                {submitting
-                  ? "Đang lưu..."
-                  : hasReview
-                  ? "Cập nhật đánh giá"
-                  : "Gửi đánh giá"}
-              </button>
-              {hasReview && (
-                <button
-                  onClick={() => {
-                    setBuyerReviewType(
-                      order.reviews?.byBuyer?.isGood ? "good" : "bad"
-                    );
-                    setBuyerReviewContent(
-                      order.reviews?.byBuyer?.content || ""
-                    );
-                    setBuyerEditingReview(false);
-                  }}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-                  Hủy
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          // Hiển thị đánh giá đã có
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              {order.reviews?.byBuyer?.isGood ? (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                  <ThumbsUp className="w-4 h-4" />
-                  Tốt
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
-                  <ThumbsDown className="w-4 h-4" />
-                  Không tốt
-                </span>
-              )}
-              <span className="text-xs text-gray-500">
-                • {formatDateTime(order.reviews?.byBuyer?.lastUpdated)}
-              </span>
-            </div>
-            <p className="text-gray-700">{order.reviews?.byBuyer?.content}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Component Review cho Seller
-  const SellerReviewSection = () => {
-    const hasReview = order.reviews?.bySeller?.content;
-    const isEditing = sellerEditingReview || !hasReview;
-
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Star className="w-5 h-5" />
-            Đánh giá người mua
-          </h2>
-          {hasReview && !isEditing && (
-            <button
-              onClick={() => setSellerEditingReview(true)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
-              <Edit2 className="w-4 h-4" />
-              Chỉnh sửa
-            </button>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setSellerReviewType("good")}
-                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
-                  sellerReviewType === "good"
-                    ? "border-green-500 bg-green-50 text-green-700"
-                    : "border-gray-300 hover:border-green-300"
-                }`}>
-                <ThumbsUp className="w-5 h-5 mx-auto mb-1" />
-                Tốt
-              </button>
-              <button
-                onClick={() => setSellerReviewType("bad")}
-                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-colors ${
-                  sellerReviewType === "bad"
-                    ? "border-red-500 bg-red-50 text-red-700"
-                    : "border-gray-300 hover:border-red-300"
-                }`}>
-                <ThumbsDown className="w-5 h-5 mx-auto mb-1" />
-                Không tốt
-              </button>
-            </div>
-
-            <textarea
-              value={sellerReviewContent}
-              onChange={(e) => setSellerReviewContent(e.target.value)}
-              placeholder="Đánh giá về người mua..."
-              rows="4"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
-            />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  alert("Lưu đánh giá (Chưa implement)");
-                  setSellerEditingReview(false);
-                }}
-                disabled={submitting || !sellerReviewContent.trim()}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
-                {submitting
-                  ? "Đang lưu..."
-                  : hasReview
-                  ? "Cập nhật đánh giá"
-                  : "Gửi đánh giá"}
-              </button>
-              {hasReview && (
-                <button
-                  onClick={() => {
-                    setSellerReviewType(
-                      order.reviews?.bySeller?.isGood ? "good" : "bad"
-                    );
-                    setSellerReviewContent(
-                      order.reviews?.bySeller?.content || ""
-                    );
-                    setSellerEditingReview(false);
-                  }}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-                  Hủy
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              {order.reviews?.bySeller?.isGood ? (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                  <ThumbsUp className="w-4 h-4" />
-                  Tốt
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
-                  <ThumbsDown className="w-4 h-4" />
-                  Không tốt
-                </span>
-              )}
-              <span className="text-xs text-gray-500">
-                • {formatDateTime(order.reviews?.bySeller?.lastUpdated)}
-              </span>
-            </div>
-            <p className="text-gray-700">{order.reviews?.bySeller?.content}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
+        // Exit edit mode
+        if (reviewerRole === "buyer") {
+          setBuyerEditingReview(false);
+        } else {
+          setSellerEditingReview(false);
+        }
+      } catch (error) {
+        console.error("Error saving review:", error);
+        toast.error(
+          error.response?.data?.message || "Có lỗi xảy ra khi lưu đánh giá"
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [
+      buyerReviewType,
+      buyerReviewContent,
+      sellerReviewType,
+      sellerReviewContent,
+      productId,
+      axiosPrivate,
+    ]
+  );
 
   if (loading) {
     return (
@@ -1128,7 +1316,8 @@ const OrderProduct = () => {
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate(-1)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             Quay lại
           </button>
         </div>
@@ -1233,10 +1422,50 @@ const OrderProduct = () => {
               </div>
             ) : (
               <>
-                <StepPendingPayment />
-                <StepPendingConfirmation />
-                <StepShipping />
-                <StepDelivered />
+                <StepPendingPayment
+                  order={order}
+                  isBuyer={isBuyer}
+                  isSeller={isSeller}
+                  expandedSteps={expandedSteps}
+                  toggleStep={toggleStep}
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  address={address}
+                  setAddress={setAddress}
+                  paymentProof={paymentProof}
+                  setPaymentProof={setPaymentProof}
+                  submitting={submitting}
+                  handleSubmitPayment={handleSubmitPayment}
+                />
+                <StepPendingConfirmation
+                  order={order}
+                  isBuyer={isBuyer}
+                  isSeller={isSeller}
+                  expandedSteps={expandedSteps}
+                  toggleStep={toggleStep}
+                  shippingProof={shippingProof}
+                  setShippingProof={setShippingProof}
+                  submitting={submitting}
+                  handleSubmitShipping={handleSubmitShipping}
+                />
+                <StepShipping
+                  order={order}
+                  isBuyer={isBuyer}
+                  isSeller={isSeller}
+                  expandedSteps={expandedSteps}
+                  toggleStep={toggleStep}
+                  submitting={submitting}
+                  handleConfirmDelivery={handleConfirmDelivery}
+                />
+                <StepDelivered
+                  order={order}
+                  isBuyer={isBuyer}
+                  isSeller={isSeller}
+                  expandedSteps={expandedSteps}
+                  toggleStep={toggleStep}
+                  submitting={submitting}
+                  handleCloseOrder={handleCloseOrder}
+                />
 
                 {order.status === "completed" && (
                   <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
@@ -1266,7 +1495,8 @@ const OrderProduct = () => {
                 <button
                   onClick={handleCancelOrder}
                   disabled={submitting}
-                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2">
+                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
+                >
                   <Ban className="w-5 h-5" />
                   {submitting ? "Đang hủy..." : "Hủy đơn hàng"}
                 </button>
@@ -1274,10 +1504,34 @@ const OrderProduct = () => {
             )}
 
           {/* Reviews Section - Only show when completed */}
-          {order.status === "completed" && (
+          {order.status !== "completed" && order.status !== "cancelled" && (
             <>
-              {isBuyer && <BuyerReviewSection />}
-              {isSeller && <SellerReviewSection />}
+              {isBuyer && (
+                <BuyerReviewSection
+                  order={order}
+                  buyerReviewType={buyerReviewType}
+                  setBuyerReviewType={setBuyerReviewType}
+                  buyerReviewContent={buyerReviewContent}
+                  setBuyerReviewContent={setBuyerReviewContent}
+                  buyerEditingReview={buyerEditingReview}
+                  setBuyerEditingReview={setBuyerEditingReview}
+                  submitting={submitting}
+                  handleSaveReview={handleSaveReview}
+                />
+              )}
+              {isSeller && (
+                <SellerReviewSection
+                  order={order}
+                  sellerReviewType={sellerReviewType}
+                  setSellerReviewType={setSellerReviewType}
+                  sellerReviewContent={sellerReviewContent}
+                  setSellerReviewContent={setSellerReviewContent}
+                  sellerEditingReview={sellerEditingReview}
+                  setSellerEditingReview={setSellerEditingReview}
+                  submitting={submitting}
+                  handleSaveReview={handleSaveReview}
+                />
+              )}
             </>
           )}
 
@@ -1326,7 +1580,8 @@ const OrderProduct = () => {
                       order.status === "cancelled"
                         ? "bg-red-600"
                         : "bg-gray-600"
-                    }`}></div>
+                    }`}
+                  ></div>
                   <p>
                     <strong>
                       {order.status === "cancelled" ? "Đã hủy:" : "Hoàn thành:"}

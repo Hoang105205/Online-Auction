@@ -87,3 +87,22 @@ export const closeOrder = async (productId, axiosInstance) => {
     throw error;
   }
 };
+
+export const updateReviewDraft = async (
+  productId,
+  reviewData,
+  axiosInstance
+) => {
+  try {
+    const response = await axiosInstance.put(
+      `/orders/${productId}/rating-draft`,
+      {
+        isGood: reviewData.isGood,
+        content: reviewData.content,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
