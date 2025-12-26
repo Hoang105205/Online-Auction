@@ -176,7 +176,7 @@ export default function ProductsPage() {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search product..."
+                placeholder="Tìm kiếm sản phẩm..."
                 className="w-full pl-10 pr-4 py-2 border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
             </div>
