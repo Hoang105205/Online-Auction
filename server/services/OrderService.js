@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const Product = require("../models/Product");
 
 class OrderService {
   static async createInitialOrder(data, session) {
@@ -143,6 +144,13 @@ class OrderService {
           { session }
         );
 
+        // 5. Chuyển status product
+        await Product.findByIdAndUpdate(
+          productId,
+          { status: "ended" },
+          { session }
+        );
+
         await order.save({ session });
         result = { message: "Giao dịch thành công!" };
       });
@@ -218,6 +226,13 @@ class OrderService {
               },
             },
           },
+          { session }
+        );
+
+        // 5. Chuyển status product
+        await Product.findByIdAndUpdate(
+          productId,
+          { status: "cancelled" },
           { session }
         );
 
