@@ -14,7 +14,7 @@ import {
 import { toast } from "react-toastify";
 
 export default function UpgradePage() {
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("asc");
   const [page, setPage] = useState(1);
   const [requests, setRequests] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -124,14 +124,9 @@ export default function UpgradePage() {
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 border rounded-full text-sm bg-white"
             >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
+              <option value="asc">Sắp xếp A-Z</option>
+              <option value="desc">Sắp xếp Z-A</option>
             </select>
-
-            <button className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded text-sm">
-              {/* small control icon placeholder */}
-              <span className="text-gray-400">☰</span>
-            </button>
           </div>
         </div>
 

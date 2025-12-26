@@ -12,7 +12,7 @@ import systemService, { removeUser } from "../../api/systemService";
 
 export default function UsersPage() {
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("asc");
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState([]);
   const [openRows, setOpenRows] = useState(new Set());
@@ -47,11 +47,28 @@ export default function UsersPage() {
     return String(r);
   };
 
+  const isUserAdmin = (user) => {
+    if (Array.isArray(user.roles)) {
+      return user.roles.some(
+        (r) => r === 5150 || String(r).toLowerCase() === "admin"
+      );
+    }
+    const role = user.role;
+    return role === 5150 || String(role).toLowerCase() === "admin";
+  };
+
   // server-side pagination/search
   // We sort the current page items client-side based on sortBy
   const paginated = useMemo(() => {
-    const data = (users || []).slice();
-    if (sortBy === "name") {
+    // Filter by user name/email locally
+    let data = (users || []).filter((u) => {
+      if (!query.trim()) return true;
+      const userName = u.fullName || u.email || "";
+      return userName.toLowerCase().includes(query.toLowerCase());
+    });
+
+    if (sortBy === "asc") {
+      // A-Z sorting
       data.sort((a, b) => {
         const an = a.fullName || a.email || "";
         const bn = b.fullName || b.email || "";
@@ -59,16 +76,33 @@ export default function UsersPage() {
           sensitivity: "base",
         });
       });
-    } else {
-      // date (default): show newest first
+    } else if (sortBy === "desc") {
+      // Z-A sorting
       data.sort((a, b) => {
-        const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bt - at;
+        const an = a.fullName || a.email || "";
+        const bn = b.fullName || b.email || "";
+        return String(bn).localeCompare(String(an), "vi", {
+          sensitivity: "base",
+        });
       });
     }
-    return data;
-  }, [users, sortBy]);
+
+    // Update total pages and count based on filtered results
+    const filteredCount = data.length;
+    const newTotalPages = Math.ceil(filteredCount / pageSize);
+    setTotalCount(filteredCount);
+    setTotalPages(newTotalPages);
+
+    // Reset to page 1 if current page exceeds total pages
+    if (page > newTotalPages && newTotalPages > 0) {
+      setPage(1);
+    }
+
+    // Paginate the filtered and sorted data
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return data.slice(start, end);
+  }, [users, sortBy, query, page, pageSize]);
 
   function goto(p) {
     const pp = Math.max(1, Math.min(totalPages, p));
@@ -83,17 +117,12 @@ export default function UsersPage() {
       setLoading(true);
       try {
         const res = await systemService.listUsers(axiosPrivate, {
-          page,
-          limit: pageSize,
-          q: query,
-          sortBy,
+          page: 1,
+          limit: 100,
         });
         if (!isMounted) return;
         setUsers(res.data || []);
-        setTotalPages(res.totalPages || 1);
-        setTotalCount(
-          typeof res.total === "number" ? res.total : (res.data || []).length
-        );
+        setPage(1);
       } catch (err) {
         console.error("Fetch users failed", err);
       } finally {
@@ -107,7 +136,7 @@ export default function UsersPage() {
       isMounted = false;
       controller.abort();
     };
-  }, [page, query]);
+  }, [axiosPrivate]);
 
   function toggleRow(id) {
     const key = id;
@@ -180,8 +209,8 @@ export default function UsersPage() {
               }}
               className="px-3 py-2 border rounded-full text-sm bg-white"
             >
-              <option value="date">Sort by Date</option>
-              <option value="name">Sort by Name</option>
+              <option value="asc">Sắp xếp A-Z</option>
+              <option value="desc">Sắp xếp Z-A</option>
             </select>
 
             {/* Add user button removed per request */}
@@ -230,12 +259,14 @@ export default function UsersPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDeleteClick(u._id || u.id)}
-                            className="p-2 rounded-full bg-red-50 text-red-500"
-                          >
-                            <HiTrash />
-                          </button>
+                          {!isUserAdmin(u) && (
+                            <button
+                              onClick={() => handleDeleteClick(u._id || u.id)}
+                              className="p-2 rounded-full bg-red-50 text-red-500"
+                            >
+                              <HiTrash />
+                            </button>
+                          )}
                         </div>
                       </td>
 
@@ -306,7 +337,7 @@ export default function UsersPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div
               className="absolute inset-0 bg-black/40"
-              onClick={() => setShowDeleteModal(false)}
+              onClick={() => !loading && setShowDeleteModal(false)}
             />
             <div className="bg-white rounded-lg p-6 z-10 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-2">Xác nhận xóa</h3>
@@ -319,15 +350,22 @@ export default function UsersPage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded"
+                  disabled={loading}
+                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={() => performDelete(deleteTarget)}
-                  className="px-4 py-2 bg-red-600 text-white rounded"
+                  disabled={loading}
+                  className={`px-4 py-2 bg-red-600 text-white rounded flex items-center gap-2 ${
+                    loading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
                 >
-                  Xóa
+                  {loading && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {loading ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
             </div>
