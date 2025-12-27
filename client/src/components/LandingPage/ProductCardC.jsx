@@ -2,8 +2,41 @@ import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
 import ProductImage from "../ProductImage";
 import { Link } from "react-router-dom";
 import { Button } from "flowbite-react";
+import { useState, useEffect } from "react";
+import { getTimeConfigs } from "../../api/systemService";
+import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 
 const ProductCardC = ({ product, isWon = false }) => {
+  const axiosPrivate = useAxiosPrivate();
+  const [timeConfigs, setTimeConfigs] = useState(null);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+
+  // Fetch time configs
+  useEffect(() => {
+    const fetchTimeConfigs = async () => {
+      try {
+        const data = await getTimeConfigs(axiosPrivate);
+        setTimeConfigs(data);
+      } catch (error) {
+        console.error("Error fetching time configs:", error);
+      }
+    };
+    fetchTimeConfigs();
+  }, [axiosPrivate]);
+
+  // Check if product is new based on latestProductTimeConfig
+  useEffect(() => {
+    if (timeConfigs && product.postedDate) {
+      const postedTime = new Date(product.postedDate).getTime();
+      const currentTime = new Date().getTime();
+      const diffInMinutes = (currentTime - postedTime) / (1000 * 60);
+
+      setIsNewProduct(
+        diffInMinutes <= (timeConfigs.latestProductTimeConfig || 0)
+      );
+    }
+  }, [timeConfigs, product.postedDate]);
+
   // Calculate time remaining
 
   let absoluteDate = false;
@@ -59,13 +92,22 @@ const ProductCardC = ({ product, isWon = false }) => {
 
   return (
     <Link to={`/details/${product.id}`}>
-      <div className="grid grid-cols-1 md:grid-cols-2 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group ${
+          isNewProduct && !isEnded
+            ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-200/50 animate-pulse-border"
+            : ""
+        }`}>
+        {isNewProduct && !isEnded && (
+          <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg z-10 animate-bounce">
+            🔥 MỚI
+          </div>
+        )}
         {/* Image */}
         <div className="relative aspect-[8/7] overflow-hidden bg-gray-100">
           <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
             <ProductImage url={product.image} />
           </div>
-
           {/* Time Remaining - Only show if not won */}
           {!isWon && (
             <div className="flex items-center gap-2 text-gray-600">
@@ -82,9 +124,8 @@ const ProductCardC = ({ product, isWon = false }) => {
           {!isEnded && (
             <Button
               className="
-              absolute bottom-2 font-bold left-1/2 -translate-x-1/2 opacity-0 bg-white text-gray-800 hover:bg-gray-100 hover:text-sky-600
-              group-hover:opacity-100 group-hover:translate-y-0
-              translate-y-4 transition-all duration-300 w-[80%]">
+              absolute bottom-2 font-bold left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-blue-700 text-white group-hover:from-blue-600 group-hover:to-blue-800 group-hover:scale-105
+              transition-all duration-300 w-[80%] shadow-xl border-2 border-white">
               {absoluteDate
                 ? `HẾT HẠN VÀO ${timeRemaining}`
                 : `CHỈ CÒN ${timeRemaining}`}

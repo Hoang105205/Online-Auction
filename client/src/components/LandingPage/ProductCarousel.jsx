@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { getFirstProducts } from "../../api/productService";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
 import { HiHeart } from "react-icons/hi";
@@ -26,7 +24,10 @@ export default function ProductCarousel({ products }) {
       const result = await addToWatchList(axiosPrivate, productId);
       toast.success(result.message);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm vào danh sách theo dõi.");
+      toast.error(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi thêm vào danh sách theo dõi."
+      );
     }
   };
 
