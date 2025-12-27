@@ -77,13 +77,5 @@ router.post(
   confirmDelivery
 );
 
-// POST /api/orders/:productId/close - Close order by seller
-router.post(
-  "/:productId/close",
-  verifyJWT,
-  verifyRoles(ROLES_LIST.Bidder),
-  finalizeOrder
-);
-
 // ==========================
 module.exports = router;

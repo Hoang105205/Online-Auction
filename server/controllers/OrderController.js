@@ -187,24 +187,6 @@ const confirmDelivery = async (req, res) => {
   }
 };
 
-const closeOrder = async (req, res) => {
-  try {
-    const { productId } = req.params;
-    const userId = req.user;
-
-    if (!productId) {
-      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
-    }
-
-    const result = await OrderService.closeOrder(productId, userId);
-    return res.status(200).json(result);
-  } catch (err) {
-    return res
-      .status(err.statusCode || 500)
-      .json({ message: err.message || "Server error" });
-  }
-};
-
 module.exports = {
   getOrderByProductId,
   updateRatingDraft,
@@ -213,6 +195,5 @@ module.exports = {
   submitPaymentInfo,
   submitShippingInfo,
   confirmDelivery,
-  closeOrder,
   upload,
 };
