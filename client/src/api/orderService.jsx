@@ -1,5 +1,3 @@
-import { axiosPublic } from "../config/axios";
-
 export const getOrderByProductId = async (productId, axiosInstance) => {
   try {
     const response = await axiosInstance.get(`/orders/product/${productId}`);
@@ -81,7 +79,7 @@ export const confirmDelivery = async (productId, axiosInstance) => {
 
 export const closeOrder = async (productId, axiosInstance) => {
   try {
-    const response = await axiosInstance.post(`/orders/${productId}/close`);
+    const response = await axiosInstance.post(`/orders/${productId}/complete`);
     return response.data;
   } catch (error) {
     throw error;
