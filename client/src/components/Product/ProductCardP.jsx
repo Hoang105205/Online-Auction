@@ -124,13 +124,13 @@ const ProductCardP = ({ product, isWon = false }) => {
       <Link to={`/details/${product.id}`}>
         <div
           className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group ${
-            isNewProduct
+            isNewProduct && !isEnded
               ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-200/50 animate-pulse-border"
               : ""
           }`}>
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-            {isNewProduct && (
+            {isNewProduct && !isEnded && (
               <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg z-10 animate-bounce">
                 🔥 MỚI
               </div>
@@ -253,9 +253,3 @@ const ProductCardP = ({ product, isWon = false }) => {
 };
 
 export default ProductCardP;
-
-// Add this to your global CSS or Tailwind config
-// @keyframes pulse-border {
-//   0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
-//   50% { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0); }
-// }
