@@ -52,9 +52,9 @@ const HomeContent = () => {
           <ProductCarousel products={endingSoonProducts} />
         </div>
       </div>
-      <div>
+      <div className="w-full">
         {/* Top 5 products with most bids */}
-        <div className="mb-10">
+        <div className="mb-20">
           <div className="text-2xl font-bold ml-5 text-gray-800 px-3">
             Nhiều Lượt Ra Giá Nhất
           </div>
@@ -65,9 +65,14 @@ const HomeContent = () => {
               </div>
             ))}
           </div>
+          {mostBidsProducts.length === 0 && (
+            <div className="ml-10 mt-10 text-xl text-gray-500">
+              Không có sản phẩm nào để hiển thị.
+            </div>
+          )}
         </div>
         {/* Top 5 products with highest price */}
-        <div className="mb-20">
+        <div className="mb-60">
           <div className="text-2xl font-bold ml-5 text-gray-800 px-3">
             Giá Cao Nhất
           </div>
@@ -78,6 +83,11 @@ const HomeContent = () => {
               </div>
             ))}
           </div>
+          {highestPriceProducts.length === 0 && (
+            <div className="ml-10 mt-10 text-xl text-gray-500">
+              Không có sản phẩm nào để hiển thị.
+            </div>
+          )}
         </div>
       </div>
     </div>

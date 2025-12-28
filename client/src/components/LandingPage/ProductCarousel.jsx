@@ -35,7 +35,9 @@ export default function ProductCarousel({ products }) {
   if (products.length === 0) {
     return (
       <div className="flex justify-center items-center py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="text-xl text-gray-500">
+          Không có sản phẩm nào để hiển thị.
+        </div>
       </div>
     );
   }
