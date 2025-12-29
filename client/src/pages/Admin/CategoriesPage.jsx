@@ -458,16 +458,14 @@ export default function CategoriesPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border rounded-full text-sm bg-white w-full sm:w-auto"
-            >
+              className="px-3 py-2 border rounded-full text-sm bg-white w-full sm:w-auto">
               <option value="asc">Sắp xếp A-Z</option>
               <option value="desc">Sắp xếp Z-A</option>
             </select>
 
             <button
               onClick={() => setShowAddForm((s) => !s)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm"
-            >
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-full text-sm">
               <HiPlus />
               <span>Thêm danh mục</span>
             </button>
@@ -478,8 +476,7 @@ export default function CategoriesPage() {
         {showAddForm && (
           <form
             onSubmit={handleAddFormSubmit}
-            className="mb-6 bg-white p-4 rounded-lg border"
-          >
+            className="mb-6 bg-white p-4 rounded-lg border">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div>
                 <label className="text-xs text-gray-500">Tên danh mục</label>
@@ -496,8 +493,7 @@ export default function CategoriesPage() {
                 <select
                   value={newParent}
                   onChange={(e) => setNewParent(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border rounded"
-                >
+                  className="mt-1 w-full px-3 py-2 border rounded">
                   <option value="">-- Root --</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -511,15 +507,13 @@ export default function CategoriesPage() {
             <div className="mt-3 flex items-center gap-2">
               <button
                 type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded"
-              >
+                className="px-4 py-2 bg-green-600 text-white rounded">
                 Thêm
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 bg-gray-100 rounded"
-              >
+                className="px-4 py-2 bg-gray-100 rounded">
                 Hủy
               </button>
             </div>
@@ -533,7 +527,7 @@ export default function CategoriesPage() {
               <tr className="text-sm text-gray-500 border-b">
                 <th className="py-4 px-4">ID</th>
                 <th className="py-4 px-4">Danh mục</th>
-                <th className="py-4 px-4">Actions</th>
+                <th className="py-4 px-4">Thao tác</th>
                 <th className="py-4 px-4"></th>
               </tr>
             </thead>
@@ -543,8 +537,7 @@ export default function CategoriesPage() {
                   <tr
                     className={`text-sm text-gray-600 ${
                       idx % 2 === 0 ? "" : "bg-gray-50"
-                    }`}
-                  >
+                    }`}>
                     <td className="py-4 px-4">{c.id}</td>
                     {editingId === c.id ? (
                       <>
@@ -559,14 +552,12 @@ export default function CategoriesPage() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={submitEdit}
-                              className="px-3 py-1 bg-green-600 text-white rounded"
-                            >
+                              className="px-3 py-1 bg-green-600 text-white rounded">
                               Lưu
                             </button>
                             <button
                               onClick={cancelEdit}
-                              className="px-3 py-1 bg-gray-100 rounded"
-                            >
+                              className="px-3 py-1 bg-gray-100 rounded">
                               Hủy
                             </button>
                           </div>
@@ -579,14 +570,12 @@ export default function CategoriesPage() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => startEdit(c.id)}
-                              className="p-2 rounded-full bg-purple-50 text-purple-600"
-                            >
+                              className="p-2 rounded-full bg-purple-50 text-purple-600">
                               <HiPencilAlt />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(c.id)}
-                              className="p-2 rounded-full bg-red-50 text-red-500"
-                            >
+                              className="p-2 rounded-full bg-red-50 text-red-500">
                               <HiTrash />
                             </button>
                           </div>
@@ -601,8 +590,7 @@ export default function CategoriesPage() {
                           onClick={() => toggleRow(c.id)}
                           className={`p-1 rounded ${
                             openRows.has(c.id) ? "bg-gray-100" : "bg-white"
-                          }`}
-                        >
+                          }`}>
                           <HiChevronDown
                             className={`${
                               openRows.has(c.id) ? "transform rotate-180" : ""
@@ -622,8 +610,7 @@ export default function CategoriesPage() {
                     c.children.map((ch, chi) => (
                       <tr
                         key={ch.id}
-                        className="text-sm text-gray-600 bg-gray-50"
-                      >
+                        className="text-sm text-gray-600 bg-gray-50">
                         {editingId === ch.id ? (
                           <>
                             <td className="py-3 px-4">{ch.id}</td>
@@ -638,14 +625,12 @@ export default function CategoriesPage() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={submitEdit}
-                                  className="px-3 py-1 bg-green-600 text-white rounded"
-                                >
+                                  className="px-3 py-1 bg-green-600 text-white rounded">
                                   Lưu
                                 </button>
                                 <button
                                   onClick={cancelEdit}
-                                  className="px-3 py-1 bg-gray-100 rounded"
-                                >
+                                  className="px-3 py-1 bg-gray-100 rounded">
                                   Hủy
                                 </button>
                               </div>
@@ -660,14 +645,12 @@ export default function CategoriesPage() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => startEdit(ch.id)}
-                                  className="p-2 rounded-full bg-purple-50 text-purple-600"
-                                >
+                                  className="p-2 rounded-full bg-purple-50 text-purple-600">
                                   <HiPencilAlt />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteClick(ch.id)}
-                                  className="p-2 rounded-full bg-red-50 text-red-500"
-                                >
+                                  className="p-2 rounded-full bg-red-50 text-red-500">
                                   <HiTrash />
                                 </button>
                               </div>
@@ -708,8 +691,7 @@ export default function CategoriesPage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded"
-                >
+                  className="px-4 py-2 bg-gray-100 rounded">
                   Hủy
                 </button>
                 <button
@@ -717,8 +699,7 @@ export default function CategoriesPage() {
                   className={`px-4 py-2 bg-red-600 text-white rounded ${
                     submitting ? "opacity-70 cursor-not-allowed" : ""
                   }`}
-                  disabled={submitting}
-                >
+                  disabled={submitting}>
                   {submitting ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
@@ -737,8 +718,7 @@ export default function CategoriesPage() {
             <button
               onClick={() => goto(page - 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === 1}
-            >
+              disabled={page === 1}>
               <HiChevronLeft />
             </button>
 
@@ -752,8 +732,7 @@ export default function CategoriesPage() {
                     p === page
                       ? "bg-purple-600 text-white"
                       : "bg-white border text-gray-600"
-                  }`}
-                >
+                  }`}>
                   {p}
                 </button>
               );
@@ -762,8 +741,7 @@ export default function CategoriesPage() {
             <button
               onClick={() => goto(page + 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === totalPages}
-            >
+              disabled={page === totalPages}>
               <HiChevronRight />
             </button>
           </div>

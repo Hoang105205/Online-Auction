@@ -200,8 +200,7 @@ export default function ProductsPage() {
                 setSortBy(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border rounded-full text-sm bg-white"
-            >
+              className="px-3 py-2 border rounded-full text-sm bg-white">
               <option value="name">Sắp xếp theo tên</option>
               <option value="price">Sắp xếp theo giá</option>
             </select>
@@ -218,7 +217,7 @@ export default function ProductsPage() {
                 <th className="py-4 px-4">Sản phẩm</th>
                 <th className="py-4 px-4">Danh mục</th>
                 <th className="py-4 px-4">Giá</th>
-                <th className="py-4 px-4">Actions</th>
+                <th className="py-4 px-4">Thao tác</th>
                 <th className="py-4 px-4"></th>
               </tr>
             </thead>
@@ -235,8 +234,7 @@ export default function ProductsPage() {
                     <tr
                       className={`text-sm text-gray-600 ${
                         idx % 2 === 0 ? "" : "bg-gray-50"
-                      }`}
-                    >
+                      }`}>
                       <td className="py-4 px-4">{p._id || p.id}</td>
                       <td className="py-4 px-4 flex items-center gap-3">
                         {p.detail &&
@@ -266,8 +264,7 @@ export default function ProductsPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleDeleteClick(p._id || p.id)}
-                            className="p-2 rounded-full bg-red-50 text-red-500"
-                          >
+                            className="p-2 rounded-full bg-red-50 text-red-500">
                             <HiTrash />
                           </button>
                         </div>
@@ -279,8 +276,7 @@ export default function ProductsPage() {
                             openRows.has(p._id || p.id)
                               ? "bg-gray-100"
                               : "bg-white"
-                          }`}
-                        >
+                          }`}>
                           <HiChevronDown
                             className={`${
                               openRows.has(p._id || p.id)
@@ -396,8 +392,7 @@ export default function ProductsPage() {
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   disabled={deleting}
-                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed">
                   Hủy
                 </button>
                 <button
@@ -405,8 +400,7 @@ export default function ProductsPage() {
                   disabled={deleting}
                   className={`px-4 py-2 bg-red-600 text-white rounded flex items-center gap-2 ${
                     deleting ? "opacity-70 cursor-not-allowed" : ""
-                  }`}
-                >
+                  }`}>
                   {deleting && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   )}
@@ -427,8 +421,7 @@ export default function ProductsPage() {
             <button
               onClick={() => goto(page - 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === 1}
-            >
+              disabled={page === 1}>
               <HiChevronLeft />
             </button>
 
@@ -442,8 +435,7 @@ export default function ProductsPage() {
                     p === page
                       ? "bg-purple-600 text-white"
                       : "bg-white border text-gray-600"
-                  }`}
-                >
+                  }`}>
                   {p}
                 </button>
               );
@@ -452,8 +444,7 @@ export default function ProductsPage() {
             <button
               onClick={() => goto(page + 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === totalPages}
-            >
+              disabled={page === totalPages}>
               <HiChevronRight />
             </button>
           </div>

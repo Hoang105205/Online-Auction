@@ -122,8 +122,7 @@ export default function UpgradePage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border rounded-full text-sm bg-white"
-            >
+              className="px-3 py-2 border rounded-full text-sm bg-white">
               <option value="asc">Sắp xếp A-Z</option>
               <option value="desc">Sắp xếp Z-A</option>
             </select>
@@ -149,9 +148,9 @@ export default function UpgradePage() {
             <thead>
               <tr className="text-sm text-gray-500 border-b">
                 <th className="py-4 px-4 whitespace-nowrap">ID</th>
-                <th className="py-4 px-4">Name</th>
-                <th className="py-4 px-4 whitespace-nowrap">Requested At</th>
-                <th className="py-4 px-4">Action</th>
+                <th className="py-4 px-4">Tên</th>
+                <th className="py-4 px-4 whitespace-nowrap">Ngày yêu cầu</th>
+                <th className="py-4 px-4">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -160,8 +159,7 @@ export default function UpgradePage() {
                   key={`${r.id}-${idx}`}
                   className={`text-sm text-gray-600 ${
                     idx % 2 === 0 ? "" : "bg-gray-50"
-                  }`}
-                >
+                  }`}>
                   <td className="py-4 px-4">{r.id}</td>
                   <td className="py-4 px-4 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-50 text-purple-600 font-semibold">
@@ -179,15 +177,13 @@ export default function UpgradePage() {
                     <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         onClick={() => openAccept(r.id)}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus:ring-2 focus:ring-purple-300 text-white rounded-full text-sm transition-colors"
-                      >
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus:ring-2 focus:ring-purple-300 text-white rounded-full text-sm transition-colors">
                         <HiCheck />
                         <span>Chấp nhận</span>
                       </button>
                       <button
                         onClick={() => performReject(r.id)}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 hover:bg-red-50 hover:border-red-300 active:bg-red-100 focus:ring-2 focus:ring-red-300 text-red-600 rounded-full text-sm transition-colors"
-                      >
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 hover:bg-red-50 hover:border-red-300 active:bg-red-100 focus:ring-2 focus:ring-red-300 text-red-600 rounded-full text-sm transition-colors">
                         <span>Từ chối</span>
                       </button>
                     </div>
@@ -223,14 +219,12 @@ export default function UpgradePage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowAcceptModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded"
-                >
+                  className="px-4 py-2 bg-gray-100 rounded">
                   Hủy
                 </button>
                 <button
                   onClick={() => performAccept(acceptTarget)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded"
-                >
+                  className="px-4 py-2 bg-purple-600 text-white rounded">
                   Chấp nhận
                 </button>
               </div>
@@ -248,16 +242,14 @@ export default function UpgradePage() {
             <button
               onClick={() => goto(page - 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === 1}
-            >
+              disabled={page === 1}>
               <HiChevronLeft />
             </button>
             {pageList.map((p, idx) =>
               p === "..." ? (
                 <span
                   key={`ellipsis-${idx}`}
-                  className="w-8 h-8 flex items-center justify-center text-sm text-gray-500"
-                >
+                  className="w-8 h-8 flex items-center justify-center text-sm text-gray-500">
                   …
                 </span>
               ) : (
@@ -268,8 +260,7 @@ export default function UpgradePage() {
                     p === page
                       ? "bg-purple-600 text-white"
                       : "bg-white border text-gray-600"
-                  }`}
-                >
+                  }`}>
                   {p}
                 </button>
               )
@@ -277,8 +268,7 @@ export default function UpgradePage() {
             <button
               onClick={() => goto(page + 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === totalPages}
-            >
+              disabled={page === totalPages}>
               <HiChevronRight />
             </button>
           </div>

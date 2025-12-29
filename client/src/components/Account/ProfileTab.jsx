@@ -307,16 +307,14 @@ const ProfileTab = () => {
                 color="gray"
                 size="lg"
                 onClick={handleCancelInfo}
-                disabled={isLoading}
-              >
+                disabled={isLoading}>
                 Hủy
               </Button>
               <Button
                 type="submit"
                 className="bg-sky-600 hover:bg-sky-700"
                 size="lg"
-                disabled={isLoading || !isValid}
-              >
+                disabled={isLoading || !isValid}>
                 Cập nhật thông tin
               </Button>
             </>
@@ -326,8 +324,7 @@ const ProfileTab = () => {
               className="bg-sky-600 hover:bg-sky-700"
               size="lg"
               onClick={() => setIsEditingInfo(true)}
-              disabled={isLoading}
-            >
+              disabled={isLoading}>
               Chỉnh sửa thông tin
             </Button>
           )}
@@ -354,7 +351,7 @@ const ProfileTab = () => {
               <TextInput
                 id="currentPassword"
                 type="password"
-                placeholder="Current Password"
+                placeholder="Mật khẩu hiện tại"
                 disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
@@ -376,7 +373,7 @@ const ProfileTab = () => {
               <TextInput
                 id="newPassword"
                 type="password"
-                placeholder="New Password (min 8 ký tự)"
+                placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
                 disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
@@ -398,7 +395,7 @@ const ProfileTab = () => {
               <TextInput
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm New Password"
+                placeholder="Nhập lại mật khẩu mới"
                 disabled={isLoading || !isEditingPassword}
                 sizing="lg"
                 className="w-full"
@@ -422,16 +419,14 @@ const ProfileTab = () => {
                 color="gray"
                 size="lg"
                 onClick={handleCancelPassword}
-                disabled={isLoading}
-              >
+                disabled={isLoading}>
                 Hủy
               </Button>
               <Button
                 type="submit"
                 className="bg-red-500 hover:bg-red-600"
                 size="lg"
-                disabled={isLoading || !isValid}
-              >
+                disabled={isLoading || !isValid}>
                 Cập nhật mật khẩu
               </Button>
             </>
@@ -441,8 +436,7 @@ const ProfileTab = () => {
               className="bg-red-500 hover:bg-red-600"
               size="lg"
               onClick={() => setIsEditingPassword(true)}
-              disabled={isLoading}
-            >
+              disabled={isLoading}>
               Thay đổi mật khẩu
             </Button>
           )}
