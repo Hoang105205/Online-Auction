@@ -22,6 +22,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import VerifyForgotPasswordPage from "./pages/auth/VerifyForgotPasswordPage";
 import LoginSuccess from "./pages/auth/LoginSuccess.jsx";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -55,6 +56,10 @@ const router = createBrowserRouter(
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/verify-forgot-password-otp"
+          element={<VerifyForgotPasswordPage />}
+        />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route path="/" element={<MainLayout />}>

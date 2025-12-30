@@ -7,8 +7,9 @@ const {
   refreshToken,
   logoutUser,
   loginGoogleCallback,
-  verifyOTP,
+  verifySignup,
   forgotPassword,
+  verifyForgotPasswordOtp,
   resetPassword,
 } = require("../controllers/AuthController");
 
@@ -39,9 +40,11 @@ router.get(
   loginGoogleCallback
 );
 
-router.post("/verify-otp", verifyOTP);
+router.post("/verify-otp", verifySignup);
 
 router.post("/forgot-password", forgotPassword);
+
+router.post("/verify-forgot-password-otp", verifyForgotPasswordOtp);
 
 router.post("/reset-password", resetPassword);
 

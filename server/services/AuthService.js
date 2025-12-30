@@ -86,7 +86,7 @@ class AuthService {
     return { email: user.email };
   }
 
-  static async verifyEmailOTP(email, otp) {
+  static async verifySignupOTP(email, otp) {
     const user = await User.findOne({ email }).exec();
 
     if (!user) {
@@ -257,92 +257,130 @@ class AuthService {
     return newUser;
   }
 
-  static async requestPasswordReset(email) {
-    const user = await User.findOne({ email }).exec();
+  static async forgotPassword(email) {
+    const user = await User.findOne({ email });
     if (!user) {
-      console.log(
-        `[Forgot Password] Email ${email} không tồn tại (Silent Success).`
-      );
-      return;
+      const error = new Error("Email không tồn tại trong hệ thống.");
+      error.statusCode = 404;
+      throw error;
     }
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    // Tái sử dụng: Logic sinh OTP 6 số
+    const otp = crypto.randomInt(100000, 999999).toString();
 
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    // Tái sử dụng trường OTP trong DB (Ghi đè OTP cũ nếu có)
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 phút
     await user.save();
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    const resetLink = `${clientUrl}/reset-password?token=${resetToken}&email=${email}`;
-
-    const subject = "Yêu cầu đặt lại mật khẩu Auctify";
-    const htmlMessage = `
-    <div style="background:#f4f7f9;padding:32px 12px;font-family:Helvetica,Arial,sans-serif;line-height:1.55;color:#1f2937;">
-      <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#3b82f6,#1e3a8a);padding:26px 22px;text-align:center;">
-          <h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:.5px;color:#ffffff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">Auctify</h1>
-          <p style="margin:6px 0 0;font-size:12px;font-weight:500;color:#dbeafe;letter-spacing:1px;text-transform:uppercase;">Đặt lại mật khẩu</p>
-        </div>
-        <!-- Body -->
-        <div style="padding:36px 38px 30px;">
-          <p style="margin:0 0 16px;font-size:15px;">Xin chào,</p>
-          <p style="margin:0 0 18px;font-size:15px;color:#374151;">Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản <strong style="color:#3b82f6;">${email}</strong>.</p>
-          <p style="margin:0 0 24px;font-size:14px;color:#4b5563;">Nhấn nút bên dưới để tạo mật khẩu mới. Liên kết này sẽ hết hạn sau <strong>15 phút</strong>.</p>
-
-          <div style="text-align:center;margin:26px 0 30px;">
-            <a href="${resetLink}" style="background:#3b82f6;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 30px;border-radius:50px;display:inline-block;box-shadow:0 4px 10px rgba(59,130,246,0.35);letter-spacing:.5px;">
-              Đặt lại mật khẩu
-            </a>
-            <p style="margin:16px 0 0;font-size:11px;color:#64748b;">Nếu nút không hoạt động, dùng liên kết bên dưới:</p>
-            <p style="word-break:break-all;font-size:11px;margin:6px 0 0;color:#3b82f6;">${resetLink}</p>
-          </div>
-
-          <div style="background:#fff7ed;border:1px solid #fed7aa;padding:14px 16px;border-radius:10px;font-size:12px;color:#9a3412;line-height:1.5;">
-            Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email. Mật khẩu hiện tại vẫn an toàn.
-          </div>
-
-          <p style="margin:32px 0 6px;font-size:12px;color:#6b7280;">Trân trọng,</p>
-          <p style="margin:0;font-size:12px;font-weight:600;color:#0f172a;">Auctify Team</p>
-        </div>
-        <!-- Footer -->
-        <div style="background:#f9fafb;padding:16px 22px;text-align:center;border-top:1px solid #e5e7eb;">
-          <p style="margin:0;font-size:11px;color:#94a3b8;">Cần hỗ trợ? Liên hệ <a href="mailto:auctify.onlineauction@gmail.com" style="color:#3b82f6;text-decoration:none;font-weight:600;">auctify.onlineauction@gmail.com</a></p>
-          <p style="margin:10px 0 0;font-size:11px;color:#94a3b8;">© 2025 Auctify. All rights reserved.</p>
-        </div>
-      </div>
+    // Gửi Email OTP (Blue, security-focused template)
+    const message = `
+<div style="background:#f4f7f9;padding:32px 12px;font-family:Helvetica,Arial,sans-serif;line-height:1.55;color:#0f172a;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 6px 16px rgba(0,0,0,0.07);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:26px 24px;text-align:center;">
+      <h1 style="margin:0;font-size:26px;font-weight:800;letter-spacing:.3px;color:#ffffff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">Auctify</h1>
+      <p style="margin:8px 0 0;font-size:13px;font-weight:600;color:#e0f2fe;letter-spacing:.8px;text-transform:uppercase;">Xác thực đặt lại mật khẩu</p>
     </div>
-    `;
 
-    sendEmail(email, subject, htmlMessage).catch(console.error);
+    <!-- Body -->
+    <div style="padding:34px 36px 28px;">
+      <p style="margin:0 0 14px;font-size:16px;font-weight:600;">🔐 Xin chào,</p>
+      <p style="margin:0 0 18px;font-size:15px;color:#334155;">Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã OTP bên dưới để xác thực yêu cầu. Mã có hiệu lực trong <strong>10 phút</strong>.</p>
 
-    return;
+      <div style="text-align:center;margin:26px 0 30px;">
+        <div style="display:inline-block;background:#0ea5e9;color:#ffffff;font-weight:800;font-size:32px;letter-spacing:6px;padding:16px 30px;border-radius:12px;font-family:'Roboto',Helvetica,Arial,sans-serif;box-shadow:0 4px 12px rgba(14,165,233,.35);">
+          ${otp}
+        </div>
+        <p style="margin:12px 0 0;font-size:12px;color:#64748b;">Không chia sẻ mã này với bất kỳ ai.</p>
+      </div>
+
+      <div style="background:#eff6ff;border:1px solid #bae6fd;padding:14px 16px;border-radius:10px;font-size:13px;color:#0c4a6e;line-height:1.6;">
+        Lưu ý bảo mật: Nếu bạn không thực hiện yêu cầu này, có thể ai đó đã cố truy cập tài khoản của bạn. Vui lòng bỏ qua email hoặc đổi mật khẩu ngay sau khi đăng nhập.
+      </div>
+
+      <p style="margin:24px 0 6px;font-size:13px;color:#6b7280;">Trân trọng,</p>
+      <p style="margin:0;font-size:13px;font-weight:700;color:#0f172a;">Auctify Team</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f9fafb;padding:16px 22px;text-align:center;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;font-size:11px;color:#94a3b8;">Cần hỗ trợ? Liên hệ <a href="mailto:auctify.onlineauction@gmail.com" style="color:#0ea5e9;text-decoration:none;font-weight:700;">auctify.onlineauction@gmail.com</a></p>
+      <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">© 2025 Auctify. All rights reserved.</p>
+    </div>
+  </div>
+</div>`;
+
+    // Tái sử dụng hàm sendEmail
+    try {
+      await sendEmail(email, "Mã xác thực đặt lại mật khẩu - Auctify", message);
+      return { message: "Mã OTP đã được gửi đến email của bạn." };
+    } catch (err) {
+      user.otp = undefined;
+      user.otpExpires = undefined;
+      await user.save();
+      throw new Error("Không thể gửi email. Vui lòng thử lại sau.");
+    }
   }
 
-  static async resetPassword(email, token, newPassword) {
+  static async verifyForgotPasswordOTP(email, otp) {
     const user = await User.findOne({
       email,
-      resetPasswordToken: token,
+      otp,
+      otpExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      const error = new Error("Mã OTP không đúng hoặc đã hết hạn.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Tạo "Vé thông hành" (Reset Token)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Hash token để lưu vào DB (Bảo mật)
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 phút
+
+    // Xóa OTP ngay lập tức
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    // Trả về token chưa hash cho Client
+    return { message: "Xác thực thành công.", resetToken: resetToken };
+  }
+
+  static async resetPassword(token, newPassword) {
+    // Hash token từ client gửi lên để so sánh với DB
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() },
-    }).exec();
+    });
 
     if (!user) {
       const error = new Error(
-        "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn."
+        "Phiên đổi mật khẩu không hợp lệ hoặc đã hết hạn."
       );
       error.statusCode = 400;
       throw error;
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-
     user.password = hashedPassword;
+
+    // Dọn dẹp token
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-
     await user.save();
 
-    return { message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại." };
+    return { message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại." };
   }
 }
 

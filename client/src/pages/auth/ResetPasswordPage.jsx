@@ -20,7 +20,6 @@ const schema = z
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const email = searchParams.get("email") || "";
   const token = searchParams.get("token") || "";
   const [submitError, setSubmitError] = useState(null);
 
@@ -36,18 +35,18 @@ const ResetPasswordPage = () => {
   });
 
   useEffect(() => {
-    if (!email || !token) {
-      toast.error("Thiếu token hoặc email.");
+    if (!token) {
+      toast.error("Thiếu token đặt lại mật khẩu.");
     }
-  }, [email, token]);
+  }, [token]);
 
   const onSubmit = async (data) => {
-    if (!email || !token) {
-      setSubmitError("Thiếu token hoặc email.");
+    if (!token) {
+      setSubmitError("Thiếu token đặt lại mật khẩu.");
       return;
     }
     try {
-      await resetPassword(email, token, data.password);
+      await resetPassword(token, data.password);
       toast.success("Đặt lại mật khẩu thành công. Chuyển hướng...");
       setSubmitError(null);
       reset();
@@ -92,11 +91,7 @@ const ResetPasswordPage = () => {
                     Đặt lại mật khẩu
                   </h2>
                   <p className="text-gray-600 text-sm">
-                    Tạo mật khẩu mới cho tài khoản{" "}
-                    <span className="font-semibold">
-                      {email || "email không xác định"}
-                    </span>
-                    .
+                    Tạo mật khẩu mới bằng token đã xác thực từ OTP.
                   </p>
                 </div>
                 <div>

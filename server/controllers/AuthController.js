@@ -67,7 +67,7 @@ const signup = async (req, res) => {
   }
 };
 
-const verifyOTP = async (req, res) => {
+const verifySignup = async (req, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({ message: "Dữ liệu không được để trống." });
@@ -79,7 +79,7 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: "Vui lòng nhập đủ thông tin." });
     }
 
-    const result = await AuthService.verifyEmailOTP(email, otp);
+    const result = await AuthService.verifySignupOTP(email, otp);
 
     return res.status(200).json(result);
   } catch (error) {
@@ -216,45 +216,42 @@ const loginGoogleCallback = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-    if (!req.body) {
-      return res.status(400).json({ message: "Dữ liệu không được để trống." });
-    }
-
     const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Vui lòng nhập email" });
 
-    if (!email) {
-      return res.status(400).json({ message: "Vui lòng nhập email." });
-    }
-
-    await AuthService.requestPasswordReset(email);
-
-    return res.status(200).json({ message: "Đã gửi email đặt lại mật khẩu." });
-  } catch (error) {
-    res
-      .status(error.statusCode || 500)
-      .json({ message: error.message || "Lỗi máy chủ." });
+    const result = await AuthService.forgotPassword(email);
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ message: err.message });
   }
 };
 
+// 4. Xác thực OTP Quên mật khẩu (Nhận Token)
+const verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: "Thiếu thông tin" });
+
+    // Gọi hàm verifyForgotPasswordOTP bên Service
+    const result = await AuthService.verifyForgotPasswordOTP(email, otp);
+    
+    // Trả về { message, resetToken }
+    res.status(200).json(result); 
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ message: err.message });
+  }
+};
+
+// 5. Đặt lại mật khẩu (Dùng Token)
 const resetPassword = async (req, res) => {
   try {
-    if (!req.body) {
-      return res.status(400).json({ message: "Dữ liệu không được để trống." });
-    }
+    const { token, newPassword } = req.body; 
+    if (!token || !newPassword) return res.status(400).json({ message: "Thiếu thông tin" });
 
-    const { email, token, newPassword } = req.body;
-
-    if (!email || !token || !newPassword) {
-      return res.status(400).json({ message: "Thiếu thông tin xác thực." });
-    }
-
-    const result = await AuthService.resetPassword(email, token, newPassword);
-
-    return res.status(200).json(result);
-  } catch (error) {
-    res
-      .status(error.statusCode || 500)
-      .json({ message: error.message || "Lỗi máy chủ." });
+    const result = await AuthService.resetPassword(token, newPassword);
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ message: err.message });
   }
 };
 
@@ -264,7 +261,8 @@ module.exports = {
   refreshToken,
   logoutUser,
   loginGoogleCallback,
-  verifyOTP,
+  verifySignup,
   forgotPassword,
+  verifyForgotPasswordOtp,
   resetPassword,
 };

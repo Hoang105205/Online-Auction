@@ -41,11 +41,23 @@ export const forgotPassword = async (email) => {
   }
 };
 
-// Hàm xử lý logic gọi API Đặt lại mật khẩu
-export const resetPassword = async (email, token, newPassword) => {
+// Hàm xử lý logic gọi API Xác thực OTP Quên mật khẩu (lấy resetToken)
+export const verifyForgotPasswordOtp = async (email, otp) => {
+  try {
+    const response = await axiosPublic.post(
+      "/auth/verify-forgot-password-otp",
+      { email, otp }
+    );
+    return response.data; // { message, resetToken }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Hàm xử lý logic gọi API Đặt lại mật khẩu (dùng resetToken)
+export const resetPassword = async (token, newPassword) => {
   try {
     const response = await axiosPublic.post("/auth/reset-password", {
-      email,
       token,
       newPassword,
     });

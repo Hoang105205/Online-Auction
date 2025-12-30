@@ -1,38 +1,59 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Label, TextInput, Card } from "flowbite-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPassword } from "../../api/authService";
+import { verifyForgotPasswordOtp } from "../../api/authService";
 import { toast } from "react-toastify";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
 const schema = z.object({
-  email: z.email("Email không hợp lệ"),
+  otp: z
+    .string()
+    .min(6, "OTP tối thiểu 6 ký tự")
+    .max(6, "OTP gồm 6 ký tự")
+    .regex(/^\d{6}$/i, "OTP chỉ gồm số"),
 });
 
-const ForgotPasswordPage = () => {
+const VerifyForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const email = searchParams.get("email") || "";
   const [submitError, setSubmitError] = useState(null);
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
+    reset,
   } = useForm({
     resolver: zodResolver(schema),
     mode: "onBlur",
-    defaultValues: { email: "" },
+    defaultValues: { otp: "" },
   });
 
+  useEffect(() => {
+    if (!email) {
+      toast.error("Thiếu email để xác thực OTP.");
+    }
+  }, [email]);
+
   const onSubmit = async (data) => {
+    if (!email) {
+      setSubmitError("Thiếu email.");
+      return;
+    }
     try {
-      const result = await forgotPassword(data.email);
-      toast.success(result.message || "Đã gửi OTP đến email của bạn");
+      const result = await verifyForgotPasswordOtp(email, data.otp);
+      const resetToken = result.resetToken;
+      toast.success(result.message || "Xác thực OTP thành công");
       setSubmitError(null);
-      // Điều hướng sang trang xác thực OTP kèm email
-      navigate(
-        `/verify-forgot-password-otp?email=${encodeURIComponent(data.email)}`
-      );
+      reset();
+      if (resetToken) {
+        navigate(`/reset-password?token=${encodeURIComponent(resetToken)}`);
+      } else {
+        toast.error("Không nhận được token đặt lại mật khẩu.");
+      }
     } catch (error) {
       setSubmitError(error.response?.data?.message || "Có lỗi xảy ra");
       toast.error(error.response?.data?.message || "Có lỗi xảy ra");
@@ -70,27 +91,31 @@ const ForgotPasswordPage = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="text-center space-y-2">
                   <h2 className="text-2xl font-bold text-sky-600">
-                    Quên mật khẩu
+                    Xác thực OTP
                   </h2>
                   <p className="text-gray-600 text-sm">
-                    Nhập email để nhận mã OTP xác thực và tiếp tục đặt lại mật
-                    khẩu.
+                    Nhập mã OTP đã gửi đến{" "}
+                    <span className="font-semibold">
+                      {email || "email không xác định"}
+                    </span>
+                    .
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="email" value="Email" className="sr-only" />
+                  <Label htmlFor="otp" value="OTP" className="sr-only" />
                   <TextInput
-                    id="email"
-                    type="email"
-                    placeholder="Email"
-                    {...register("email")}
-                    color={errors.email ? "failure" : "gray"}
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Nhập OTP 6 số"
+                    {...register("otp")}
+                    color={errors.otp ? "failure" : "gray"}
                     sizing="lg"
                     className="w-full"
                   />
-                  {errors.email && (
+                  {errors.otp && (
                     <p className="text-sm text-red-600 mt-1">
-                      {errors.email.message}
+                      {errors.otp.message}
                     </p>
                   )}
                 </div>
@@ -100,15 +125,15 @@ const ForgotPasswordPage = () => {
                   size="lg"
                   disabled={!isValid || isSubmitting}
                 >
-                  Gửi yêu cầu
+                  Xác thực
                 </Button>
                 {submitError && (
                   <p className="text-red-600 text-sm mt-2">{submitError}</p>
                 )}
                 <div className="text-center">
-                  <p className="text-gray-600 mb-3">Nhớ mật khẩu?</p>
+                  <p className="text-gray-600 mb-3">Sai email?</p>
                   <Link
-                    to="/login"
+                    to="/forgot-password"
                     className="block w-full md:w-fit md:mx-auto"
                   >
                     <Button
@@ -116,7 +141,7 @@ const ForgotPasswordPage = () => {
                       size="lg"
                       className="w-full md:w-fit px-12"
                     >
-                      Đăng nhập
+                      Nhập lại email
                     </Button>
                   </Link>
                 </div>
@@ -129,4 +154,4 @@ const ForgotPasswordPage = () => {
   );
 };
 
-export default ForgotPasswordPage;
+export default VerifyForgotPasswordPage;
