@@ -391,7 +391,10 @@ class UserService {
   }
 
   static async getMyProducts(userId, { page = 1, limit = 3 }) {
-    const query = { "detail.sellerId": userId };
+    const query = {
+      "detail.sellerId": userId,
+      "auction.status": "active",
+    };
 
     const totalItems = await Product.countDocuments(query).exec();
 
@@ -539,7 +542,7 @@ class UserService {
         .skip(skip)
         .limit(limit)
         .populate({
-          path: "auction.highestBidderId", 
+          path: "auction.highestBidderId",
           select: "fullName",
         })
         .lean()
