@@ -70,17 +70,29 @@ class UserService {
       }
     }
 
-    const result = await User.findByIdAndUpdate(userId, {
-      $set: {
-        fullName: updateData.fullName,
-        email: updateData.email,
-        address: updateData.address,
+    const updateFields = {
+      fullName: updateData.fullName,
+      email: updateData.email,
+      address: updateData.address,
+      dateOfBirth: updateData.dateOfBirth, // <--- THÊM DÒNG NÀY
+    };
+
+    // Loại bỏ các trường undefined (tránh việc update đè giá trị null vào DB nếu client không gửi lên)
+    Object.keys(updateFields).forEach(
+      (key) => updateFields[key] === undefined && delete updateFields[key]
+    );
+
+    const result = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: updateFields,
       },
-    }).exec();
+      { new: true }
+    ).exec();
 
     if (!result) {
       const error = new Error("Người dùng không tồn tại.");
-      error.statusCode = 404; // Not Found
+      error.statusCode = 400; // Bad Request
       throw error;
     }
 

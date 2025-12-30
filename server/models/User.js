@@ -41,6 +41,10 @@ const userSchema = new Schema(
       type: String,
       trim: true,
     },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
     googleId: {
       type: String,
       unique: true,

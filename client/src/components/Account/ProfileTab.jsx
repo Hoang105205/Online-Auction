@@ -21,6 +21,23 @@ const ProfileTab = () => {
       fullName: z.string().min(2, "Vui lòng nhập họ và tên hợp lệ"),
       email: z.email("Email không hợp lệ"),
       address: z.string().min(5, "Địa chỉ chưa hợp lệ"),
+      dateOfBirth: z
+        .string()
+        .optional()
+        .default("")
+        .refine(
+          (val) => {
+            if (!val) return true; // allow empty (no DOB)
+            // Expect YYYY-MM-DD
+            const m = /^\d{4}-\d{2}-\d{2}$/.test(val);
+            if (!m) return false;
+            const dt = new Date(`${val}T00:00:00.000Z`);
+            return !isNaN(dt.getTime());
+          },
+          {
+            message: "Ngày sinh không hợp lệ (YYYY-MM-DD)",
+          }
+        ),
       currentPassword: z.string().optional().default(""),
       newPassword: z.string().optional().default(""),
       confirmPassword: z.string().optional().default(""),
@@ -68,6 +85,7 @@ const ProfileTab = () => {
       fullName: "",
       email: "",
       address: "",
+      dateOfBirth: "",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
@@ -81,7 +99,18 @@ const ProfileTab = () => {
     fullName: "",
     email: "",
     address: "",
+    dateOfBirth: null,
   });
+
+  const toDateInputValue = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
@@ -99,6 +128,7 @@ const ProfileTab = () => {
             fullName: data.fullName || "",
             email: data.email || "",
             address: data.address || "",
+            dateOfBirth: toDateInputValue(data.dateOfBirth),
             currentPassword: "",
             newPassword: "",
             confirmPassword: "",
@@ -108,6 +138,7 @@ const ProfileTab = () => {
             fullName: data.fullName || "",
             email: data.email || "",
             address: data.address || "",
+            dateOfBirth: data.dateOfBirth || null,
           });
 
           reset(formValues);
@@ -132,11 +163,19 @@ const ProfileTab = () => {
         fullName: data.fullName,
         email: data.email,
         address: data.address,
+        dateOfBirth: data.dateOfBirth
+          ? new Date(`${data.dateOfBirth}T00:00:00.000Z`).toISOString()
+          : undefined,
       };
 
       const result = await updateUserInfo(axiosPrivate, payload);
 
-      setUserData(payload);
+      setUserData({
+        fullName: payload.fullName,
+        email: payload.email,
+        address: payload.address,
+        dateOfBirth: payload.dateOfBirth ?? userData.dateOfBirth,
+      });
 
       toast.success(result.message);
 
@@ -146,7 +185,12 @@ const ProfileTab = () => {
 
       // QUAN TRỌNG: Dùng 'payload' (dữ liệu mới) để reset, KHÔNG dùng 'userData'
       reset({
-        ...payload,
+        fullName: payload.fullName,
+        email: payload.email,
+        address: payload.address,
+        dateOfBirth: toDateInputValue(
+          payload.dateOfBirth ?? userData.dateOfBirth
+        ),
         currentPassword,
         newPassword,
         confirmPassword,
@@ -206,7 +250,15 @@ const ProfileTab = () => {
 
   const handleCancelInfo = () => {
     const { currentPassword, newPassword, confirmPassword } = getValues();
-    reset({ ...userData, currentPassword, newPassword, confirmPassword });
+    reset({
+      fullName: userData.fullName,
+      email: userData.email,
+      address: userData.address,
+      dateOfBirth: toDateInputValue(userData.dateOfBirth),
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
     setIsEditingInfo(false);
   };
 
@@ -298,6 +350,23 @@ const ProfileTab = () => {
           )}
         </div>
 
+        {/* Date of Birth */}
+        <div>
+          <TextInput
+            id="dateOfBirth"
+            type="date"
+            placeholder="YYYY-MM-DD"
+            disabled={isLoading || !isEditingInfo}
+            sizing="lg"
+            className="w-full"
+            {...register("dateOfBirth")}
+            color={errors.dateOfBirth ? "failure" : undefined}
+          />
+          {errors.dateOfBirth?.message && (
+            <span className="text-red-600">{errors.dateOfBirth.message}</span>
+          )}
+        </div>
+
         {/* Actions: Basic Info */}
         <div className="flex justify-end gap-4 pt-2">
           {isEditingInfo ? (
@@ -307,14 +376,16 @@ const ProfileTab = () => {
                 color="gray"
                 size="lg"
                 onClick={handleCancelInfo}
-                disabled={isLoading}>
+                disabled={isLoading}
+              >
                 Hủy
               </Button>
               <Button
                 type="submit"
                 className="bg-sky-600 hover:bg-sky-700"
                 size="lg"
-                disabled={isLoading || !isValid}>
+                disabled={isLoading || !isValid}
+              >
                 Cập nhật thông tin
               </Button>
             </>
@@ -324,7 +395,8 @@ const ProfileTab = () => {
               className="bg-sky-600 hover:bg-sky-700"
               size="lg"
               onClick={() => setIsEditingInfo(true)}
-              disabled={isLoading}>
+              disabled={isLoading}
+            >
               Chỉnh sửa thông tin
             </Button>
           )}
@@ -419,14 +491,16 @@ const ProfileTab = () => {
                 color="gray"
                 size="lg"
                 onClick={handleCancelPassword}
-                disabled={isLoading}>
+                disabled={isLoading}
+              >
                 Hủy
               </Button>
               <Button
                 type="submit"
                 className="bg-red-500 hover:bg-red-600"
                 size="lg"
-                disabled={isLoading || !isValid}>
+                disabled={isLoading || !isValid}
+              >
                 Cập nhật mật khẩu
               </Button>
             </>
@@ -436,7 +510,8 @@ const ProfileTab = () => {
               className="bg-red-500 hover:bg-red-600"
               size="lg"
               onClick={() => setIsEditingPassword(true)}
-              disabled={isLoading}>
+              disabled={isLoading}
+            >
               Thay đổi mật khẩu
             </Button>
           )}
