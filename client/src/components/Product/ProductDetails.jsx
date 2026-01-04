@@ -260,15 +260,13 @@ const ProductDetails = () => {
                       <span
                         className={`${
                           isLast ? "text-black font-medium" : "text-gray-600"
-                        }`}
-                      >
+                        }`}>
                         {crumb.name}
                       </span>
                     ) : (
                       <Link
                         to={crumb.to}
-                        className="text-gray-600 hover:text-black hover:underline transition-colors"
-                      >
+                        className="text-gray-600 hover:text-black hover:underline transition-colors">
                         {crumb.name}
                       </Link>
                     )}
@@ -288,8 +286,7 @@ const ProductDetails = () => {
                 <div
                   ref={thumbsRef}
                   className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-y-auto overflow-y-hidden lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-2 hide-scrollbar order-2 lg:order-1 max-h-28 lg:max-h-[400px]"
-                  style={{ minWidth: "auto" }}
-                >
+                  style={{ minWidth: "auto" }}>
                   {images.map((img, idx) => (
                     <div
                       key={idx}
@@ -298,8 +295,7 @@ const ProductDetails = () => {
                         selectedImage === idx
                           ? "border-black"
                           : "border-gray-200"
-                      }`}
-                    >
+                      }`}>
                       <ProductImage url={img} />
                     </div>
                   ))}
@@ -309,12 +305,10 @@ const ProductDetails = () => {
                 <div
                   ref={mainImageRef}
                   className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center order-1 lg:order-2"
-                  style={{ aspectRatio: "1 / 1", minHeight: 240 }}
-                >
+                  style={{ aspectRatio: "1 / 1", minHeight: 240 }}>
                   <div
                     className="product-main-image w-full h-full object-contain cursor-zoom-in"
-                    onClick={() => setModalOpen(true)}
-                  >
+                    onClick={() => setModalOpen(true)}>
                     <ProductImage url={images[selectedImage]} />
                   </div>
                 </div>
@@ -323,7 +317,9 @@ const ProductDetails = () => {
               {/* Right Side - Product Info */}
               <div className="order-2">
                 {/* Seller Info */}
-                <div className="flex items-center gap-2 mb-3 lg:mb-4">
+                <Link
+                  to={`/user-rating/${productInfoData.detail.sellerId._id}`}
+                  className="flex items-center gap-2 mb-3 lg:mb-4">
                   <span className="text-sm lg:text-base text-gray-600">
                     Seller: @{productInfoData.detail.sellerId.fullName}
                   </span>
@@ -333,7 +329,7 @@ const ProductDetails = () => {
                     </span>
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   </div>
-                </div>
+                </Link>
 
                 {/* Date Range */}
                 <div className="text-sm lg:text-base text-gray-700 mb-3 lg:mb-4">
@@ -375,7 +371,9 @@ const ProductDetails = () => {
                         {formatPrice(productAuctionData.auction.currentPrice)}đ
                       </div>
                       {productAuctionData.auction.highestBidderId && (
-                        <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <Link
+                          to={`/user-rating/${productAuctionData.auction.highestBidderId._id}`}
+                          className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                           <span className="text-xs lg:text-sm text-gray-600">
                             bởi: @
                             {maskBidderName(
@@ -391,7 +389,7 @@ const ProductDetails = () => {
                             </span>
                             <Star className="w-3 h-3 lg:w-4 lg:h-4 fill-yellow-400 text-yellow-400" />
                           </div>
-                        </div>
+                        </Link>
                       )}
                     </div>
                     {/* Mobile: Bidder info on separate row */}
@@ -446,8 +444,7 @@ const ProductDetails = () => {
                   // Nút cho user bị ban
                   <button
                     disabled
-                    className="w-full bg-red-500 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8 opacity-90 flex items-center justify-center gap-2"
-                  >
+                    className="w-full bg-red-500 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8 opacity-90 flex items-center justify-center gap-2">
                     <Ban className="w-5 h-5" />
                     Bạn đã bị từ chối đấu giá!
                   </button>
@@ -456,16 +453,14 @@ const ProductDetails = () => {
                   // Nút bình thường
                   <button
                     className="w-full bg-black text-white py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors mb-8"
-                    onClick={() => setActiveTab("auction")}
-                  >
+                    onClick={() => setActiveTab("auction")}>
                     Đấu Giá Ngay!
                   </button>
                 ) : isOwner || isHighestBidder ? (
                   // Đấu giá kết thúc + User là seller hoặc highest bidder
                   <button
                     onClick={handleGoToOrder}
-                    className="w-full bg-green-600 text-white py-4 rounded-full text-lg font-semibold hover:bg-green-700 transition-colors mb-8 flex items-center justify-center gap-2"
-                  >
+                    className="w-full bg-green-600 text-white py-4 rounded-full text-lg font-semibold hover:bg-green-700 transition-colors mb-8 flex items-center justify-center gap-2">
                     <Package className="w-5 h-5" />
                     Hoàn tất đơn hàng
                   </button>
@@ -473,8 +468,7 @@ const ProductDetails = () => {
                   // Nút khi đấu giá đã kết thúc
                   <button
                     disabled
-                    className="w-full bg-gray-400 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8"
-                  >
+                    className="w-full bg-gray-400 text-white py-4 rounded-full text-lg font-semibold cursor-not-allowed mb-8">
                     Đấu giá đã kết thúc
                   </button>
                 )}
@@ -492,8 +486,7 @@ const ProductDetails = () => {
                       activeTab === "details"
                         ? "border-black text-black"
                         : "border-transparent text-gray-600 hover:text-black"
-                    }`}
-                  >
+                    }`}>
                     Chi Tiết Sản Phẩm
                   </button>
                   <button
@@ -502,8 +495,7 @@ const ProductDetails = () => {
                       activeTab === "auction"
                         ? "border-black text-black"
                         : "border-transparent text-gray-600 hover:text-black"
-                    }`}
-                  >
+                    }`}>
                     Bắt đầu đấu giá
                   </button>
                   <button
@@ -512,8 +504,7 @@ const ProductDetails = () => {
                       activeTab === "qa"
                         ? "border-black text-black"
                         : "border-transparent text-gray-600 hover:text-black"
-                    }`}
-                  >
+                    }`}>
                     Hỏi Đáp
                   </button>
                 </div>
@@ -567,18 +558,15 @@ const ProductDetails = () => {
             {modalOpen && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-                onClick={() => setModalOpen(false)}
-              >
+                onClick={() => setModalOpen(false)}>
                 <button
                   className="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2"
-                  onClick={() => setModalOpen(false)}
-                >
+                  onClick={() => setModalOpen(false)}>
                   ✕
                 </button>
                 <div
                   className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                  onClick={(e) => e.stopPropagation()}>
                   <ProductImage
                     url={images[selectedImage]}
                     defaultWidth="75%"
@@ -597,8 +585,7 @@ const ProductDetails = () => {
                          bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:scale-110
                          border border-gray-200"
               aria-label="Add to watchlist"
-              title="Thêm vào danh sách theo dõi"
-            >
+              title="Thêm vào danh sách theo dõi">
               <HiHeart className="w-6 h-6" />
             </button>
           </>
@@ -611,8 +598,7 @@ const ProductDetails = () => {
                        bg-white text-gray-400 hover:bg-blue-50 hover:text-blue-600 hover:scale-110
                        border border-gray-200"
               aria-label="Reset page"
-              title="Làm mới trang"
-            >
+              title="Làm mới trang">
               <RotateCcw className="w-6 h-6" />
             </button>
           </>
