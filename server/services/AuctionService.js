@@ -534,6 +534,7 @@ class AuctionService {
 
   static async kickBidder(productId, sellerId, bidderIdToKick) {
     const session = await mongoose.startSession();
+    let emailTasks = [];
 
     try {
       let result;
@@ -644,8 +645,43 @@ class AuctionService {
         // 6. LƯU SẢN PHẨM
         await product.save({ session });
 
+        // 7. CHUẨN BỊ EMAIL THÔNG BÁO CHO NGƯỜI BỊ CHẶN
+        const kickedUser = await User.findById(bidderIdToKick)
+          .select("email fullName")
+          .session(session);
+
+        if (kickedUser && kickedUser.email) {
+          const productName = product.detail.name;
+          const subject = `[Alert] Bạn đã bị chặn khỏi đấu giá: ${productName}`;
+          const heading = `<h2 style="margin:0 0 10px 0;font-size:20px">Thông báo: Bạn đã bị chặn khỏi phiên đấu giá</h2>`;
+          const sections = `
+            <p style="margin:0 0 12px 0;line-height:1.6">Bạn đã bị người bán chặn khỏi việc tham gia đấu giá sản phẩm <strong>${productName}</strong>.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:12px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+              <tr>
+                <td style="padding:12px 14px;font-size:14px;color:#0f172a">
+                  <div style="margin-bottom:6px"><strong>Sản phẩm:</strong> ${productName}</div>
+                  <div style="margin-top:6px;font-size:12px;color:#64748b">Nếu bạn tin rằng đây là nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ.</div>
+                </td>
+              </tr>
+            </table>`;
+          emailTasks.push({
+            to: kickedUser.email,
+            subject,
+            content: wrapBidEmail(subject, heading, sections),
+          });
+        }
+
         result = { message: "Chặn người đấu giá thành công." };
       });
+
+      // GỬI EMAIL SAU KHI TRANSACTION HOÀN TẤT
+      if (emailTasks.length > 0) {
+        Promise.all(
+          emailTasks.map((task) =>
+            sendEmail(task.to, task.subject, task.content)
+          )
+        );
+      }
 
       return result;
     } catch (error) {
