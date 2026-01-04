@@ -56,12 +56,14 @@ const ProductDetails = () => {
   const [productRelatedData, setProductRelatedData] = useState(null);
 
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [breadcrumbs, setBreadcrumbs] = useState([]);
 
   const mainImageRef = useRef(null);
   const thumbsRef = useRef(null);
+  const slideIntervalRef = useRef(null);
 
   const fetchProductData = async () => {
     try {
@@ -230,6 +232,47 @@ const ProductDetails = () => {
     navigate(`/order/${productId}`);
   };
 
+  // Auto slideshow effect
+  useEffect(() => {
+    if (!images || images.length <= 1) return;
+
+    const startSlideshow = () => {
+      slideIntervalRef.current = setInterval(() => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setSelectedImage((prev) => (prev + 1) % images.length);
+          setTimeout(() => setIsTransitioning(false), 50);
+        }, 300);
+      }, 5000);
+    };
+
+    startSlideshow();
+
+    return () => {
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current);
+      }
+    };
+  }, [images]);
+
+  // Reset slideshow when user manually selects image
+  const handleImageSelect = (idx) => {
+    setSelectedImage(idx);
+    // Clear and restart slideshow
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+    }
+    if (images && images.length > 1) {
+      slideIntervalRef.current = setInterval(() => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setSelectedImage((prev) => (prev + 1) % images.length);
+          setTimeout(() => setIsTransitioning(false), 50);
+        }, 300);
+      }, 5000);
+    }
+  };
+
   return (
     <>
       {loading && (
@@ -290,11 +333,11 @@ const ProductDetails = () => {
                   {images.map((img, idx) => (
                     <div
                       key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`w-20 h-20 lg:w-24 lg:h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 ${
+                      onClick={() => handleImageSelect(idx)}
+                      className={`w-20 h-20 lg:w-24 lg:h-24 border-2 rounded-lg cursor-pointer overflow-hidden shrink-0 transition-all duration-300 ${
                         selectedImage === idx
-                          ? "border-black"
-                          : "border-gray-200"
+                          ? "border-gray-500"
+                          : "border-gray-200 hover:border-gray-400"
                       }`}>
                       <ProductImage url={img} />
                     </div>
@@ -304,13 +347,36 @@ const ProductDetails = () => {
                 {/* Main Image */}
                 <div
                   ref={mainImageRef}
-                  className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center order-1 lg:order-2"
+                  className="w-full lg:flex-1 bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative"
                   style={{ aspectRatio: "1 / 1", minHeight: 240 }}>
                   <div
-                    className="product-main-image w-full h-full object-contain cursor-zoom-in"
+                    className={`absolute inset-0 flex items-center justify-center cursor-zoom-in transition-all duration-300 ${
+                      isTransitioning
+                        ? "opacity-0 translate-y-4"
+                        : "opacity-100 translate-y-0"
+                    }`}
                     onClick={() => setModalOpen(true)}>
-                    <ProductImage url={images[selectedImage]} />
+                    <div className="w-full h-full flex items-center justify-center p-4">
+                      <ProductImage url={images[selectedImage]} />
+                    </div>
                   </div>
+                  {/* Slideshow indicators */}
+                  {images && images.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+                      {images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleImageSelect(idx)}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            selectedImage === idx
+                              ? "bg-gray-700 w-6"
+                              : "bg-gray-400 hover:bg-gray-600"
+                          }`}
+                          aria-label={`Go to image ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
