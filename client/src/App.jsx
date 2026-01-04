@@ -24,6 +24,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import VerifyForgotPasswordPage from "./pages/auth/VerifyForgotPasswordPage";
 import LoginSuccess from "./pages/auth/LoginSuccess.jsx";
+import UserPublicRatingPage from "./pages/UserPublicRatingPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage";
 
 // Account related pages and layout
@@ -68,6 +69,10 @@ const router = createBrowserRouter(
           <Route path="details/:id" element={<DetailsPage />} />
           <Route path="/category/*" element={<CategoryPage />} />
           <Route path="/login-success" element={<LoginSuccess />} />
+          <Route
+            path="/user-rating/:userId"
+            element={<UserPublicRatingPage />}
+          />
 
           {/* 2. PROTECTED ROUTES (Yêu cầu Đã Đăng nhập) */}
           <Route element={<RequireAuth allowedRoles={[ROLES.Bidder]} />}>

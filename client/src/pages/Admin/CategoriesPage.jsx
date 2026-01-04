@@ -666,7 +666,7 @@ export default function CategoriesPage() {
               {paginated.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-gray-400">
-                    No categories found.
+                    Không tìm thấy danh mục nào.
                   </td>
                 </tr>
               )}
@@ -710,9 +710,9 @@ export default function CategoriesPage() {
         {/* Footer / pagination */}
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
-            Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {categories.length}{" "}
-            danh mục
+            Hiển thị {(page - 1) * pageSize + (paginated.length ? 1 : 0)} đến{" "}
+            {(page - 1) * pageSize + paginated.length} trong tổng số{" "}
+            {categories.length} danh mục
           </div>
           <div className="flex items-center gap-2">
             <button

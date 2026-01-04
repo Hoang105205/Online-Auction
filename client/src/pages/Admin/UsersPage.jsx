@@ -365,7 +365,7 @@ export default function UsersPage() {
               {paginated.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-gray-400">
-                    No users found.
+                    Không tìm thấy người dùng nào.
                   </td>
                 </tr>
               )}
@@ -455,8 +455,9 @@ export default function UsersPage() {
 
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
-            Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {totalCount} users
+            Hiển thị {(page - 1) * pageSize + (paginated.length ? 1 : 0)} đến{" "}
+            {(page - 1) * pageSize + paginated.length} trong tổng số{" "}
+            {totalCount} người dùng
           </div>
           <div className="flex items-center gap-2">
             <button

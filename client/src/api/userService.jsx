@@ -63,6 +63,34 @@ export const getUserFeedback = async (
 };
 
 /**
+ * Lấy đánh giá của người dùng khác với phân trang và bộ lọc
+ * API: GET /api/users/public-feedback/:userId
+ */
+export const getPublicFeedback = async (
+  axiosInstance,
+  userId,
+  page = 1,
+  filter = "all",
+  limit = 5
+) => {
+  try {
+    const response = await axiosInstance.get(
+      `/users/public-feedback/${userId}`,
+      {
+        params: {
+          page: page,
+          filter: filter,
+          limit: limit,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Lấy danh sách theo dõi của người dùng với phân trang và sắp xếp
  * API: GET /api/users/watchlist
  */

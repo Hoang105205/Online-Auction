@@ -48,6 +48,32 @@ const updateUserPassword = async (req, res) => {
   }
 };
 
+const getPublicFeedback = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 5;
+    const filter = req.query.filter || "all";
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const result = await UserService.getFeedBack(userId, {
+      page,
+      limit,
+      filter,
+    });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 const getFeedback = async (req, res) => {
   try {
     const userId = req.user;
@@ -209,12 +235,11 @@ const getWonProducts = async (req, res) => {
     });
 
     return res.status(200).json(result);
-  }
-  catch (err) {
+  } catch (err) {
     res
       .status(err.statusCode || 500)
       .json({ message: err.message || "Server error" });
-  }   
+  }
 };
 
 const getSoldProducts = async (req, res) => {
@@ -230,8 +255,7 @@ const getSoldProducts = async (req, res) => {
     });
 
     return res.status(200).json(result);
-  }
-  catch (err) {
+  } catch (err) {
     res
       .status(err.statusCode || 500)
       .json({ message: err.message || "Server error" });
@@ -251,4 +275,5 @@ module.exports = {
   requestSeller,
   getWonProducts,
   getSoldProducts,
+  getPublicFeedback,
 };

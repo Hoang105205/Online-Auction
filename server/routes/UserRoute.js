@@ -14,6 +14,7 @@ const {
   requestSeller,
   getWonProducts,
   getSoldProducts,
+  getPublicFeedback,
 } = require("../controllers/UserController");
 const verifyJWT = require("../middleware/verifyJWT");
 const verifyRoles = require("../middleware/verifyRoles");
@@ -35,6 +36,8 @@ router.put(
   verifyRoles(ROLES_LIST.Bidder),
   updateUserPassword
 );
+
+router.get("/public-feedback/:userId", getPublicFeedback);
 
 router.get("/feedback", verifyJWT, verifyRoles(ROLES_LIST.Bidder), getFeedback);
 

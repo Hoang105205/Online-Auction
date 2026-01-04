@@ -365,7 +365,7 @@ export default function ProductsPage() {
               {paginated.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">
-                    No products found.
+                    Không tìm thấy sản phẩm nào.
                   </td>
                 </tr>
               )}
@@ -414,8 +414,9 @@ export default function ProductsPage() {
         {/* Footer / pagination */}
         <div className="flex items-center justify-between mt-6">
           <div className="text-xs text-gray-400">
-            Showing {(page - 1) * pageSize + (paginated.length ? 1 : 0)} to{" "}
-            {(page - 1) * pageSize + paginated.length} of {totalCount} products
+            Hiển thị {(page - 1) * pageSize + (paginated.length ? 1 : 0)} đến{" "}
+            {(page - 1) * pageSize + paginated.length} trong tổng số{" "}
+            {totalCount} sản phẩm
           </div>
           <div className="flex items-center gap-2">
             <button

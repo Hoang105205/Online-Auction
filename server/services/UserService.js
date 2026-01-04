@@ -126,7 +126,7 @@ class UserService {
 
   static async getFeedBack(userId, { page = 1, limit = 5, filter = "all" }) {
     const user = await User.findById(userId)
-      .select("feedBackAsBidder feedBackAsSeller")
+      .select("feedBackAsBidder feedBackAsSeller fullName email")
       .populate({
         path: "feedBackAsBidder.commenterId",
         select: "fullName",
@@ -188,6 +188,10 @@ class UserService {
     const paginatedFeedbacks = rawFeedbacks.slice(startIndex, endIndex);
 
     return {
+      user: {
+        fullName: user.fullName,
+        email: user.email,
+      },
       feedbacks: paginatedFeedbacks,
       stats: {
         total: totalCount,
