@@ -6,6 +6,8 @@ const ROLES_LIST = require("../config/roles_list");
 const sendEmail = require("../utils/sendEmail");
 const { recalculateAuctionAfterRemovingBidder } = require("../utils/userUtils");
 const ProductService = require("./ProductService");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
 // Helpers for email formatting
 const formatDateVN = (date) =>
@@ -969,6 +971,76 @@ class SystemService {
 
     // Trả về kết quả xóa
     return { cloudinaryFoldersDeleted, prodIds };
+  }
+  static async resetPasswordUser(userId) {
+    if (!userId) {
+      const error = new Error("userId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const user = await User.findById(userId).exec();
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 1. Generate random password (8 bytes = 16 hex characters)
+    const randomPassword = crypto.randomBytes(8).toString("hex");
+
+    // 2. Hash the password using bcrypt (same as AuthService)
+    const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
+    const hashedPassword = await bcrypt.hash(randomPassword, SALT_ROUNDS);
+
+    // 3. Update user's password in database
+    user.password = hashedPassword;
+    await user.save();
+
+    // 4. Send email with new password to user
+    await this.sendResetPasswordEmail(
+      user.email,
+      user.fullName,
+      randomPassword
+    );
+
+    return {
+      message:
+        "Mật khẩu đã được đặt lại. Mật khẩu mới đã được gửi đến email của người dùng.",
+      userId: user._id,
+      email: user.email,
+    };
+  }
+
+  /**
+   * Send reset password email to user with new temporary password
+   * @param {String} email - User's email
+   * @param {String} fullName - User's full name
+   * @param {String} newPassword - New temporary password
+   */
+  static async sendResetPasswordEmail(email, fullName, newPassword) {
+    const subject = "🔐 Mật khẩu của bạn đã được đặt lại";
+
+    const heading = `<h2 style="margin:0 0 10px 0; font-size:20px;">Xin chào, ${fullName}! 🔐</h2>`;
+
+    const bodyHtml = `
+      <p style="margin:0 0 12px 0; line-height:1.6;">Mật khẩu của tài khoản Auctify của bạn đã được Admin đặt lại.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin:14px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+        <tr>
+          <td style="padding:12px 14px; font-size:14px; color:#0f172a;">
+            <div style="margin-bottom:6px;"><strong>Mật khẩu tạm thời:</strong></div>
+            <div style="font-family:monospace; font-size:16px; font-weight:700; color:#0ea5e9; letter-spacing:1px; word-break:break-all;">
+              ${newPassword}
+            </div>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 18px 0; color:#334155; line-height:1.6;">Vui lòng sao chép mật khẩu này và đổi ngay sau khi đăng nhập vào hệ thống.</p>
+      <p style="margin:18px 0 0 0; font-size:12px; color:#64748b;">Lưu ý: Không chia sẻ mật khẩu này cho bất kỳ ai. Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng liên hệ với Admin ngay lập tức.</p>
+    `;
+
+    const html = wrapEmail("#0ea5e9", heading, bodyHtml);
+    await sendEmail(email, subject, html);
   }
 }
 

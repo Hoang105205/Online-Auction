@@ -5,10 +5,14 @@ import {
   HiChevronDown,
   HiChevronLeft,
   HiChevronRight,
+  HiKey,
 } from "react-icons/hi";
 import { toast } from "react-toastify";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import systemService, { removeUser } from "../../api/systemService";
+import systemService, {
+  removeUser,
+  resetUserPassword,
+} from "../../api/systemService";
 
 export default function UsersPage() {
   const [query, setQuery] = useState("");
@@ -18,6 +22,8 @@ export default function UsersPage() {
   const [openRows, setOpenRows] = useState(new Set());
   const [deleteTarget, setDeleteTarget] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState("");
+  const [showResetModal, setShowResetModal] = useState(false);
   const pageSize = 6;
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -151,6 +157,11 @@ export default function UsersPage() {
     setShowDeleteModal(true);
   }
 
+  function handleResetClick(id) {
+    setResetTarget(id);
+    setShowResetModal(true);
+  }
+
   function performDelete(id) {
     if (!id) return;
     (async () => {
@@ -172,6 +183,26 @@ export default function UsersPage() {
       } finally {
         setShowDeleteModal(false);
         setDeleteTarget("");
+        setLoading(false);
+      }
+    })();
+  }
+
+  function performReset(id) {
+    if (!id) return;
+    (async () => {
+      try {
+        setLoading(true);
+        await resetUserPassword(axiosPrivate, id);
+        toast.success(
+          "Đặt lại mật khẩu thành công. Mật khẩu mới đã được gửi đến email."
+        );
+      } catch (err) {
+        console.error("Reset password failed", err);
+        toast.error(err.response?.data?.message || "Đặt lại mật khẩu thất bại");
+      } finally {
+        setShowResetModal(false);
+        setResetTarget("");
         setLoading(false);
       }
     })();
@@ -207,7 +238,8 @@ export default function UsersPage() {
                 setSortBy(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border rounded-full text-sm bg-white">
+              className="px-3 py-2 border rounded-full text-sm bg-white"
+            >
               <option value="asc">Sắp xếp A-Z</option>
               <option value="desc">Sắp xếp Z-A</option>
             </select>
@@ -240,7 +272,8 @@ export default function UsersPage() {
                     <tr
                       className={`text-sm text-gray-600 ${
                         idx % 2 === 0 ? "" : "bg-gray-50"
-                      }`}>
+                      }`}
+                    >
                       <td className="py-4 px-4">{u._id || u.id}</td>
 
                       <td className="py-4 px-4 flex items-center gap-3">
@@ -259,8 +292,18 @@ export default function UsersPage() {
                         <div className="flex items-center gap-2">
                           {!isUserAdmin(u) && (
                             <button
+                              onClick={() => handleResetClick(u._id || u.id)}
+                              className="p-2 rounded-full bg-blue-50 text-blue-500"
+                              title="Reset password"
+                            >
+                              <HiKey />
+                            </button>
+                          )}
+                          {!isUserAdmin(u) && (
+                            <button
                               onClick={() => handleDeleteClick(u._id || u.id)}
-                              className="p-2 rounded-full bg-red-50 text-red-500">
+                              className="p-2 rounded-full bg-red-50 text-red-500"
+                            >
                               <HiTrash />
                             </button>
                           )}
@@ -274,7 +317,8 @@ export default function UsersPage() {
                             openRows.has(u._id || u.id)
                               ? "bg-gray-100"
                               : "bg-white"
-                          }`}>
+                          }`}
+                        >
                           <HiChevronDown
                             className={`${
                               openRows.has(u._id || u.id)
@@ -329,6 +373,47 @@ export default function UsersPage() {
           </table>
         </div>
 
+        {showResetModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => !loading && setShowResetModal(false)}
+            />
+            <div className="bg-white rounded-lg p-6 z-10 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2">
+                Xác nhận đặt lại mật khẩu
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Bạn có chắc muốn đặt lại mật khẩu cho "
+                {users.find((x) => (x._id || x.id) === resetTarget)?.fullName ||
+                  resetTarget}
+                "? Mật khẩu mới sẽ được gửi đến email của họ.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => performReset(resetTarget)}
+                  disabled={loading}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2 ${
+                    loading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {loading && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {loading ? "Đang xử lý..." : "Đặt lại"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div
@@ -347,7 +432,8 @@ export default function UsersPage() {
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   disabled={loading}
-                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="px-4 py-2 bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Hủy
                 </button>
                 <button
@@ -355,7 +441,8 @@ export default function UsersPage() {
                   disabled={loading}
                   className={`px-4 py-2 bg-red-600 text-white rounded flex items-center gap-2 ${
                     loading ? "opacity-70 cursor-not-allowed" : ""
-                  }`}>
+                  }`}
+                >
                   {loading && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   )}
@@ -375,7 +462,8 @@ export default function UsersPage() {
             <button
               onClick={() => goto(page - 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === 1}>
+              disabled={page === 1}
+            >
               <HiChevronLeft />
             </button>
             {Array.from({ length: totalPages }).map((_, i) => {
@@ -388,7 +476,8 @@ export default function UsersPage() {
                     p === page
                       ? "bg-purple-600 text-white"
                       : "bg-white border text-gray-600"
-                  }`}>
+                  }`}
+                >
                   {p}
                 </button>
               );
@@ -396,7 +485,8 @@ export default function UsersPage() {
             <button
               onClick={() => goto(page + 1)}
               className="p-2 rounded-full bg-gray-100"
-              disabled={page === totalPages}>
+              disabled={page === totalPages}
+            >
               <HiChevronRight />
             </button>
           </div>

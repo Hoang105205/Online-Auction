@@ -366,6 +366,21 @@ const removeUserAdmin = async (req, res) => {
   }
 };
 
+const resetUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.params || {};
+    if (!userId)
+      return res.status(400).json({ message: "userId không được để trống." });
+
+    const result = await SystemService.resetPasswordUser(userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ message: err.message || "Server error" });
+  }
+};
+
 module.exports = {
   getSystemConfig,
   getTimeConfigs,
@@ -383,6 +398,7 @@ module.exports = {
   updateCategory,
   removeCategory,
   removeUserAdmin,
+  resetUserPassword,
   getDashboardStats,
   removeSubCategory,
   listUsers,
