@@ -39,6 +39,11 @@ const AuctionsPage = () => {
           image: p.detail?.images && p.detail.images[0],
           currentPrice: p.auction?.currentPrice ?? 0,
           buyNowPrice: p.auction?.buyNowPrice ?? null,
+          // Pass both name and id of highest bidder for UI logic
+          highestBidderId:
+            p.auction?.highestBidderId?._id ||
+            p.auction?.highestBidderId ||
+            null,
           highestBidder: p.auction?.highestBidderId?.fullName || "",
           createdAt: p.createdAt,
           endDate: p.auction?.endTime,

@@ -1,8 +1,10 @@
 import { HiClock, HiUser, HiTag, HiShoppingCart } from "react-icons/hi";
 import { Link } from "react-router-dom";
 import ProductImage from "../ProductImage";
+import useAuth from "../../hooks/useAuth";
 
 const ProductCard = ({ product, isWon = false }) => {
+  const { auth } = useAuth();
   // Calculate time remaining
   const getTimeRemaining = (endDate) => {
     const now = new Date();
@@ -52,14 +54,30 @@ const ProductCard = ({ product, isWon = false }) => {
   const timeRemaining = getTimeRemaining(product.endDate);
   const isEnded = timeRemaining === "Đã kết thúc";
 
+  // Determine if current user is the highest bidder
+  // `highestBidderId` is mapped to a plain id in AuctionsPage
+  const leaderId = product.highestBidderId ?? null;
+  const isLeader =
+    !!auth?.id && !!leaderId && String(auth.id) === String(leaderId);
+
+  const cardClass = `bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group ${
+    isLeader ? "border-2 border-yellow-400" : ""
+  }`;
+
   return (
     <Link to={`/details/${product.id}`}>
-      <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow overflow-hidden group">
+      <div className={cardClass}>
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
           <div className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
             <ProductImage url={product.image} />
           </div>
+          {/* Leader badge */}
+          {!isWon && !isEnded && isLeader && (
+            <div className="absolute top-3 left-3 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+              👑 Bạn đang dẫn đầu
+            </div>
+          )}
           {isWon && (
             <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
               ✓ Đã thắng
@@ -94,10 +112,18 @@ const ProductCard = ({ product, isWon = false }) => {
               <div className="flex items-center gap-2 text-gray-600">
                 <HiUser className="text-gray-400 flex-shrink-0" />
                 <span className="truncate">
-                  Bởi:{" "}
-                  <span className="font-medium text-gray-900">
-                    {maskBidderName(product.highestBidder)}
-                  </span>
+                  {isLeader ? (
+                    <span className="font-medium text-yellow-600">
+                      Bạn đang dẫn đầu
+                    </span>
+                  ) : (
+                    <>
+                      Bởi:{" "}
+                      <span className="font-medium text-gray-900">
+                        {maskBidderName(product.highestBidder)}
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
             )}
