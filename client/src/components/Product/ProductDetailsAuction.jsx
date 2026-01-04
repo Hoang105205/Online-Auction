@@ -40,8 +40,7 @@ const ProductDetailsAuction = ({
           </h3>
           <Link
             to="/login"
-            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
+            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
             Đăng nhập ngay
           </Link>
         </div>
@@ -125,8 +124,7 @@ const ProductDetailsAuction = ({
             display: "flex",
             gap: "10px",
             justifyContent: "center",
-          }}
-        >
+          }}>
           <button
             onClick={async () => {
               toast.dismiss(toastId);
@@ -161,8 +159,7 @@ const ProductDetailsAuction = ({
               borderRadius: "6px",
               cursor: "pointer",
               fontWeight: "600",
-            }}
-          >
+            }}>
             Xác nhận
           </button>
           <button
@@ -174,8 +171,7 @@ const ProductDetailsAuction = ({
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
-            }}
-          >
+            }}>
             Hủy
           </button>
         </div>
@@ -244,8 +240,7 @@ const ProductDetailsAuction = ({
               display: "flex",
               gap: "10px",
               justifyContent: "center",
-            }}
-          >
+            }}>
             <button
               onClick={() => {
                 handleBuyNow(buyNowPrice);
@@ -258,8 +253,7 @@ const ProductDetailsAuction = ({
                 border: "none",
                 borderRadius: "6px",
                 cursor: "pointer",
-              }}
-            >
+              }}>
               Xác nhận
             </button>
             <button
@@ -271,8 +265,7 @@ const ProductDetailsAuction = ({
                 border: "none",
                 borderRadius: "6px",
                 cursor: "pointer",
-              }}
-            >
+              }}>
               Hủy
             </button>
           </div>
@@ -347,26 +340,80 @@ const ProductDetailsAuction = ({
 
   // Hàm xử lý đấu giá thành công
   const handleBidSuccess = async (price) => {
-    try {
-      const result = await placeBid(axiosPrivate, {
-        productId: productId,
-        bidAmount: price,
-      });
+    const toastId = toast.info(
+      <div>
+        <p className="font-semibold mb-2">Xác nhận đấu giá</p>
+        <p className="mb-3">
+          Bạn có chắc chắn muốn đặt giá <strong>{formatPrice(price)} đ</strong>?
+        </p>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center",
+          }}>
+          <button
+            onClick={async () => {
+              toast.dismiss(toastId);
 
-      toast.success(result.message);
+              try {
+                setIsSubmitting(true);
+                const result = await placeBid(axiosPrivate, {
+                  productId: productId,
+                  bidAmount: price,
+                });
 
-      setBidAmount("");
+                toast.success(result.message);
 
-      if (onBidSuccess) {
-        await onBidSuccess();
+                setBidAmount("");
+
+                if (onBidSuccess) {
+                  await onBidSuccess();
+                }
+              } catch (error) {
+                const errorMsg =
+                  error.response?.data?.message || "Có lỗi xảy ra khi đấu giá!";
+                toast.error(errorMsg);
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#2563eb",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}>
+            Xác nhận
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(toastId);
+              setIsSubmitting(false);
+            }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#6b7280",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}>
+            Hủy
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
       }
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Có lỗi xảy ra khi đấu giá!";
-      toast.error(errorMsg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   const renderPagination = () => {
@@ -403,8 +450,7 @@ const ProductDetailsAuction = ({
         <button
           onClick={() => handlePageChange(currentPage - 1)}
           disabled={currentPage === 1 || isRefreshing}
-          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
 
@@ -420,8 +466,7 @@ const ProductDetailsAuction = ({
                 : page === "..."
                 ? "cursor-default"
                 : "border border-gray-300 hover:bg-gray-50"
-            } ${page === "..." ? "" : "min-w-[40px]"}`}
-          >
+            } ${page === "..." ? "" : "min-w-[40px]"}`}>
             {page}
           </button>
         ))}
@@ -430,8 +475,7 @@ const ProductDetailsAuction = ({
         <button
           onClick={() => handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages || isRefreshing}
-          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -479,8 +523,7 @@ const ProductDetailsAuction = ({
                 <button
                   onClick={handleBidSubmit}
                   disabled={isSubmitting}
-                  className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
-                >
+                  className="bg-blue-600 text-white px-2 sm:px-6 py-2 rounded-lg text-sm sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md whitespace-nowrap">
                   {isSubmitting ? "Đang xử lý..." : "XÁC NHẬN"}
                 </button>
               </div>
@@ -585,8 +628,7 @@ const ProductDetailsAuction = ({
                     historyList.map((bid) => (
                       <tr
                         key={bid._id}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
+                        className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 w-[35%]">
                           <span className="block sm:inline">
                             {formatDateTime(bid.bidTime)}
@@ -618,8 +660,7 @@ const ProductDetailsAuction = ({
                               }
                               disabled={kickingBidder === bid.bidderId._id}
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Chặn"
-                            >
+                              title="Chặn">
                               <Ban className="w-3 h-3" />
                               {kickingBidder === bid.bidderId._id
                                 ? "Đang chặn..."
@@ -633,8 +674,7 @@ const ProductDetailsAuction = ({
                     <tr>
                       <td
                         colSpan="3"
-                        className="text-center py-8 sm:py-12 text-gray-500"
-                      >
+                        className="text-center py-8 sm:py-12 text-gray-500">
                         <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
                         <p className="text-sm sm:text-base">
                           Chưa có lượt đấu giá nào
