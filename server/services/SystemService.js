@@ -986,18 +986,18 @@ class SystemService {
       throw error;
     }
 
-    // 1. Generate random password (8 bytes = 16 hex characters)
-    const randomPassword = crypto.randomBytes(8).toString("hex");
+    // Generate random password (8 characters)
+    const randomPassword = crypto.randomBytes(4).toString("hex");
 
-    // 2. Hash the password using bcrypt (same as AuthService)
+    // Hash the password using bcrypt (same as AuthService)
     const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
     const hashedPassword = await bcrypt.hash(randomPassword, SALT_ROUNDS);
 
-    // 3. Update user's password in database
+    // Update user's password in database
     user.password = hashedPassword;
     await user.save();
 
-    // 4. Send email with new password to user
+    // Send email with new password to user
     await this.sendResetPasswordEmail(
       user.email,
       user.fullName,
@@ -1009,6 +1009,7 @@ class SystemService {
         "Mật khẩu đã được đặt lại. Mật khẩu mới đã được gửi đến email của người dùng.",
       userId: user._id,
       email: user.email,
+      newPassword: randomPassword,
     };
   }
 
