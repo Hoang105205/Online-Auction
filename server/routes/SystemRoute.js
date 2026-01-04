@@ -130,6 +130,13 @@ router.delete(
   SystemController.removeUserAdmin
 );
 
+router.put(
+  "/users/:userId/reset-password",
+  verifyJWT,
+  verifyRoles(ROLES_LIST.Admin),
+  SystemController.resetUserPassword
+);
+
 router.get(
   "/products",
   verifyJWT,

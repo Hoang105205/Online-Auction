@@ -218,6 +218,17 @@ export const removeUser = async (axiosInstance, userId) => {
   }
 };
 
+export const resetUserPassword = async (axiosInstance, userId) => {
+  try {
+    const res = await axiosInstance.put(
+      `/app_settings/users/${userId}/reset-password`
+    );
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const listProducts = async (
   axiosInstance,
   { page = 1, limit = 20, q = "", status, sortBy } = {}
