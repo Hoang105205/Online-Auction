@@ -4,9 +4,9 @@ const bcrypt = require("bcrypt");
 
 // Import Models
 // Lưu ý: Đảm bảo đường dẫn trỏ đúng tới thư mục models của bạn
-const User = require("../server/models/User");
-const Product = require("../server/models/Product");
-const SystemSetting = require("../server/models/System");
+const User = require("./models/User");
+const Product = require("./models/Product");
+const SystemSetting = require("./models/System");
 
 // Cấu hình Roles (Giả sử theo config roles_list của bạn)
 const ROLES_LIST = {
@@ -26,7 +26,57 @@ const SAMPLE_IMAGES = [
   "https://res.cloudinary.com/demo/image/upload/v1688640000/cld-sample-2.jpg",
   "https://res.cloudinary.com/demo/image/upload/v1688640000/cld-sample.jpg",
   "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+  "https://res.cloudinary.com/demo/image/upload/v1688640000/shoes.jpg",
+  "https://res.cloudinary.com/demo/image/upload/v1688640000/watch.jpg",
 ];
+
+const getRandomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+const generateFakeBids = (
+  startPrice,
+  stepPrice,
+  startTime,
+  endTime,
+  biddersList
+) => {
+  const numberOfBids = getRandomInt(5, 10);
+  const history = [];
+  let currentPrice = startPrice;
+  let lastBidTime = new Date(startTime).getTime() + 60000; // Bid đầu tiên sau start 1 phút
+  const maxTime =
+    new Date(endTime).getTime() < Date.now()
+      ? new Date(endTime).getTime()
+      : Date.now();
+
+  for (let k = 0; k < numberOfBids; k++) {
+    // Random người bid
+    const randomBidder = biddersList[getRandomInt(0, biddersList.length - 1)];
+    currentPrice += stepPrice;
+
+    // Tăng thời gian bid từ từ
+    lastBidTime += getRandomInt(100000, 500000);
+    if (lastBidTime >= maxTime) break;
+
+    history.push({
+      bidderId: randomBidder._id,
+      bidPrice: currentPrice,
+      bidTime: new Date(lastBidTime),
+    });
+  }
+
+  // Đếm số người tham gia (unique)
+  const uniqueBidders = new Set(history.map((b) => b.bidderId.toString())).size;
+
+  return {
+    history: history.reverse(), // Mới nhất lên đầu
+    finalPrice: currentPrice,
+    highestBidderId:
+      history.length > 0 ? history[history.length - 1].bidderId : null,
+    uniqueBidders: uniqueBidders,
+    totalBids: history.length,
+  };
+};
 
 const seedData = async () => {
   try {
@@ -54,10 +104,8 @@ const seedData = async () => {
           categoryName: "Thời trang",
           slug: "thoi-trang",
           subCategories: [
-            { subCategoryName: "Quần áo nữ", slug: "quan-ao-nu" },
+            { subCategoryName: "Quần áo", slug: "quan-ao" },
             { subCategoryName: "Giày dép", slug: "giay-dep" },
-            { subCategoryName: "Quần áo nam", slug: "quan-ao-nam" },
-            { subCategoryName: "Túi xách", slug: "tui-xach" },
           ],
         },
         {
@@ -68,12 +116,35 @@ const seedData = async () => {
             { subCategoryName: "Laptop", slug: "laptop" },
           ],
         },
+        {
+          categoryName: "Đồng hồ",
+          slug: "dong-ho",
+          subCategories: [
+            { subCategoryName: "Đồng hồ nam", slug: "dong-ho-nam" },
+            { subCategoryName: "Đồng hồ cơ", slug: "dong-ho-co" },
+          ],
+        },
+        {
+          categoryName: "Nhà cửa",
+          slug: "nha-cua",
+          subCategories: [
+            { subCategoryName: "Nội thất", slug: "noi-that" },
+            { subCategoryName: "Decor", slug: "decor" },
+          ],
+        },
+        {
+          categoryName: "Sưu tầm",
+          slug: "suu-tam",
+          subCategories: [
+            { subCategoryName: "Tem", slug: "tem" },
+            { subCategoryName: "Tiền cổ", slug: "tien-co" },
+          ],
+        },
       ],
     };
 
     const createdSystem = await SystemSetting.create(systemData);
-    const mainCategory = createdSystem.categories[0]; // Lấy category Thời trang để dùng cho Product
-    const subCats = mainCategory.subCategories;
+    const allCategories = createdSystem.categories; // Lấy toàn bộ danh mục để random
 
     // 4. Tạo Users (Hash password)
     console.log("👤 Đang tạo Users...");
@@ -84,7 +155,7 @@ const seedData = async () => {
         email: "admin@gmail.com",
         password: hashedPassword,
         fullName: "Super Admin",
-        address: "HCMC, Vietnam",
+        address: "HCMC",
         roles: [ROLES_LIST.Admin, ROLES_LIST.Bidder],
         isVerified: true,
       },
@@ -92,7 +163,7 @@ const seedData = async () => {
         email: "seller@gmail.com",
         password: hashedPassword,
         fullName: "Uy Tin Seller",
-        address: "Hanoi, Vietnam",
+        address: "Hanoi",
         roles: [ROLES_LIST.Seller, ROLES_LIST.Bidder],
         isVerified: true,
         sellerRequest: { status: "approved", startDate: new Date() },
@@ -101,7 +172,7 @@ const seedData = async () => {
         email: "bidder1@gmail.com",
         password: hashedPassword,
         fullName: "Nguyen Van Bidder",
-        address: "Danang, Vietnam",
+        address: "Danang",
         roles: [ROLES_LIST.Bidder],
         isVerified: true,
       },
@@ -109,13 +180,38 @@ const seedData = async () => {
         email: "bidder2@gmail.com",
         password: hashedPassword,
         fullName: "Le Thi Mua Hang",
-        address: "Cantho, Vietnam",
+        address: "Cantho",
+        roles: [ROLES_LIST.Bidder],
+        isVerified: true,
+      },
+      {
+        email: "bidder3@gmail.com",
+        password: hashedPassword,
+        fullName: "Tran Van C",
+        address: "Hue",
+        roles: [ROLES_LIST.Bidder],
+        isVerified: true,
+      },
+      {
+        email: "bidder4@gmail.com",
+        password: hashedPassword,
+        fullName: "Pham Thi D",
+        address: "Haiphong",
+        roles: [ROLES_LIST.Bidder],
+        isVerified: true,
+      },
+      {
+        email: "bidder5@gmail.com",
+        password: hashedPassword,
+        fullName: "Hoang Van E",
+        address: "Vinh",
         roles: [ROLES_LIST.Bidder],
         isVerified: true,
       },
     ]);
 
     const sellerUser = users[1]; // Seller user
+    const bidderUsers = users.slice(2); // Lấy danh sách bidder
 
     // 5. Tạo 20 Products
     console.log("📦 Đang tạo 20 Products...");
@@ -124,12 +220,21 @@ const seedData = async () => {
 
     for (let i = 1; i <= 20; i++) {
       let startTime, endTime, status;
-      const randomSubCat = subCats[Math.floor(Math.random() * subCats.length)];
 
-      // Logic chia trạng thái sản phẩm để test
-      if (i <= 10) {
-        // 10 SP Đang đấu giá (Active)
-        // Bắt đầu: 1-2 ngày trước. Kết thúc: 1-5 ngày tới
+      // [SỬA 1]: Khai báo giá TRƯỚC khi dùng
+      const startPrice = 100000 + i * 50000;
+      const stepPrice = 50000;
+
+      const randomCat =
+        allCategories[Math.floor(Math.random() * allCategories.length)];
+      const randomSubCat =
+        randomCat.subCategories[
+          Math.floor(Math.random() * randomCat.subCategories.length)
+        ];
+
+      // Logic chia trạng thái
+      if (i <= 15) {
+        // Active
         startTime = new Date(
           now.getTime() - Math.random() * 2 * 24 * 60 * 60 * 1000
         );
@@ -137,47 +242,66 @@ const seedData = async () => {
           now.getTime() + (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000
         );
         status = "active";
-      } else if (i <= 15) {
-        // 5 SP Đã kết thúc (Ended)
-        // Bắt đầu: 5 ngày trước. Kết thúc: 1 ngày trước
+      } else {
+        // Ended
         startTime = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
         endTime = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
         status = "ended";
-      } else {
-        // 5 SP Sắp diễn ra (Active nhưng chưa đến giờ start - tuỳ logic hiển thị frontend)
-        // Hoặc Status = Pending (Chờ duyệt)
-        startTime = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // Bắt đầu ngày mai
-        endTime = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
-        status = "active"; // Vẫn active nhưng chưa bid được vì chưa đến giờ
       }
 
-      // Random 3 ảnh từ list
-      const productImages = [
-        SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)],
-        SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)],
-        SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)],
-      ];
+      // Tạo lịch sử đấu giá giả
+      let auctionData = {
+        currentPrice: startPrice,
+        history: [],
+        highest: null,
+        total: 0,
+        distinct: 0,
+      };
+
+      const fakeResult = generateFakeBids(
+        startPrice,
+        stepPrice,
+        startTime,
+        endTime,
+        bidderUsers
+      );
+      auctionData.currentPrice = fakeResult.finalPrice;
+      auctionData.history = fakeResult.history;
+      auctionData.highest = fakeResult.highestBidderId;
+      auctionData.total = fakeResult.totalBids;
+      auctionData.distinct = fakeResult.uniqueBidders;
+
+      // Random 3 ảnh
+      const shuffledImages = [...SAMPLE_IMAGES].sort(() => 0.5 - Math.random());
+      const productImages = shuffledImages.slice(0, 3);
 
       products.push({
         detail: {
           sellerId: sellerUser._id,
           name: `Sản phẩm mẫu ${i} - ${randomSubCat.subCategoryName}`,
-          category: mainCategory._id,
+          // [SỬA 2]: Thay mainCategory._id bằng randomCat._id
+          category: randomCat._id,
           subCategory: randomSubCat._id,
           description: `Mô tả chi tiết cho sản phẩm số ${i}. Hàng chính hãng, chất lượng cao, bảo hành đầy đủ.`,
           images: productImages,
           followers: Math.floor(Math.random() * 10),
         },
         auction: {
-          startPrice: 100000 + i * 50000, // Giá khởi điểm tăng dần
-          stepPrice: 50000,
-          currentPrice: 100000 + i * 50000,
-          buyNowPrice: 5000000 + i * 100000,
+          startPrice: startPrice,
+          stepPrice: stepPrice,
+          buyNowPrice: startPrice * 10,
+          currentPrice: auctionData.currentPrice,
+          highestBidderId: auctionData.highest,
+          bidders: auctionData.distinct,
           startTime: startTime,
           endTime: endTime,
           status: status,
           autoExtend: true,
           allowNewBidders: true,
+        },
+        auctionHistory: {
+          numberOfBids: auctionData.total,
+          historyList: auctionData.history,
         },
       });
     }
@@ -185,12 +309,9 @@ const seedData = async () => {
     await Product.create(products);
 
     console.log("✅ SEED DATA THÀNH CÔNG!");
-    console.log("------------------------------------------------");
-    console.log(`Admin:   admin@gmail.com   | Pass: test1234`);
-    console.log(`Seller:  seller@gmail.com  | Pass: test1234`);
-    console.log(`Bidder:  bidder1@gmail.com | Pass: test1234`);
-    console.log("------------------------------------------------");
-
+    console.log(`- Categories: ${allCategories.length}`);
+    console.log(`- Users: ${users.length}`);
+    console.log(`- Products: ${products.length}`);
     process.exit(0);
   } catch (error) {
     console.error("❌ Lỗi Seed Data:", error);
