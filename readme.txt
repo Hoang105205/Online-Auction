@@ -49,7 +49,7 @@ Bước 1: Mở Terminal, di chuyển vào thư mục db:
 Bước 2: Cài đặt thư viện:
    npm install
 
-Bước 3: Tạo file ".env" trong thư mục db với nội dung sau:
+Bước 3: Tạo file ".env" (nếu chưa có) trong thư mục db với nội dung sau:
    (Lưu ý: Thay <username> và <password> bằng tài khoản và mật khẩu thật của bạn)
 
    MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/auctify_db
