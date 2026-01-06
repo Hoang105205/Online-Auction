@@ -3,14 +3,17 @@ const nodemailer = require("nodemailer");
 const sendEmail = async (to, subject, htmlContent) => {
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail", // Dùng cái này thay cho host/port/secure
+      host: "smtp.gmail.com", // 1. Khai báo host cụ thể
+      port: 465,            // 2. Sử dụng Port 465 (SSL) thay vì 587
+      secure: true,         // 3. Bắt buộc true với port 465
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-        rejectUnauthorized: false
-      }
+      // 4. Thêm cấu hình Timeout để tránh lỗi kết nối trên Render
+      connectionTimeout: 10000, // 10 giây
+      greetingTimeout: 10000,   // 10 giây
+      socketTimeout: 10000,     // 10 giây
     });
 
     await transporter.sendMail({
