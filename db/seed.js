@@ -300,6 +300,9 @@ const seedData = async () => {
           numberOfBids: auctionData.total,
           historyList: auctionData.history,
         },
+        // Set createdAt = startTime để giả lập thời gian tạo sản phẩm
+        createdAt: startTime,
+        updatedAt: startTime,
       });
     }
 
