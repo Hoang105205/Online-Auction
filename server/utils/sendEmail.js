@@ -4,8 +4,8 @@ const sendEmail = async (to, subject, htmlContent) => {
   try {
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com", // 1. Khai báo host cụ thể
-      port: 465,            // 2. Sử dụng Port 465 (SSL) thay vì 587
-      secure: true,         // 3. Bắt buộc true với port 465
+      port: 587,              // 1. Đổi sang port 587
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
