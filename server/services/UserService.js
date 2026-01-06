@@ -330,27 +330,22 @@ class UserService {
   ) {
     const now = new Date();
 
-    let matchOptions = {};
+    let matchOptions = { "auction.status": "active" };
 
     switch (filter) {
       case "active":
-        matchOptions = {
-          "auction.endTime": { $gt: now },
-        };
+        matchOptions["auction.endTime"] = { $gt: now };
         break;
 
       case "ending_soon":
         const threeDaysLater = new Date(
           now.getTime() + 3 * 24 * 60 * 60 * 1000
         );
-        matchOptions = {
-          "auction.endTime": { $gt: now, $lte: threeDaysLater },
-        };
+        matchOptions["auction.endTime"] = { $gt: now, $lte: threeDaysLater };
         break;
 
       case "all":
       default:
-        matchOptions = {};
         break;
     }
 
