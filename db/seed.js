@@ -27,7 +27,6 @@ const SAMPLE_IMAGES = [
   "https://res.cloudinary.com/demo/image/upload/v1688640000/cld-sample.jpg",
   "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   "https://res.cloudinary.com/demo/image/upload/v1688640000/shoes.jpg",
-  "https://res.cloudinary.com/demo/image/upload/v1688640000/watch.jpg",
 ];
 
 const getRandomInt = (min, max) =>
