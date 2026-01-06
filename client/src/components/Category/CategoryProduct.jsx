@@ -52,6 +52,9 @@ export default function CategoryProduct() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Reset to page 1 when filters or category change
+    setCurrentPage(1);
+    
     const fetchCategoryAndProducts = async () => {
       try {
         setLoading(true);
@@ -161,12 +164,91 @@ export default function CategoryProduct() {
     };
 
     fetchCategoryAndProducts();
-  }, [axiosPrivate, slugPath, currentPage, appliedSortBy, appliedSearch]);
+  }, [axiosPrivate, slugPath, appliedSortBy, appliedSearch]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Re-fetch when page changes
+  useEffect(() => {    
+    const fetchPageData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!slugPath) {
+          const result = await getFirstProducts(
+            {
+              page: currentPage,
+              limit: 8,
+              sortBy: appliedSortBy,
+              search: appliedSearch,
+            },
+            axiosPrivate
+          );
+
+          if (Array.isArray(result)) {
+            setProducts(result);
+          } else if (result && Array.isArray(result.data)) {
+            setProducts(result.data);
+          } else if (result && Array.isArray(result.products)) {
+            setProducts(result.products);
+          } else {
+            setProducts([]);
+          }
+          setTotalPages(result.pagination?.totalPages || 0);
+          setTotalItems(result.pagination?.totalItems || products.length);
+        } else {
+          const parts = slugPath.split("/");
+          const mainSlug = parts[0];
+          const cat = await getCategoryBySlug(axiosPrivate, mainSlug);
+          
+          const subSlug = parts[1];
+          let index = -1;
+          if (subSlug && cat?.subCategories) {
+            index = cat.subCategories.findIndex((sc) => sc.slug === subSlug);
+          }
+
+          const categoryId = cat._id;
+          const subcategoryId = index >= 0 ? cat.subCategories[index]._id : null;
+
+          const result = await getProductsByCategory(
+            {
+              category: categoryId,
+              subcategory: subcategoryId,
+              page: currentPage,
+              limit: 8,
+              sortBy: appliedSortBy,
+              search: appliedSearch,
+            },
+            axiosPrivate
+          );
+
+          if (Array.isArray(result)) {
+            setProducts(result);
+          } else if (result && Array.isArray(result.data)) {
+            setProducts(result.data);
+          } else if (result && Array.isArray(result.products)) {
+            setProducts(result.products);
+          } else {
+            setProducts([]);
+          }
+          setTotalPages(result.pagination?.totalPages || 0);
+          setTotalItems(result.pagination?.totalItems || products.length);
+        }
+      } catch (err) {
+        console.error("Error fetching page data:", err);
+        setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPageData();
+  }, [currentPage]);
 
   // Build pagination list with ellipsis when pages are many
   const buildPageList = (current, total) => {
@@ -203,10 +285,6 @@ export default function CategoryProduct() {
 
   // Products are now fetched from API with server-side filtering and sorting
   const filteredProducts = products;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [slugPath, appliedSortBy, appliedSearch]);
 
   function resetFilters() {
     setSearch("");
@@ -289,7 +367,6 @@ export default function CategoryProduct() {
                   const searchValue = debouncedSearch || search;
                   setAppliedSearch(searchValue);
                   setAppliedSortBy(sortBy);
-                  console.log(searchValue);
                   // Update URL with search params
                   if (searchValue.trim()) {
                     navigate(
