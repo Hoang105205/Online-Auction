@@ -221,7 +221,6 @@ const seedData = async () => {
     for (let i = 1; i <= 20; i++) {
       let startTime, endTime, status;
 
-      // [SỬA 1]: Khai báo giá TRƯỚC khi dùng
       const startPrice = 100000 + i * 50000;
       const stepPrice = 50000;
 
@@ -279,7 +278,6 @@ const seedData = async () => {
         detail: {
           sellerId: sellerUser._id,
           name: `Sản phẩm mẫu ${i} - ${randomSubCat.subCategoryName}`,
-          // [SỬA 2]: Thay mainCategory._id bằng randomCat._id
           category: randomCat._id,
           subCategory: randomSubCat._id,
           description: `Mô tả chi tiết cho sản phẩm số ${i}. Hàng chính hãng, chất lượng cao, bảo hành đầy đủ.`,
