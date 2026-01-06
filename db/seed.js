@@ -230,22 +230,14 @@ const seedData = async () => {
           Math.floor(Math.random() * randomCat.subCategories.length)
         ];
 
-      // Logic chia trạng thái
-      if (i <= 15) {
-        // Active
-        startTime = new Date(
-          now.getTime() - Math.random() * 2 * 24 * 60 * 60 * 1000
-        );
-        endTime = new Date(
-          now.getTime() + (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000
-        );
-        status = "active";
-      } else {
-        // Ended
-        startTime = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
-        endTime = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
-        status = "ended";
-      }
+      // Active
+      startTime = new Date(
+        now.getTime() - Math.random() * 2 * 24 * 60 * 60 * 1000
+      );
+      endTime = new Date(
+        now.getTime() + (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000
+      );
+      status = "active";
 
       // Tạo lịch sử đấu giá giả
       let auctionData = {
