@@ -1022,7 +1022,7 @@ class ProductService {
           currentPrice: p.auction.currentPrice || p.auction.startPrice || 0,
           buyNowPrice: p.auction.buyNowPrice || null,
           highestBidder: bidderInfo?.fullName || null,
-          postedDate: p.createdAt || null,
+          postedDate: p.auction.startTime || null,
           endDate: p.auction.endTime || null,
           bidCount: p.auctionHistory.numberOfBids || 0,
         };
