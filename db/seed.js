@@ -217,7 +217,7 @@ const seedData = async () => {
     const products = [];
     const now = new Date();
 
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 30; i++) {
       let startTime, endTime, status;
 
       const startPrice = 100000 + i * 50000;
@@ -230,14 +230,22 @@ const seedData = async () => {
           Math.floor(Math.random() * randomCat.subCategories.length)
         ];
 
-      // Active
-      startTime = new Date(
-        now.getTime() - Math.random() * 2 * 24 * 60 * 60 * 1000
-      );
-      endTime = new Date(
-        now.getTime() + (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000
-      );
-      status = "active";
+      // Logic chia trạng thái
+      if (i <= 25) {
+        // Active
+        startTime = new Date(
+          now.getTime() - Math.random() * 2 * 24 * 60 * 60 * 1000
+        );
+        endTime = new Date(
+          now.getTime() + (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000
+        );
+        status = "active";
+      } else {
+        // Ended
+        startTime = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+        endTime = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+        status = "ended";
+      }
 
       // Tạo lịch sử đấu giá giả
       let auctionData = {
